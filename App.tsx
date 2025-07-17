@@ -1,14 +1,13 @@
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import { NavigationContainer} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "./HomeScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import LoginScreen from "./screens/LoginScreen";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 export type RootStackParamList = {
   LoginScreen: undefined;
-  Login: undefined;
-  SignUp: undefined;
   HomeScreen: undefined;
   FlightResult: {
     departure: string;
@@ -25,6 +24,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
+    <ThemeProvider>
     <GestureHandlerRootView style={{ flex: 1 }}>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="HomeScreen">
@@ -41,6 +41,7 @@ export default function App() {
         </Stack.Navigator>
       </NavigationContainer>
     </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }
 

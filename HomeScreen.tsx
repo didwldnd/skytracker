@@ -1,21 +1,15 @@
-import React, { useState } from "react"
+import React from "react"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Ionicons } from '@expo/vector-icons';
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 import ProfileScreen from "./screens/ProfileScreen"
 import MyTripScreen from "./screens/MyTripScreen"
 import SearchScreen from "./screens/SearchScreen"
-import ExploreScreen from "./screens/ExploreScreen"
+import ExploreScreen from "./screens/PriceAlertScreen"
 
 const Tab = createBottomTabNavigator()
 
 const HomeScreen = () => {
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
 
   return (
     <Tab.Navigator
