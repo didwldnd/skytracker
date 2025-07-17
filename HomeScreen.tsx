@@ -3,10 +3,9 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Ionicons } from '@expo/vector-icons';
 
 import ProfileScreen from "./screens/ProfileScreen"
-import MyTripScreen from "./screens/MyTripScreen"
+import JplanScreen from './screens/JplanScreen'
 import SearchScreen from "./screens/SearchScreen"
-import ExploreScreen from "./screens/PriceAlertScreen"
-
+import PriceAlertScreen from "./screens/PriceAlertScreen";
 const Tab = createBottomTabNavigator()
 
 const HomeScreen = () => {
@@ -20,7 +19,7 @@ const HomeScreen = () => {
           const iconMap = {
             검색: 'search',
             알리미: 'alarm',
-            미정: 'heart',
+            J플랜: 'chatbubbles',
             프로필: 'person-outline',
           } as const;
 
@@ -28,13 +27,13 @@ const HomeScreen = () => {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: 'black',
+        tabBarActiveTintColor: '#f26522',
         tabBarInactiveTintColor: 'gray',
       })}
     >
       <Tab.Screen name="검색" component={SearchScreen} />
-      <Tab.Screen name="알리미" component={ExploreScreen} />
-      <Tab.Screen name="미정" component={MyTripScreen} />
+      <Tab.Screen name="알리미" component={PriceAlertScreen} />
+      <Tab.Screen name="J플랜" component={JplanScreen} />
       <Tab.Screen name="프로필" component={ProfileScreen} />
     </Tab.Navigator>
   );

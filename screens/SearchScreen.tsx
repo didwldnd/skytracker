@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../App";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { ScrollView } from "react-native-gesture-handler";
+import PopularScreen from "./PopularScreen";
 
 const options = {
   passengers: Array.from({ length: 9 }, (_, i) => `${i + 1}명`),
@@ -338,6 +339,7 @@ const SearchScreen = () => {
           </View>
         </View>
       </Modal>
+      <PopularScreen /> 
     </View>
   );
 };
@@ -420,7 +422,7 @@ const styles = StyleSheet.create({
   smallButton: {
     flex: 1,
     backgroundColor: "#ccc",
-    paddingVertical: 10,
+    paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",
   },

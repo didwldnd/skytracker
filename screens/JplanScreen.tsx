@@ -1,11 +1,11 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 
-const MyTripScreen = () => (
-  <View style={centered.view}><Text>마이트립</Text></View>
+const JplanScreen = () => (
+  <View style={centered.view}><Text>J플랜</Text></View>
 );
 
-export default MyTripScreen;
+export default JplanScreen;
 
 
 const centered = StyleSheet.create({
