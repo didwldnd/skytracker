@@ -7,8 +7,8 @@ import {
   Image,
   ActivityIndicator,
 } from "react-native";
-import { FontAwesome } from "@expo/vector-icons"; // 비행기 아이콘
-import { LinearGradient } from "expo-linear-gradient";
+import { FontAwesome } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient"; // 색이쁘게
 
 export default function LoginScreen() {
   const [loadingProvider, setLoadingProvider] = useState<
@@ -28,17 +28,15 @@ export default function LoginScreen() {
 
   return (
     <LinearGradient
-      colors={["#FFA726", "#FB8C00"]} // 밝은 오렌지 → 진한 오렌지
+      colors={["#FFA726", "#FB8C00"]} 
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}
     >
-      {/* 비행기 아이콘 */}
       <View style={styles.iconCircle}>
         <FontAwesome name="plane" size={28} color="#FF6F00" />
       </View>
 
-      {/* 앱 이름/슬로건 */}
       <Text style={styles.title}>SkyTracker</Text>
       <Text style={styles.subtitle}>하늘을 향한 여정의 시작</Text>
       <Text style={styles.subsubtitle}>최고의 항공편을 찾아 떠나세요</Text>
@@ -140,7 +138,6 @@ export default function LoginScreen() {
         )}
       </TouchableOpacity>
 
-      {/* 약관 */}
       <Text style={styles.footer}>
         로그인하면 SkyTracker의 <Text style={styles.link}>서비스 약관</Text>과{" "}
         <Text style={styles.link}>개인정보 처리방침</Text>에 동의하게 됩니다.
