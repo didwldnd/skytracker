@@ -20,7 +20,7 @@ const HomeScreen = () => {
           const iconMap = {
             검색: 'search',
             알리미: 'alarm',
-            마이트립: 'heart',
+            미정: 'heart',
             프로필: 'person-outline',
           } as const;
 
@@ -34,7 +34,7 @@ const HomeScreen = () => {
     >
       <Tab.Screen name="검색" component={SearchScreen} />
       <Tab.Screen name="알리미" component={ExploreScreen} />
-      <Tab.Screen name="마이트립" component={MyTripScreen} />
+      <Tab.Screen name="미정" component={MyTripScreen} />
       <Tab.Screen name="프로필" component={ProfileScreen} />
     </Tab.Navigator>
   );
