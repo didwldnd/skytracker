@@ -2,10 +2,11 @@ import React from "react"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Ionicons } from '@expo/vector-icons';
 
-import ProfileScreen from "./screens/ProfileScreen"
-import JplanScreen from './screens/JplanScreen'
+import index from "./screens/SearchScreen/index"
+import ProfileScreen from "./screens/ProfileScreen/ProfileScreen"
+import JplanScreen from './screens/JplanScreen/JplanScreen'
 import SearchScreen from "./screens/SearchScreen"
-import PriceAlertScreen from "./screens/PriceAlertScreen";
+import PriceAlertScreen from "./screens/PriceAlertScreen/PriceAlertScreen";
 const Tab = createBottomTabNavigator()
 
 const HomeScreen = () => {
@@ -31,7 +32,7 @@ const HomeScreen = () => {
         tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="검색" component={SearchScreen} />
+      <Tab.Screen name="검색" component={index} />
       <Tab.Screen name="알리미" component={PriceAlertScreen} />
       <Tab.Screen name="J플랜" component={JplanScreen} />
       <Tab.Screen name="프로필" component={ProfileScreen} />

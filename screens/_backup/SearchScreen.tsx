@@ -10,10 +10,10 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../App";
+import { RootStackParamList } from "../../App";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { ScrollView } from "react-native-gesture-handler";
-import PopularScreen from "./PopularScreen";
+import PopularScreen from "../SearchScreen/PopularScreen";
 
 const options = {
   passengers: Array.from({ length: 9 }, (_, i) => `${i + 1}명`),
@@ -76,7 +76,6 @@ const SearchScreen = () => {
   };
 
   const decrement = (type: keyof typeof passengerCounts) => {
-    // 전체 합이 1이고 지금 누르려는 타입이 현재 값이 1 이상이면 차감 허용 → 결과적으로 0이 되면 경고
     const newValue = passengerCounts[type] - 1;
     const newCounts = { ...passengerCounts, [type]: Math.max(newValue, 0) };
     const newTotal = Object.values(newCounts).reduce((a, b) => a + b, 0);

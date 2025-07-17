@@ -1,5 +1,3 @@
-// PopularScreen.tsx
-
 import React, { useState } from "react";
 import { View, Text, FlatList, Image, StyleSheet } from "react-native";
 
@@ -7,22 +5,22 @@ const popularDestinations = [
   {
     korean: "도쿄",
     english: "Tokyo",
-    image: require("../assets/tokyo.png"),
+    image: require("../../assets/tokyo.png"),
   },
   {
     korean: "오사카",
     english: "Osaka",
-    image: require("../assets/osaka.png"),
+    image: require("../../assets/osaka.png"),
   },
   {
     korean: "파리",
     english: "Paris",
-    image: require("../assets/paris.png"),
+    image: require("../../assets/paris.png"),
   },
   {
     korean: "뉴욕",
     english: "New York",
-    image: require("../assets/ny.png"),
+    image: require("../../assets/ny.png"),
   },
   // 필요 시 더 추가
 ];

@@ -3,7 +3,7 @@ import { NavigationContainer} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import HomeScreen from "./HomeScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import LoginScreen from "./screens/LoginScreen";
+import LoginScreen from "./screens/LoginScreen/LoginScreen";
 
 export type RootStackParamList = {
   LoginScreen: undefined;
