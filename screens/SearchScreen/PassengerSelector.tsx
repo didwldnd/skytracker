@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
 } from "react-native";
+import Toast from "react-native-root-toast";
 
 interface Props {
   visible: boolean;

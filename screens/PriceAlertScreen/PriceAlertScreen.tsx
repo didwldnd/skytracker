@@ -185,8 +185,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   globalToggleText: {
-    fontSize: 16,
+    fontSize: 24,
     fontWeight: "bold",
+    padding: 5,
   },
   card: {
     backgroundColor: "#fff",
