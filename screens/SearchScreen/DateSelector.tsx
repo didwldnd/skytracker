@@ -1,53 +1,162 @@
-import React, { useState } from "react";
+import React, { useEffect } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { Calendar } from "react-native-calendars";
-import { LocaleConfig } from 'react-native-calendars';
+import { LocaleConfig } from "react-native-calendars";
 
-LocaleConfig.locales['ko'] = {
+LocaleConfig.locales["ko"] = {
   monthNames: [
-    '1월', '2월', '3월', '4월', '5월', '6월',
-    '7월', '8월', '9월', '10월', '11월', '12월',
+    "1월",
+    "2월",
+    "3월",
+    "4월",
+    "5월",
+    "6월",
+    "7월",
+    "8월",
+    "9월",
+    "10월",
+    "11월",
+    "12월",
   ],
   monthNamesShort: [
-    '1월', '2월', '3월', '4월', '5월', '6월',
-    '7월', '8월', '9월', '10월', '11월', '12월',
+    "1월",
+    "2월",
+    "3월",
+    "4월",
+    "5월",
+    "6월",
+    "7월",
+    "8월",
+    "9월",
+    "10월",
+    "11월",
+    "12월",
   ],
   dayNames: [
-    '일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일',
+    "일요일",
+    "월요일",
+    "화요일",
+    "수요일",
+    "목요일",
+    "금요일",
+    "토요일",
   ],
-  dayNamesShort: ['일', '월', '화', '수', '목', '금', '토'],
-  today: '오늘',
+  dayNamesShort: ["일", "월", "화", "수", "목", "금", "토"],
+  today: "오늘",
 };
 
-LocaleConfig.defaultLocale = 'ko';
+LocaleConfig.defaultLocale = "ko";
 
 interface Props {
   departureDate: Date;
   returnDate: Date;
   showDeparturePicker: boolean;
-  showReturnPicker: boolean;
   setShowDeparturePicker: (visible: boolean) => void;
-  setShowReturnPicker: (visible: boolean) => void;
   setDepartureDate: (date: Date) => void;
   setReturnDate: (date: Date) => void;
+  startDate: string | null;
+  endDate: string | null;
+  markedDates: Record<string, any>;
+  setStartDate: (date: string | null) => void;
+  setEndDate: (date: string | null) => void;
+  setMarkedDates: (dates: Record<string, any>) => void;
 }
 
 const DateSelector = ({
   departureDate,
   returnDate,
   showDeparturePicker,
-  showReturnPicker,
   setShowDeparturePicker,
-  setShowReturnPicker,
   setDepartureDate,
   setReturnDate,
+  startDate,
+  endDate,
+  markedDates,
+  setStartDate,
+  setEndDate,
+  setMarkedDates,
 }: Props) => {
-  const formatDate = (date: Date) =>
-    date.toISOString().split("T")[0];
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+
+  const onDayPress = (day: { dateString: string }) => {
+    if (!startDate || (startDate && endDate)) {
+      // 첫 번째 선택 -> 출발 후보일
+      setStartDate(day.dateString);
+      setEndDate(null);
+      setMarkedDates({
+        [day.dateString]: {
+          startingDay: true,
+          color: "#FF6F00",
+          textColor: "#fff",
+        },
+      });
+    } else {
+      // 두 번째 날짜 선택 -> 범위 확정
+      const first = new Date(startDate);
+      const second = new Date(day.dateString);
+
+      const earlier = first < second ? startDate : day.dateString;
+      const later = first < second ? day.dateString : startDate;
+
+      const range = getDatesBetween(earlier, later);
+      const newMarked: Record<string, any> = {};
+
+      range.forEach((date, index) => {
+        if (index === 0) {
+          newMarked[date] = {
+            startingDay: true,
+            color: "#FF6F00",
+            textColor: "#fff",
+          };
+        } else if (index === range.length - 1) {
+          newMarked[date] = {
+            endingDay: true,
+            color: "#FF6F00",
+            textColor: "#fff",
+          };
+        } else {
+          newMarked[date] = {
+            color: "#FFE0B2",
+            textColor: "#000",
+          };
+        }
+      });
+
+      setStartDate(earlier);
+      setEndDate(later);
+      setMarkedDates(newMarked);
+
+      // 출발일/귀국일도 정렬해서 부모에 전달
+      setDepartureDate(new Date(earlier));
+      setReturnDate(new Date(later));
+      setShowDeparturePicker(false);
+    }
+  };
+
+  const getDatesBetween = (start: string, end: string): string[] => {
+    const dates = [];
+    let current = new Date(start);
+    let last = new Date(end);
+
+    if (current > last) [current, last] = [last, current];
+
+    while (current <= last) {
+      dates.push(current.toISOString().split("T")[0]);
+      current.setDate(current.getDate() + 1);
+    }
+
+    return dates;
+  };
+
+  // ✅ reset 되었을 때 내부 달력 초기화 처리
+  useEffect(() => {
+    if (!startDate && !endDate) {
+      setMarkedDates({});
+    }
+  }, [startDate, endDate]);
 
   return (
     <View style={styles.dateRow}>
-      {/* 출발일 */}
       <View style={styles.dateColumn}>
         <Text style={styles.label}>출발일</Text>
         <TouchableOpacity
@@ -56,82 +165,43 @@ const DateSelector = ({
         >
           <Text>{formatDate(departureDate)}</Text>
         </TouchableOpacity>
-
-        <Modal visible={showDeparturePicker} transparent animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={styles.calendarWrapper}>
-              <Calendar
-                onDayPress={(day) => {
-                  setDepartureDate(new Date(day.dateString));
-                  setShowDeparturePicker(false);
-                }}
-                markedDates={{
-                  [formatDate(departureDate)]: {
-                    selected: true,
-                    selectedColor: "#FF6F00",
-                  },
-                }}
-                theme={{
-                  selectedDayBackgroundColor: "#FF6F00",
-                  todayTextColor: "#FF6F00",
-                  arrowColor: "#FF6F00",
-                  textDayFontWeight: "500",
-                  textMonthFontWeight: "bold",
-                }}
-              />
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setShowDeparturePicker(false)}
-              >
-                <Text style={styles.closeText}>닫기</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </View>
 
-      {/* 귀국일 */}
       <View style={styles.dateColumn}>
         <Text style={styles.label}>귀국일</Text>
         <TouchableOpacity
           style={styles.input}
-          onPress={() => setShowReturnPicker(true)}
+          onPress={() => setShowDeparturePicker(true)}
         >
           <Text>{formatDate(returnDate)}</Text>
         </TouchableOpacity>
-
-        <Modal visible={showReturnPicker} transparent animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={styles.calendarWrapper}>
-              <Calendar
-                onDayPress={(day) => {
-                  setReturnDate(new Date(day.dateString));
-                  setShowReturnPicker(false);
-                }}
-                markedDates={{
-                  [formatDate(returnDate)]: {
-                    selected: true,
-                    selectedColor: "#FF6F00",
-                  },
-                }}
-                theme={{
-                  selectedDayBackgroundColor: "#FF6F00",
-                  todayTextColor: "#FF6F00",
-                  arrowColor: "#FF6F00",
-                  textDayFontWeight: "500",
-                  textMonthFontWeight: "bold",
-                }}
-              />
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setShowReturnPicker(false)}
-              >
-                <Text style={styles.closeText}>닫기</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </View>
+
+      <Modal visible={showDeparturePicker} transparent animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.calendarWrapper}>
+            <Calendar
+              key={startDate + "_" + endDate}
+              onDayPress={onDayPress}
+              markedDates={markedDates}
+              markingType={"period"}
+              theme={{
+                selectedDayBackgroundColor: "#FF6F00",
+                todayTextColor: "#FF6F00",
+                arrowColor: "#FF6F00",
+                textDayFontWeight: "500",
+                textMonthFontWeight: "bold",
+              }}
+            />
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setShowDeparturePicker(false)}
+            >
+              <Text style={styles.closeText}>닫기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };

@@ -81,6 +81,9 @@ const SearchScreen = () => {
     });
     setSeatClass("일반석");
     setStopover("상관없음");
+    setStartDate(null);
+setEndDate(null);
+setMarkedDates({});
   };
 
   const handleSwap = () => {
@@ -91,6 +94,11 @@ const SearchScreen = () => {
   };
 
   const [loading, setLoading] = useState(false); // 검색버튼 로딩 애니메이션
+
+  const [startDate, setStartDate] = useState<string | null>(null);
+const [endDate, setEndDate] = useState<string | null>(null);
+const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
+
 
   return (
     <ScrollView>
@@ -106,15 +114,20 @@ const SearchScreen = () => {
         />
 
         <DateSelector
-          departureDate={departureDate}
-          returnDate={returnDate}
-          showDeparturePicker={showDeparturePicker}
-          showReturnPicker={showReturnPicker}
-          setShowDeparturePicker={setShowDeparturePicker}
-          setShowReturnPicker={setShowReturnPicker}
-          setDepartureDate={setDepartureDate}
-          setReturnDate={setReturnDate}
-        />
+  departureDate={departureDate}
+  returnDate={returnDate}
+  showDeparturePicker={showDeparturePicker}
+  setShowDeparturePicker={setShowDeparturePicker}
+  setDepartureDate={setDepartureDate}
+  setReturnDate={setReturnDate}
+    startDate={startDate}
+  endDate={endDate}
+  markedDates={markedDates}
+  setStartDate={setStartDate}
+  setEndDate={setEndDate}
+  setMarkedDates={setMarkedDates}
+/>
+
 
         {/* 여행객 수 선택 버튼 */}
         <View style={styles.selectorRow}>
