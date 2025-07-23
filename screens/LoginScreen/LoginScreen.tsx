@@ -64,7 +64,7 @@ export default function LoginScreen() {
         ) : (
           <>
             <Image
-              source={require("../assets/google.png")}
+              source={require("../../assets/google.png")}
               style={styles.icon}
             />
             <Text style={styles.buttonText}>Google로 계속하기</Text>
@@ -95,7 +95,7 @@ export default function LoginScreen() {
         ) : (
           <>
             <Image
-              source={require("../assets/kakao.png")}
+              source={require("../../assets/kakao.png")}
               style={styles.icon}
             />
             <Text style={styles.buttonText}>카카오로 계속하기</Text>
@@ -128,7 +128,7 @@ export default function LoginScreen() {
         ) : (
           <>
             <Image
-              source={require("../assets/naver.png")}
+              source={require("../../assets/naver.png")}
               style={styles.icon}
             />
             <Text style={[styles.buttonText, { color: "#fff" }]}>

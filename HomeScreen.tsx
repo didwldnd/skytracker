@@ -1,3 +1,5 @@
+// 하단 탭
+
 import React from "react"
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs"
 import { Ionicons } from '@expo/vector-icons';
@@ -5,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import index from "./screens/SearchScreen/index"
 import ProfileScreen from "./screens/ProfileScreen/ProfileScreen"
 import JplanScreen from './screens/JplanScreen/JplanScreen'
-import SearchScreen from "./screens/SearchScreen"
 import PriceAlertScreen from "./screens/PriceAlertScreen/PriceAlertScreen";
 const Tab = createBottomTabNavigator()
 

@@ -9,6 +9,7 @@ import PassengerSelector from "./PassengerSelector";
 import SeatStopoverSelector from "./SeatStopoverSelector";
 import SearchButtons from "./SearchButtons";
 import PopularScreen from "./PopularScreen";
+import FlightLoadingModal from "../../components/FlightLoadingModal";
 import { ScrollView } from "react-native-gesture-handler";
 
 const SearchScreen = () => {
@@ -88,6 +89,8 @@ const SearchScreen = () => {
       return destination;
     });
   };
+
+  const [loading, setLoading] = useState(false); // 검색버튼 로딩 애니메이션
 
   return (
     <ScrollView>
@@ -169,18 +172,25 @@ const SearchScreen = () => {
         <SearchButtons
           onReset={resetForm}
           onSearch={() => {
-            navigation.navigate("FlightResult", {
-              departure,
-              destination,
-              departureDate: departureDate.toISOString(),
-              returnDate: returnDate.toISOString(),
-              passengers: totalPassengers,
-              seatClass,
-              stopover,
-            });
+            setLoading(true);
+            setTimeout(() => {
+              setLoading(false);
+              navigation.navigate("FlightResult", {
+                originLocationCode: departure,
+                destinationLocationCode: destination,
+                departureDate: departureDate.toISOString(),
+                returnDate: returnDate.toISOString(),
+                adults: totalPassengers,
+                travelClass: seatClass,
+                stopover,
+              });
+            }, 2000);
           }}
           disabled={!departure || !destination}
         />
+        <FlightLoadingModal visible={loading} />
+
+        {/* // FlightResult로 네비게이션, 검색 애니메이션 2초로 일단 고정 */}
 
         <PopularScreen />
       </View>

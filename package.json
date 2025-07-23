@@ -24,7 +24,9 @@
     "react-native-calendars": "^1.1263.0",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-reanimated": "~3.17.4",
-    "react-native-vector-icons": "^10.2.0"
+    "react-native-switch-toggle": "^2.2.1",
+    "react-native-vector-icons": "^10.2.0",
+    "lottie-react-native": "7.2.2"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
