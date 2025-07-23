@@ -82,8 +82,8 @@ const SearchScreen = () => {
     setSeatClass("일반석");
     setStopover("상관없음");
     setStartDate(null);
-setEndDate(null);
-setMarkedDates({});
+    setEndDate(null);
+    setMarkedDates({});
   };
 
   const handleSwap = () => {
@@ -96,9 +96,13 @@ setMarkedDates({});
   const [loading, setLoading] = useState(false); // 검색버튼 로딩 애니메이션
 
   const [startDate, setStartDate] = useState<string | null>(null);
-const [endDate, setEndDate] = useState<string | null>(null);
-const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
+  const [endDate, setEndDate] = useState<string | null>(null);
+  const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
 
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+  const [currentMonth, setCurrentMonth] = useState(
+    new Date().toISOString().split("T")[0]
+  );
 
   return (
     <ScrollView>
@@ -114,20 +118,21 @@ const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
         />
 
         <DateSelector
-  departureDate={departureDate}
-  returnDate={returnDate}
-  showDeparturePicker={showDeparturePicker}
-  setShowDeparturePicker={setShowDeparturePicker}
-  setDepartureDate={setDepartureDate}
-  setReturnDate={setReturnDate}
-    startDate={startDate}
-  endDate={endDate}
-  markedDates={markedDates}
-  setStartDate={setStartDate}
-  setEndDate={setEndDate}
-  setMarkedDates={setMarkedDates}
-/>
-
+          departureDate={departureDate}
+          returnDate={returnDate}
+          showDeparturePicker={showDeparturePicker}
+          setShowDeparturePicker={setShowDeparturePicker}
+          setDepartureDate={setDepartureDate}
+          setReturnDate={setReturnDate}
+          startDate={startDate}
+          endDate={endDate}
+          markedDates={markedDates}
+          setStartDate={setStartDate}
+          setEndDate={setEndDate}
+          setMarkedDates={setMarkedDates}
+          currentMonth={currentMonth}
+          setCurrentMonth={setCurrentMonth}
+        />
 
         {/* 여행객 수 선택 버튼 */}
         <View style={styles.selectorRow}>

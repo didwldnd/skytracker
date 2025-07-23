@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { LocaleConfig } from "react-native-calendars";
@@ -60,6 +60,8 @@ interface Props {
   setStartDate: (date: string | null) => void;
   setEndDate: (date: string | null) => void;
   setMarkedDates: (dates: Record<string, any>) => void;
+  currentMonth: string;
+  setCurrentMonth: (month: string) => void;
 }
 
 const DateSelector = ({
@@ -75,10 +77,13 @@ const DateSelector = ({
   setStartDate,
   setEndDate,
   setMarkedDates,
+  currentMonth,
+  setCurrentMonth,
 }: Props) => {
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
   const onDayPress = (day: { dateString: string }) => {
+    setCurrentMonth(day.dateString);
     if (!startDate || (startDate && endDate)) {
       // 첫 번째 선택 -> 출발 후보일
       setStartDate(day.dateString);
@@ -129,7 +134,6 @@ const DateSelector = ({
       // 출발일/귀국일도 정렬해서 부모에 전달
       setDepartureDate(new Date(earlier));
       setReturnDate(new Date(later));
-      setShowDeparturePicker(false);
     }
   };
 
@@ -148,10 +152,11 @@ const DateSelector = ({
     return dates;
   };
 
-  // ✅ reset 되었을 때 내부 달력 초기화 처리
+  // reset 되었을 때 내부 달력 초기화 처리
   useEffect(() => {
     if (!startDate && !endDate) {
       setMarkedDates({});
+      setCurrentMonth(formatDate(new Date())); // 현재 날짜의 월로 되돌림
     }
   }, [startDate, endDate]);
 
@@ -182,6 +187,7 @@ const DateSelector = ({
           <View style={styles.calendarWrapper}>
             <Calendar
               key={startDate + "_" + endDate}
+              current={currentMonth} // ✅ 현재 월 유지
               onDayPress={onDayPress}
               markedDates={markedDates}
               markingType={"period"}
@@ -197,7 +203,20 @@ const DateSelector = ({
               style={styles.closeButton}
               onPress={() => setShowDeparturePicker(false)}
             >
-              <Text style={styles.closeText}>닫기</Text>
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+                  onPress={() => setShowDeparturePicker(false)}
+                >
+                  <Text style={styles.modalButtonText}>닫기</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modalButton, { backgroundColor: "#FF6F00" }]}
+                  onPress={() => setShowDeparturePicker(false)}
+                >
+                  <Text style={styles.modalButtonText}>적용</Text>
+                </TouchableOpacity>
+              </View>
             </TouchableOpacity>
           </View>
         </View>
@@ -241,12 +260,28 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     marginTop: 10,
-    backgroundColor: "#FF6F00",
     padding: 12,
     borderRadius: 8,
     alignItems: "center",
   },
   closeText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  buttonRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalButtonText: {
     color: "#fff",
     fontWeight: "bold",
     fontSize: 16,
