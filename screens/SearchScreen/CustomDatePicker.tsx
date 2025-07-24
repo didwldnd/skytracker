@@ -31,13 +31,13 @@ const CustomDatePicker = ({ visible, onClose, selectedDate, onDateChange }: Prop
             markedDates={{
               [selectedDate]: {
                 selected: true,
-                selectedColor: "#FF6F00",
+                selectedColor: "#95ee21d7",
               },
             }}
             theme={{
-              selectedDayBackgroundColor: "#FF6F00",
-              todayTextColor: "#FF6F00",
-              arrowColor: "#FF6F00",
+              selectedDayBackgroundColor: "#95ee21d7",
+              todayTextColor: "#95ee21d7",
+              arrowColor: "#95ee21d7",
             }}
           />
 
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     marginTop: 20,
-    backgroundColor: "#FF6F00",
+    backgroundColor: "#95ee21d7",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",

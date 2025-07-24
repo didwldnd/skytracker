@@ -20,7 +20,6 @@ const SearchScreen = () => {
   const [departureDate, setDepartureDate] = useState<Date>(new Date());
   const [returnDate, setReturnDate] = useState<Date>(new Date());
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
-  const [showReturnPicker, setShowReturnPicker] = useState(false);
   const [seatClass, setSeatClass] = useState("일반석");
   const [stopover, setStopover] = useState("상관없음");
   const [modalVisible, setModalVisible] = useState(false);
