@@ -83,6 +83,11 @@ const DateSelector = ({
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
 
   const onDayPress = (day: { dateString: string }) => {
+    const today = new Date(formatDate(new Date()));
+    const selectedDate = new Date(day.dateString);
+
+    if (selectedDate < today) return;
+
     setCurrentMonth(day.dateString);
     if (!startDate || (startDate && endDate)) {
       // 첫 번째 선택 -> 출발 후보일
@@ -187,10 +192,11 @@ const DateSelector = ({
           <View style={styles.calendarWrapper}>
             <Calendar
               key={startDate + "_" + endDate}
-              current={currentMonth} // ✅ 현재 월 유지
+              current={currentMonth} // 현재 월 유지
               onDayPress={onDayPress}
               markedDates={markedDates}
               markingType={"period"}
+              minDate={formatDate(new Date())} // 오늘 날짜 이후만 선택 가능
               theme={{
                 selectedDayBackgroundColor: "#FF6F00",
                 todayTextColor: "#FF6F00",
