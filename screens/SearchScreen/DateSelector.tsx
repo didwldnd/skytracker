@@ -96,7 +96,7 @@ const DateSelector = ({
       setMarkedDates({
         [day.dateString]: {
           startingDay: true,
-          color: "#95ee21d7",
+          color: "#0be5ecd7",
           textColor: "#fff",
         },
       });
@@ -115,13 +115,13 @@ const DateSelector = ({
         if (index === 0) {
           newMarked[date] = {
             startingDay: true,
-            color: "#95ee21d7",
+            color: "#0be5ecd7",
             textColor: "#fff",
           };
         } else if (index === range.length - 1) {
           newMarked[date] = {
             endingDay: true,
-            color: "#95ee21d7",
+            color: "#0be5ecd7",
             textColor: "#fff",
           };
         } else {
@@ -198,9 +198,9 @@ const DateSelector = ({
               markingType={"period"}
               minDate={formatDate(new Date())} // 오늘 날짜 이후만 선택 가능, 기본 라이브러리
               theme={{
-                selectedDayBackgroundColor: "#95ee21d7",
-                todayTextColor: "#95ee21d7",
-                arrowColor: "#95ee21d7",
+                selectedDayBackgroundColor: "#0be5ecd7",
+                todayTextColor: "#0be5ecd7",
+                arrowColor: "#0be5ecd7",
                 textDayFontWeight: "500",
                 textMonthFontWeight: "bold",
               }}
@@ -217,7 +217,7 @@ const DateSelector = ({
                   <Text style={styles.modalButtonText}>닫기</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: "#95ee21d7" }]}
+                  style={[styles.modalButton, { backgroundColor: "#0be5ecd7" }]}
                   onPress={() => setShowDeparturePicker(false)}
                 >
                   <Text style={styles.modalButtonText}>적용</Text>

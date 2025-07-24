@@ -29,7 +29,7 @@ const HomeScreen = () => {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#95ee21d7',
+        tabBarActiveTintColor: '#0be5ecd7',
         tabBarInactiveTintColor: 'gray',
       })}
     >

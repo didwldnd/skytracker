@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   },
   userBubble: {
     alignSelf: "flex-end",
-    backgroundColor: "#95ee21d7",
+    backgroundColor: "#0be5ecd7",
     paddingVertical: 10,
     paddingHorizontal: 14,
     marginBottom: 10,
@@ -138,6 +138,7 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 4, // 오른쪽 아래만 살짝
     position: "relative",
+    marginRight: 10,
   },
 
   userText: {
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   botIcon: {
-    marginLeft: 3,
+    marginLeft: 10,
     marginBottom: 3,
     fontSize: 20,
   },
@@ -156,6 +157,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     backgroundColor: "#f1f1f1",
     padding: 10,
+    marginLeft: 10,
   },
   botText: {
     color: "black",
@@ -175,7 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   sendBtn: {
-    backgroundColor: "#95ee21d7",
+    backgroundColor: "#0be5ecd7",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 20,

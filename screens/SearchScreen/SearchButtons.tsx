@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     flex: 2,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#95ee21d7",
+    backgroundColor: "#0be5ecd7",
     alignItems: "center",
   },
   searchText: {
