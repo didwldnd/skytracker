@@ -6,8 +6,10 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FlightResult from "./screens/FlightResultScreen/FlightResultScreen";
 import LoginScreen from "./screens/LoginScreen/LoginScreen"; // 추후 반영
+import { FlightSearchResponseDto } from "./types/FlightResultScreenDto";
 
 export type RootStackParamList = {
+  Search: undefined;
   LoginScreen: undefined; // 로그인 화면
   HomeScreen: undefined; // 하단 바
   FlightResult: {
@@ -18,6 +20,8 @@ export type RootStackParamList = {
     adults: number; // 성인 인원 수 (탑승객 전체로?)
     travelClass: string; // 좌석 클래스
     stopover: string; // 좌석 클래스, 직항 선택 모달
+
+    results?: FlightSearchResponseDto[];
     // currencyCode, totalPrice, lastUpdatedAt 추가
   };
 };

@@ -11,6 +11,7 @@ import SearchButtons from "./SearchButtons";
 import PopularScreen from "./PopularScreen";
 import FlightLoadingModal from "../../components/FlightLoadingModal";
 import { ScrollView } from "react-native-gesture-handler";
+import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 
 const SearchScreen = () => {
   const navigation =
@@ -98,10 +99,29 @@ const SearchScreen = () => {
   const [endDate, setEndDate] = useState<string | null>(null);
   const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
 
-  const formatDate = (date: Date) => date.toISOString().split("T")[0];
   const [currentMonth, setCurrentMonth] = useState(
     new Date().toISOString().split("T")[0]
   );
+
+  const mockResults: FlightSearchResponseDto[] = [
+    {
+      airlineCode: "KE",
+      airlineName: "KOREAN AIR",
+      flightNumber: 907,
+      departureAirport: "ICN",
+      departureTime: "2025-07-25",
+      arrivalAirport: "LHR",
+      arrivalTime: "2025-07-25T17:20:00",
+      duration: "PT14H25M",
+      travelClass: "ECONOMY",
+      numberOfBookableSeats: 9,
+      hasCheckedBags: true,
+      isRefundable: false,
+      isChangeable: false,
+      currency: "KRW",
+      price: 1118800,
+    },
+  ];
 
   return (
     <ScrollView>
@@ -200,6 +220,7 @@ const SearchScreen = () => {
                 adults: totalPassengers,
                 travelClass: seatClass,
                 stopover,
+                results: mockResults, // ✅ 여기에 추가!
               });
             }, 2000);
           }}
