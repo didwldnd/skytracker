@@ -14,6 +14,8 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Entypo } from "@expo/vector-icons";
 import FlightResultHeader from "../../components/FlightResultHeader";
 import { formatKoreanDate } from "../../utils/formatDate";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 type FlightResultRouteProp = RouteProp<RootStackParamList, "FlightResult">;
 
@@ -109,6 +111,8 @@ const mockFlights: FlightSearchResponseDto[] = [
 const THEME_COLOR = "#0be5ecd7";
 
 const FlightResultScreen = () => {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   const route = useRoute<FlightResultRouteProp>();
   const {
     originLocationCode,
@@ -139,6 +143,8 @@ const FlightResultScreen = () => {
           `${item.airlineCode}-${item.flightNumber}-${idx}`
         }
         renderItem={({ item }) => (
+            <TouchableOpacity onPress={() => navigation.navigate("FlightDetail", { flight: item })}>
+
           <View style={styles.card}>
             {/* 상단 시간/공항 정보 */}
             <View style={styles.row}>
@@ -168,7 +174,7 @@ const FlightResultScreen = () => {
             {/* 가격 + 항공사 */}
             <View style={styles.bottomRow}>
               <Text style={styles.priceText}>
-                {item.price.toLocaleString()}원
+                {item.price.toLocaleString()} KRW
               </Text>
               <Text style={styles.carrierText}>{item.airlineName}</Text>
             </View>
@@ -183,6 +189,8 @@ const FlightResultScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
+            </TouchableOpacity>
+
         )}
       />
     </View>

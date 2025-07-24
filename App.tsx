@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import FlightResult from "./screens/FlightResultScreen/FlightResultScreen";
 import LoginScreen from "./screens/LoginScreen/LoginScreen"; // 추후 반영
 import { FlightSearchResponseDto } from "./types/FlightResultScreenDto";
+import FlightDetailScreen from "./screens/FlightResultScreen/FlightDetailScreen";
 
 export type RootStackParamList = {
   Search: undefined;
@@ -24,6 +25,9 @@ export type RootStackParamList = {
     results?: FlightSearchResponseDto[];
     // currencyCode, totalPrice, lastUpdatedAt 추가
   };
+  FlightDetail: {
+    flight: FlightSearchResponseDto;
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -39,21 +43,10 @@ export default function App() {
               headerShown: false,
             }}
           >
-            <Stack.Screen
-              name="HomeScreen"
-              component={HomeScreen}
-              options={{ title: "" }}
-            />
-            <Stack.Screen
-              name="LoginScreen"
-              component={LoginScreen}
-              options={{ title: "" }}
-            />
-            <Stack.Screen
-              name="FlightResult"
-              component={FlightResult}
-              options={{ title: "" }}
-            />
+            <Stack.Screen name="HomeScreen" component={HomeScreen} />
+            <Stack.Screen name="LoginScreen" component={LoginScreen} />
+            <Stack.Screen name="FlightResult" component={FlightResult} />
+            <Stack.Screen name="FlightDetail" component={FlightDetailScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </GestureHandlerRootView>
