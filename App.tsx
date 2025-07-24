@@ -5,25 +5,25 @@ import HomeScreen from "./HomeScreen";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import FlightResult from "./screens/FlightResultScreen/FlightResultScreen";
-import LoginScreen from "./screens/LoginScreen/LoginScreen"; // 추후 반영
+import LoginScreen from "./screens/LoginScreen/LoginScreen";
 import { FlightSearchResponseDto } from "./types/FlightResultScreenDto";
 import FlightDetailScreen from "./screens/FlightResultScreen/FlightDetailScreen";
+import SplashScreen from "./screens/SplashScreen/SplashScreen";
 
 export type RootStackParamList = {
+  Splash: undefined; // 추가
   Search: undefined;
-  LoginScreen: undefined; // 로그인 화면
-  HomeScreen: undefined; // 하단 바
+  LoginScreen: undefined;
+  HomeScreen: undefined;
   FlightResult: {
-    originLocationCode: string; // 출발지
-    destinationLocationCode: string; // 도착지
-    departureDate: string; // 출발 날짜
-    returnDate: string; // 귀국 날짜 (왕복일 경우)
-    adults: number; // 성인 인원 수 (탑승객 전체로?)
-    travelClass: string; // 좌석 클래스
-    stopover: string; // 좌석 클래스, 직항 선택 모달
-
+    originLocationCode: string;
+    destinationLocationCode: string;
+    departureDate: string;
+    returnDate: string;
+    adults: number;
+    travelClass: string;
+    stopover: string;
     results?: FlightSearchResponseDto[];
-    // currencyCode, totalPrice, lastUpdatedAt 추가
   };
   FlightDetail: {
     flight: FlightSearchResponseDto;
@@ -38,11 +38,12 @@ export default function App() {
       <GestureHandlerRootView style={{ flex: 1 }}>
         <NavigationContainer>
           <Stack.Navigator
-            initialRouteName="HomeScreen"
+            initialRouteName="Splash" // 스플래시로 변경
             screenOptions={{
               headerShown: false,
             }}
           >
+            <Stack.Screen name="Splash" component={SplashScreen} />
             <Stack.Screen name="HomeScreen" component={HomeScreen} />
             <Stack.Screen name="LoginScreen" component={LoginScreen} />
             <Stack.Screen name="FlightResult" component={FlightResult} />
@@ -53,5 +54,3 @@ export default function App() {
     </SafeAreaView>
   );
 }
-
-// 로그인 기능 넣으면 초기 로그인화면으로 설정

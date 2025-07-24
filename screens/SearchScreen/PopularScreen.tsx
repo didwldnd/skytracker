@@ -30,7 +30,7 @@ export default function PopularScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>인기 여행지 Top 20</Text>
+      <Text style={styles.title}>인기 여행지 Top 10</Text>
       <FlatList
         horizontal
         pagingEnabled
