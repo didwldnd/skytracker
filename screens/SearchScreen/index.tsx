@@ -220,7 +220,7 @@ const SearchScreen = () => {
                 adults: totalPassengers,
                 travelClass: seatClass,
                 stopover,
-                results: mockResults, // ✅ 여기에 추가!
+                results: mockResults, 
               });
             }, 2000);
           }}

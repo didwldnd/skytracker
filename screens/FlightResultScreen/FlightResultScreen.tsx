@@ -1,11 +1,12 @@
 // FlightResultScreen.tsx (디자인 카드 영역 중심)
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
+  
 } from "react-native";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../../App";
@@ -16,6 +17,7 @@ import FlightResultHeader from "../../components/FlightResultHeader";
 import { formatKoreanDate } from "../../utils/formatDate";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import FlightDetailLoadingModal from "../../components/FlightDetailLoadingModal";
 
 type FlightResultRouteProp = RouteProp<RootStackParamList, "FlightResult">;
 
@@ -124,27 +126,40 @@ const FlightResultScreen = () => {
     stopover,
     results,
   } = route.params;
-  return (
-    <View style={{ flex: 1 }}>
-      {/* ✅ 헤더 추가 */}
-      <FlightResultHeader
-        origin={originLocationCode}
-        destination={destinationLocationCode}
-        departureDate={formatKoreanDate(departureDate)}
-        returnDate={formatKoreanDate(returnDate)}
-        passengerCount={adults}
-        seatClass={travelClass}
-      />
 
-      <FlatList
-        contentContainerStyle={styles.listContainer}
-        data={mockFlights}
-        keyExtractor={(item, idx) =>
-          `${item.airlineCode}-${item.flightNumber}-${idx}`
-        }
-        renderItem={({ item }) => (
-            <TouchableOpacity onPress={() => navigation.navigate("FlightDetail", { flight: item })}>
+const [loading, setLoading] = useState(false);
 
+  const handleCardPress = (flight: FlightSearchResponseDto) => {
+  setLoading(true);
+  setTimeout(() => {
+    setLoading(false);
+    navigation.navigate("FlightDetail", { flight });
+  }, 1555); // 1.555초 로딩 스피너 표시 후 이동
+};
+
+ return (
+  <View style={{ flex: 1 }}>
+    <FlightResultHeader
+      origin={originLocationCode}
+      destination={destinationLocationCode}
+      departureDate={formatKoreanDate(departureDate)}
+      returnDate={formatKoreanDate(returnDate)}
+      passengerCount={adults}
+      seatClass={travelClass}
+    />
+
+    {/* 로딩 스피너 모달 */}
+    <FlightDetailLoadingModal visible={loading} />
+
+    {/* 항공편 리스트 */}
+    <FlatList
+      contentContainerStyle={styles.listContainer}
+      data={mockFlights}
+      keyExtractor={(item, idx) =>
+        `${item.airlineCode}-${item.flightNumber}-${idx}`
+      }
+      renderItem={({ item }) => (
+        <TouchableOpacity onPress={() => handleCardPress(item)}>
           <View style={styles.card}>
             {/* 상단 시간/공항 정보 */}
             <View style={styles.row}>
@@ -189,12 +204,13 @@ const FlightResultScreen = () => {
               </TouchableOpacity>
             </View>
           </View>
-            </TouchableOpacity>
+        </TouchableOpacity>
+      )}
+    />
+  </View>
+);
 
-        )}
-      />
-    </View>
-  );
+
 };
 
 export default FlightResultScreen;
