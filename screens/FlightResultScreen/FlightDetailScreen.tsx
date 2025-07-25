@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { formatFlightTime, formatDuration } from "../../utils/formatFlightTime";
-import { FontAwesome, Feather, Entypo } from "@expo/vector-icons";
+import { FontAwesome, Feather, Entypo, MaterialCommunityIcons } from "@expo/vector-icons";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../../App";
 
@@ -81,7 +81,7 @@ const FlightDetailScreen: React.FC = () => {
       <View style={styles.card}>
         <View style={styles.priceHeader}>
           <View style={styles.headerTitleRow}>
-            <Feather name="dollar-sign" size={20} color="white" />
+            <MaterialCommunityIcons name="currency-krw" size={20} color="white" />
             <Text style={styles.priceTitle}>가격 정보</Text>
           </View>
         </View>

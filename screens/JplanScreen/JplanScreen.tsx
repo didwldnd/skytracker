@@ -44,7 +44,7 @@ const JplanScreen = () => {
         content: `${input}에 필요한 정보를 알려드릴게요.`,
       };
       setMessages((prev) => [...prev, botReply]);
-    }, 1200); // ← 1.2초 (원하면 더 줄이거나 늘릴 수 있음)
+    }, 1200);
   };
 
   useEffect(() => {
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     borderBottomLeftRadius: 18,
-    borderBottomRightRadius: 4, // 오른쪽 아래만 살짝
+    borderBottomRightRadius: 4, 
     position: "relative",
     marginRight: 10,
   },

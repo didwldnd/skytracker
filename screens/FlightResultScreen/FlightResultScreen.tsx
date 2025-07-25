@@ -17,7 +17,7 @@ import FlightResultHeader from "../../components/FlightResultHeader";
 import { formatKoreanDate } from "../../utils/formatDate";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import FlightDetailLoadingModal from "../../components/FlightDetailLoadingModal";
+import FlightLoadingModal from "../../components/FlightLoadingModal";
 
 type FlightResultRouteProp = RouteProp<RootStackParamList, "FlightResult">;
 
@@ -149,7 +149,7 @@ const [loading, setLoading] = useState(false);
     />
 
     {/* 로딩 스피너 모달 */}
-    <FlightDetailLoadingModal visible={loading} />
+    <FlightLoadingModal visible={loading} />
 
     {/* 항공편 리스트 */}
     <FlatList

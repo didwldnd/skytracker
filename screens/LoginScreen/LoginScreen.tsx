@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { FontAwesome } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient"; // 색이쁘게
+import { LinearGradient } from "expo-linear-gradient"; 
 
 export default function LoginScreen() {
   const [loadingProvider, setLoadingProvider] = useState<
