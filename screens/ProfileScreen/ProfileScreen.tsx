@@ -9,6 +9,10 @@ import {
 } from "react-native";
 import { Avatar } from "react-native-paper";
 import { Feather } from "@expo/vector-icons";
+import { useFavorite } from "../../context/FavoriteContext";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../App";
 
 const themeColor = "white";
 
@@ -30,6 +34,12 @@ const ProfileScreen = () => {
         onPress: () => Alert.alert("탈퇴 완료", "계정이 삭제되었습니다."),
       },
     ]);
+
+    const FavoritesSection = () => {
+      const { favorites } = useFavorite();
+    }
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
 
   return (
     <ScrollView style={styles.container}>
@@ -63,7 +73,7 @@ const ProfileScreen = () => {
           title: "내 정보 관리",
           icon: <Feather name="user" size={18} color={themeColor} />,
           items: [
-            { label: "개인정보 수정", icon: "user" },
+            // { label: "개인정보 수정", icon: "user" }, 필요시 추가
             { label: "알림 설정", icon: "bell" },
             { label: "언어 및 통화", icon: "globe" },
           ],
@@ -95,7 +105,13 @@ const ProfileScreen = () => {
             <TouchableOpacity
               key={index}
               style={styles.sectionItem}
-              onPress={() => Alert.alert(item.label)}
+              onPress={() => {
+                if (item.label === "즐겨찾기") {
+                  navigation.navigate("FavoriteList");
+                } else {
+                  Alert.alert(item.label);
+                }
+              }}
             >
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
