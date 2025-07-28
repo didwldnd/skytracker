@@ -95,8 +95,8 @@ const getTripType = (depart: string, ret: string) =>
   depart.split("T")[0] !== ret.split("T")[0] ? "왕복" : "편도";
 
 export default function PriceAlertScreen() {
-
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
     {}
@@ -132,11 +132,15 @@ export default function PriceAlertScreen() {
   };
 
   const renderItem = ({ item }: { item: (typeof alertData)[0] }) => {
-    const from = airportMap[item.departureAirport] + ` (${item.departureAirport})`;
+    const from =
+      airportMap[item.departureAirport] + ` (${item.departureAirport})`;
     const to = airportMap[item.arrivalAirport] + ` (${item.arrivalAirport})`;
     const departDate = formatDate(item.departureTime);
     const returnDate = formatDate(item.arrivalTime);
-    const seat = `${getTripType(item.departureTime, item.arrivalTime)}, ${formatSeatClass(item.travelClass)}`;
+    const seat = `${getTripType(
+      item.departureTime,
+      item.arrivalTime
+    )}, ${formatSeatClass(item.travelClass)}`;
     const passenger = `${item.numberOfBookableSeats}여행객`;
     const price = formatPrice(item.price);
 
@@ -168,21 +172,23 @@ export default function PriceAlertScreen() {
             </TouchableOpacity>
             <Text style={styles.price}>{price}</Text>
             <TouchableOpacity
-  style={styles.button}
-  onPress={() => {
-    navigation.navigate("FlightDetail", { flight: item });
-  }}
->
-  <Text style={styles.buttonText}>보기</Text>
-</TouchableOpacity>
+              style={styles.button}
+              onPress={() => {
+                navigation.navigate("FlightDetail", { flight: item });
+              }}
+            >
+              <Text style={styles.buttonText}>보기</Text>
+            </TouchableOpacity>
           </View>
         </View>
         <View style={styles.footer}>
-          <Text>{switchStates[item.id] ? "알림 켜기" : "알림 끄기"}</Text>
-          <Switch
-            value={switchStates[item.id] ?? true}
-            onValueChange={() => toggleSwitch(item.id)}
-          />
+          <View style={styles.footerRight}>
+            <Text style={styles.footerLabel}>알림</Text>
+            <Switch
+              value={switchStates[item.id] ?? true}
+              onValueChange={() => toggleSwitch(item.id)}
+            />
+          </View>
         </View>
       </View>
     );
@@ -192,7 +198,7 @@ export default function PriceAlertScreen() {
     <View style={{ flex: 1, padding: 16 }}>
       <View style={styles.globalToggle}>
         <Text style={styles.globalToggleText}>
-          {globalSwitch ? "전체 알림 켜기" : "전체 알림 끄기"}
+          {globalSwitch ? "전체 알림" : "전체 알림"}
         </Text>
         <Switch value={globalSwitch} onValueChange={toggleGlobalSwitch} />
       </View>
@@ -307,7 +313,7 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 12,
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-end", // 오른쪽 정렬
     alignItems: "center",
   },
   deleteText: {
@@ -348,5 +354,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 6,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  footerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  footerLabel: {
+    fontSize: 13,
+    color: "#333",
   },
 });
