@@ -8,42 +8,96 @@ import {
   StyleSheet,
 } from "react-native";
 import { Modal } from "react-native";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../App";
 
 // 예시 데이터
 const alertData = [
   {
     id: "1",
-    from: "부산 (PUS)",
-    to: "서울 (SEL)",
-    depart: "8/25",
-    return: "8/28",
-    seat: "왕복, 일반석",
-    passenger: "1여행객",
-    price: "86,010원",
+    airlineCode: "BX",
+    airlineName: "AIR BUSAN",
+    flightNumber: 101,
+    departureAirport: "PUS",
+    departureTime: "2025-08-25T08:00:00",
+    arrivalAirport: "GMP",
+    arrivalTime: "2025-08-28T09:10:00",
+    duration: "PT1H10M",
+    travelClass: "ECONOMY",
+    numberOfBookableSeats: 1,
+    hasCheckedBags: true,
+    isRefundable: false,
+    isChangeable: false,
+    currency: "KRW",
+    price: 86010,
   },
   {
     id: "2",
-    from: "인천 (ICN)",
-    to: "제주 (CJU)",
-    depart: "9/2",
-    return: "9/5",
-    seat: "편도, 일반석",
-    passenger: "2여행객",
-    price: "49,500원",
+    airlineCode: "TW",
+    airlineName: "T'WAY AIR",
+    flightNumber: 202,
+    departureAirport: "ICN",
+    departureTime: "2025-09-02T12:30:00",
+    arrivalAirport: "CJU",
+    arrivalTime: "2025-09-05T13:40:00",
+    duration: "PT1H10M",
+    travelClass: "ECONOMY",
+    numberOfBookableSeats: 2,
+    hasCheckedBags: false,
+    isRefundable: true,
+    isChangeable: true,
+    currency: "KRW",
+    price: 49500,
   },
   {
     id: "3",
-    from: "뉴욕 (NYK)",
-    to: "도쿄 (NRT)",
-    depart: "9/22",
-    return: "9/25",
-    seat: "편도, 일반석",
-    passenger: "4여행객",
-    price: "249,500원",
+    airlineCode: "JL",
+    airlineName: "JAPAN AIRLINES",
+    flightNumber: 305,
+    departureAirport: "JFK",
+    departureTime: "2025-09-22T14:00:00",
+    arrivalAirport: "NRT",
+    arrivalTime: "2025-09-25T16:30:00",
+    duration: "PT14H30M",
+    travelClass: "ECONOMY",
+    numberOfBookableSeats: 4,
+    hasCheckedBags: true,
+    isRefundable: true,
+    isChangeable: false,
+    currency: "KRW",
+    price: 249500,
   },
 ];
 
+const airportMap: Record<string, string> = {
+  PUS: "부산",
+  GMP: "서울",
+  ICN: "인천",
+  CJU: "제주",
+  JFK: "뉴욕",
+  NRT: "도쿄",
+};
+
+const formatDate = (isoDate: string) => {
+  const date = new Date(isoDate);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+};
+
+const formatPrice = (price: number) => {
+  return price.toLocaleString("ko-KR") + "원";
+};
+
+const formatSeatClass = (cls: string) =>
+  cls === "ECONOMY" ? "일반석" : cls.toLowerCase();
+
+const getTripType = (depart: string, ret: string) =>
+  depart.split("T")[0] !== ret.split("T")[0] ? "왕복" : "편도";
+
 export default function PriceAlertScreen() {
+
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -77,56 +131,65 @@ export default function PriceAlertScreen() {
     setSwitchStates(updatedStates);
   };
 
-  // 알림 카드 하나
-  const renderItem = ({ item }: { item: (typeof alertData)[0] }) => (
-    <View style={styles.card}>
-      <View style={styles.row}>
-        <View style={styles.circle}>
-          <Text>✈️</Text>
+  const renderItem = ({ item }: { item: (typeof alertData)[0] }) => {
+    const from = airportMap[item.departureAirport] + ` (${item.departureAirport})`;
+    const to = airportMap[item.arrivalAirport] + ` (${item.arrivalAirport})`;
+    const departDate = formatDate(item.departureTime);
+    const returnDate = formatDate(item.arrivalTime);
+    const seat = `${getTripType(item.departureTime, item.arrivalTime)}, ${formatSeatClass(item.travelClass)}`;
+    const passenger = `${item.numberOfBookableSeats}여행객`;
+    const price = formatPrice(item.price);
+
+    return (
+      <View style={styles.card}>
+        <View style={styles.row}>
+          <View style={styles.circle}>
+            <Text>✈️</Text>
+          </View>
+          <View style={styles.middle}>
+            <Text style={styles.route}>
+              {from} - {to}
+            </Text>
+            <Text style={styles.info}>
+              {departDate} 출발 · {seat}
+            </Text>
+            <Text style={styles.info}>
+              {returnDate} 도착 · {passenger}
+            </Text>
+          </View>
+          <View style={styles.right}>
+            <TouchableOpacity
+              onPress={() => {
+                setPendingDeleteId(item.id);
+                setConfirmVisible(true);
+              }}
+            >
+              <Text style={styles.deleteText}>삭제</Text>
+            </TouchableOpacity>
+            <Text style={styles.price}>{price}</Text>
+            <TouchableOpacity
+  style={styles.button}
+  onPress={() => {
+    navigation.navigate("FlightDetail", { flight: item });
+  }}
+>
+  <Text style={styles.buttonText}>보기</Text>
+</TouchableOpacity>
+          </View>
         </View>
-
-        <View style={styles.middle}>
-          <Text style={styles.route}>
-            {item.from} - {item.to}
-          </Text>
-          <Text style={styles.info}>
-            {item.depart} 출발 · {item.seat}
-          </Text>
-          <Text style={styles.info}>
-            {item.return} 도착 · {item.passenger}
-          </Text>
-        </View>
-
-        <View style={styles.right}>
-          <TouchableOpacity
-            onPress={() => {
-              setPendingDeleteId(item.id); // 삭제 대기 ID 저장
-              setConfirmVisible(true); // 모달 보이기
-            }}
-          >
-            <Text style={styles.deleteText}>삭제</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.price}>{item.price}</Text>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>보기</Text>
-          </TouchableOpacity>
+        <View style={styles.footer}>
+          <Text>{switchStates[item.id] ? "알림 켜기" : "알림 끄기"}</Text>
+          <Switch
+            value={switchStates[item.id] ?? true}
+            onValueChange={() => toggleSwitch(item.id)}
+          />
         </View>
       </View>
-
-      <View style={styles.footer}>
-        <Text>{switchStates[item.id] ? "알림 켜기" : "알림 끄기"}</Text>
-        <Switch
-          value={switchStates[item.id] ?? true}
-          onValueChange={() => toggleSwitch(item.id)}
-        />
-      </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={{ flex: 1, padding: 16 }}>
-      {/* 전체 알림 ONOFF */}
       <View style={styles.globalToggle}>
         <Text style={styles.globalToggleText}>
           {globalSwitch ? "전체 알림 켜기" : "전체 알림 끄기"}
@@ -134,12 +197,12 @@ export default function PriceAlertScreen() {
         <Switch value={globalSwitch} onValueChange={toggleGlobalSwitch} />
       </View>
 
-      {/* 알림 카드 리스트 */}
       <FlatList
         data={alerts}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
       />
+
       <Modal visible={confirmVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.confirmBox}>

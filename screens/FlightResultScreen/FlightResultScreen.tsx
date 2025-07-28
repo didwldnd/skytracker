@@ -6,7 +6,6 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  
 } from "react-native";
 import { useRoute, RouteProp } from "@react-navigation/native";
 import { RootStackParamList } from "../../App";
@@ -113,7 +112,8 @@ const mockFlights: FlightSearchResponseDto[] = [
 const THEME_COLOR = "#0be5ecd7";
 
 const FlightResultScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const route = useRoute<FlightResultRouteProp>();
   const {
@@ -127,90 +127,90 @@ const FlightResultScreen = () => {
     results,
   } = route.params;
 
-const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleCardPress = (flight: FlightSearchResponseDto) => {
-  setLoading(true);
-  setTimeout(() => {
-    setLoading(false);
-    navigation.navigate("FlightDetail", { flight });
-  }, 1555); // 1.555초 로딩 스피너 표시 후 이동
-};
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      navigation.navigate("FlightDetail", { flight });
+    }, 1555); // 1.555초 로딩 스피너 표시 후 이동
+  };
 
- return (
-  <View style={{ flex: 1 }}>
-    <FlightResultHeader
-      origin={originLocationCode}
-      destination={destinationLocationCode}
-      departureDate={formatKoreanDate(departureDate)}
-      returnDate={formatKoreanDate(returnDate)}
-      passengerCount={adults}
-      seatClass={travelClass}
-    />
+  return (
+    <View style={{ flex: 1 }}>
+      <FlightResultHeader
+        origin={originLocationCode}
+        destination={destinationLocationCode}
+        departureDate={formatKoreanDate(departureDate)}
+        returnDate={formatKoreanDate(returnDate)}
+        passengerCount={adults}
+        seatClass={travelClass}
+      />
 
-    {/* 로딩 스피너 모달 */}
-    <FlightLoadingModal visible={loading} />
+      {/* 로딩 스피너 모달 */}
+      <FlightLoadingModal visible={loading} />
 
-    {/* 항공편 리스트 */}
-    <FlatList
-      contentContainerStyle={styles.listContainer}
-      data={mockFlights}
-      keyExtractor={(item, idx) =>
-        `${item.airlineCode}-${item.flightNumber}-${idx}`
-      }
-      renderItem={({ item }) => (
-        <TouchableOpacity onPress={() => handleCardPress(item)}>
-          <View style={styles.card}>
-            {/* 상단 시간/공항 정보 */}
-            <View style={styles.row}>
-              <View style={styles.timeColumn}>
-                <Text style={styles.timeText}>
-                  {formatTime(item.departureTime)}
-                </Text>
-                <Text style={styles.airportText}>{item.departureAirport}</Text>
+      {/* 항공편 리스트 */}
+      <FlatList
+        contentContainerStyle={styles.listContainer}
+        data={mockFlights}
+        keyExtractor={(item, idx) =>
+          `${item.airlineCode}-${item.flightNumber}-${idx}`
+        }
+        renderItem={({ item }) => (
+          <TouchableOpacity onPress={() => handleCardPress(item)}>
+            <View style={styles.card}>
+              {/* 상단 시간/공항 정보 */}
+              <View style={styles.row}>
+                <View style={styles.timeColumn}>
+                  <Text style={styles.timeText}>
+                    {formatTime(item.departureTime)}
+                  </Text>
+                  <Text style={styles.airportText}>
+                    {item.departureAirport}
+                  </Text>
+                </View>
+
+                <View style={styles.centerColumn}>
+                  <View style={styles.line} />
+                  <Text style={styles.durationText}>
+                    {formatDuration(item.duration)}
+                  </Text>
+                  <View style={styles.line} />
+                </View>
+
+                <View style={styles.timeColumn}>
+                  <Text style={styles.timeText}>
+                    {formatTime(item.arrivalTime)}
+                  </Text>
+                  <Text style={styles.airportText}>{item.arrivalAirport}</Text>
+                </View>
               </View>
 
-              <View style={styles.centerColumn}>
-                <View style={styles.line} />
-                <Text style={styles.durationText}>
-                  {formatDuration(item.duration)}
+              {/* 가격 + 항공사 */}
+              <View style={styles.bottomRow}>
+                <Text style={styles.priceText}>
+                  {item.price.toLocaleString()} KRW
                 </Text>
-                <View style={styles.line} />
+                <Text style={styles.carrierText}>{item.airlineName}</Text>
               </View>
 
-              <View style={styles.timeColumn}>
-                <Text style={styles.timeText}>
-                  {formatTime(item.arrivalTime)}
-                </Text>
-                <Text style={styles.airportText}>{item.arrivalAirport}</Text>
+              {/* 하단 아이콘 */}
+              <View style={styles.iconRow}>
+                <TouchableOpacity>
+                  <Entypo name="heart-outlined" size={20} color="gray" />
+                </TouchableOpacity>
+                <TouchableOpacity>
+                  <MaterialIcons name="ios-share" size={20} color="gray" />
+                </TouchableOpacity>
               </View>
             </View>
-
-            {/* 가격 + 항공사 */}
-            <View style={styles.bottomRow}>
-              <Text style={styles.priceText}>
-                {item.price.toLocaleString()} KRW
-              </Text>
-              <Text style={styles.carrierText}>{item.airlineName}</Text>
-            </View>
-
-            {/* 하단 아이콘 */}
-            <View style={styles.iconRow}>
-              <TouchableOpacity>
-                <Entypo name="heart-outlined" size={20} color="gray" />
-              </TouchableOpacity>
-              <TouchableOpacity>
-                <MaterialIcons name="ios-share" size={20} color="gray" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      )}
-    />
-  </View>
-);
-
-
+          </TouchableOpacity>
+        )}
+      />
+    </View>
+  );
 };
 
 export default FlightResultScreen;

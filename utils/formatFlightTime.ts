@@ -1,4 +1,6 @@
-import { DateTime } from "luxon";
+// 현지시간 변환 luxon
+
+import { DateTime } from "luxon"; // DateTime 객체
 import { airportTimezones } from "./airportTimezones";
 
 // 출도착 시간 포맷
