@@ -6,14 +6,18 @@ import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
 import FlightLoadingModal from "../../components/FlightLoadingModal";
+import { ActivityIndicator } from "react-native";
 
 const FavoriteListScreen = () => {
-  const { favorites } = useFavorite();
+  const { favorites, isLoaded } = useFavorite();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const [loading, setLoading] = useState(false);
 
+  if (!isLoaded) {
+    return <ActivityIndicator style={{ flex: 1 }} />;
+  }
   return (
     <View style={styles.container}>
       <Text style={styles.title}>즐겨찾기 항공편</Text>

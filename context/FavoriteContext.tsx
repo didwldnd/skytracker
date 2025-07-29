@@ -1,10 +1,12 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type FavoriteContextType = {
   favorites: FlightSearchResponseDto[];
   toggleFavorite: (flight: FlightSearchResponseDto) => void;
   isFavorite: (flight: FlightSearchResponseDto) => boolean;
+  isLoaded: boolean;
 };
 // 타입 정의
 
@@ -12,6 +14,7 @@ const FavoriteContext = createContext<FavoriteContextType | undefined>(
   undefined
 );
 // createContext -> 전역 상태로 만드는 함수, FavotireContext라는 새로운 Context를 만듦
+const FAVORITE_KEY = "FAVORITE_FLIGHTS";
 
 export const FavoriteProvider = ({
   children,
@@ -20,31 +23,58 @@ export const FavoriteProvider = ({
 }) => {
   const [favorites, setFavorites] = useState<FlightSearchResponseDto[]>([]);
 
+  const getFlightKey = (flight: FlightSearchResponseDto) =>
+    `${flight.airlineCode}-${flight.flightNumber}-${flight.departureAirport}-${flight.arrivalAirport}-${flight.departureTime}`;
+
   const isSameFlight = (
     a: FlightSearchResponseDto,
     b: FlightSearchResponseDto
-  ) =>
-    a.flightNumber === b.flightNumber &&
-    a.departureAirport === b.departureAirport &&
-    a.arrivalAirport === b.arrivalAirport &&
-    a.departureTime === b.departureTime;
+  ) => getFlightKey(a) === getFlightKey(b);
+
   // 즐겨찾기 중복방지
 
   const isFavorite = (flight: FlightSearchResponseDto) =>
     favorites.some((f) => isSameFlight(f, flight));
   // favorites 배열 중 하나라도 isSameFlight 조건 만족 시 true 변환
 
-  const toggleFavorite = (flight: FlightSearchResponseDto) => {
-    if (isFavorite(flight)) {
-      setFavorites((prev) => prev.filter((f) => !isSameFlight(f, flight)));
-    } else {
-      setFavorites((prev) => [...prev, flight]);
+  const savaToStorage = async (data: FlightSearchResponseDto[]) => {
+    try {
+      await AsyncStorage.setItem(FAVORITE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.error("즐겨찾기 저장 실패:", e);
     }
   };
-  // 즐찾 토글
+
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const toggleFavorite = (flight: FlightSearchResponseDto) => {
+    setFavorites((prev) => {
+      const exists = prev.some((f) => isSameFlight(f, flight));
+      // some 메서드 => 조건 만족하는 요소 하나라도 있으면 true, 아니면 false 반환
+      const updated = exists
+        ? prev.filter((f) => !isSameFlight(f, flight))
+        : [...prev, flight];
+      savaToStorage(updated);
+      return updated;
+    });
+  };
+  // 즐찾 토글 (추가 또는 삭제)
+
+  useEffect(() => {
+    const loadFromStorage = async () => {
+      const saved = await AsyncStorage.getItem(FAVORITE_KEY);
+      if (saved) {
+        setFavorites(JSON.parse(saved));
+      }
+      setIsLoaded(true); 
+    };
+    loadFromStorage();
+  }, []);
 
   return (
-    <FavoriteContext.Provider value={{ favorites, toggleFavorite, isFavorite }}>
+    <FavoriteContext.Provider
+      value={{ favorites, toggleFavorite, isFavorite, isLoaded }}
+    >
       {children}
     </FavoriteContext.Provider>
   );
