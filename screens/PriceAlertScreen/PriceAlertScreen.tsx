@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -85,7 +85,7 @@ const formatDate = (isoDate: string) => {
 };
 
 const formatPrice = (price: number) => {
-  return price.toLocaleString("ko-KR") + "원";
+  return price.toLocaleString("ko-KR") + " KRW";
 };
 
 const formatSeatClass = (cls: string) =>
@@ -101,6 +101,18 @@ export default function PriceAlertScreen() {
   const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
     {}
   );
+
+  // 초기 스위치 상태를 설정하는 useEffect
+  // 각 알림 항목에 대해 switchStates[id]를 true로 명시적으로 초기화해줘야 함
+  // 그렇지 않으면 초기 렌더 시 undefined로 처리되어 UI 깜빡임(꺼졌다가 다시 켜지는 현상)이 발생함
+  useEffect(() => {
+    const initialStates: { [key: string]: boolean } = {};
+    alertData.forEach((item) => {
+      initialStates[item.id] = true;
+    });
+    setSwitchStates(initialStates);
+  }, []);
+
   const [globalSwitch, setGlobalSwitch] = useState(true); // 전체 알림 ON
   const [alerts, setAlerts] = useState(alertData);
   const [confirmVisible, setConfirmVisible] = useState(false);

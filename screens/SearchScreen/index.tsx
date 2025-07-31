@@ -1,5 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
@@ -10,14 +16,43 @@ import SeatStopoverSelector from "./SeatStopoverSelector";
 import SearchButtons from "./SearchButtons";
 import PopularScreen from "./PopularScreen";
 import FlightLoadingModal from "../../components/FlightLoadingModal";
-import { ScrollView } from "react-native-gesture-handler";
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
+import SearchModal from "../../components/SearchModal";
+
+const airportData = [
+  { city: "인천", airport: "인천국제공항", code: "ICN" },
+  { city: "뉴델리", airport: "인디라간디국제공항", code: "DEL" },
+  { city: "인도르", airport: "인도레공항", code: "IDR" },
+  { city: "인디애나폴리스", airport: "인디애나폴리스국제공항", code: "IND" },
+  { city: "인스브루크", airport: "인스브루크 공항", code: "INN" },
+  { city: "도쿄", airport: "나리타국제공항", code: "NRT" },
+  { city: "파리", airport: "샤를드골공항", code: "CDG" },
+  { city: "런던", airport: "히드로공항", code: "LHR" },
+  { city: "뉴욕", airport: "존 F. 케네디국제공항", code: "JFK" },
+  { city: "로스앤젤레스", airport: "로스앤젤레스국제공항", code: "LAX" },
+  { city: "시드니", airport: "시드니국제공항", code: "SYD" },
+  { city: "싱가포르", airport: "창이국제공항", code: "SIN" },
+  { city: "홍콩", airport: "홍콩국제공항", code: "HKG" },
+  { city: "베이징", airport: "수도국제공항", code: "PEK" },
+  { city: "상하이", airport: "푸동국제공항", code: "PVG" },
+  { city: "오사카", airport: "간사이국제공항", code: "KIX" },
+  { city: "방콕", airport: "수완나품국제공항", code: "BKK" },
+  { city: "토론토", airport: "피어슨국제공항", code: "YYZ" },
+  { city: "프랑크푸르트", airport: "프랑크푸르트공항", code: "FRA" },
+  { city: "암스테르담", airport: "스키폴공항", code: "AMS" },
+];
 
 const SearchScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
+  const [selectedField, setSelectedField] = useState<
+    "departure" | "destination" | null
+  >(null);
+  const [showSearchModal, setShowSearchModal] = useState(false);
+
   const [departureDate, setDepartureDate] = useState<Date>(new Date());
   const [returnDate, setReturnDate] = useState<Date>(new Date());
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
@@ -30,6 +65,14 @@ const SearchScreen = () => {
   const [showPassengerModal, setShowPassengerModal] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [showMinWarning, setShowMinWarning] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [startDate, setStartDate] = useState<string | null>(null);
+  const [endDate, setEndDate] = useState<string | null>(null);
+  const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
+  const [currentMonth, setCurrentMonth] = useState(
+    new Date().toISOString().split("T")[0]
+  );
 
   const [passengerCounts, setPassengerCounts] = useState({
     adult: 1,
@@ -45,6 +88,12 @@ const SearchScreen = () => {
     0
   );
 
+  const handleSelectAirport = (code: string) => {
+    if (selectedField === "departure") setDeparture(code);
+    else if (selectedField === "destination") setDestination(code);
+    setShowSearchModal(false);
+  };
+
   const increment = (type: keyof typeof passengerCounts) => {
     if (totalPassengers >= 9) {
       setShowWarning(true);
@@ -57,13 +106,18 @@ const SearchScreen = () => {
     const newValue = passengerCounts[type] - 1;
     const newCounts = { ...passengerCounts, [type]: Math.max(newValue, 0) };
     const newTotal = Object.values(newCounts).reduce((a, b) => a + b, 0);
-
     if (newTotal < 1) {
       setShowMinWarning(true);
       return;
     }
-
     setPassengerCounts(newCounts);
+  };
+
+  const handleSwap = () => {
+    setDeparture((prev) => {
+      setDestination(prev);
+      return destination;
+    });
   };
 
   const resetForm = () => {
@@ -85,23 +139,6 @@ const SearchScreen = () => {
     setEndDate(null);
     setMarkedDates({});
   };
-
-  const handleSwap = () => {
-    setDeparture((prevDeparture) => {
-      setDestination(prevDeparture);
-      return destination;
-    });
-  };
-
-  const [loading, setLoading] = useState(false); // 검색버튼 로딩 애니메이션
-
-  const [startDate, setStartDate] = useState<string | null>(null);
-  const [endDate, setEndDate] = useState<string | null>(null);
-  const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
-
-  const [currentMonth, setCurrentMonth] = useState(
-    new Date().toISOString().split("T")[0]
-  );
 
   const mockResults: FlightSearchResponseDto[] = [
     {
@@ -131,9 +168,11 @@ const SearchScreen = () => {
         <LocationSelector
           departure={departure}
           destination={destination}
-          onChangeDeparture={setDeparture}
-          onChangeDestination={setDestination}
           onSwap={handleSwap}
+          onSelectField={(field) => {
+            setSelectedField(field);
+            setShowSearchModal(true);
+          }}
         />
 
         <DateSelector
@@ -153,7 +192,6 @@ const SearchScreen = () => {
           setCurrentMonth={setCurrentMonth}
         />
 
-        {/* 여행객 수 선택 버튼 */}
         <View style={styles.selectorRow}>
           <View style={styles.selectorItem}>
             <Text style={styles.label}>여행객</Text>
@@ -165,20 +203,7 @@ const SearchScreen = () => {
             </TouchableOpacity>
           </View>
 
-          <PassengerSelector
-            visible={showPassengerModal}
-            counts={passengerCounts}
-            onIncrement={increment}
-            onDecrement={decrement}
-            onClose={() => setShowPassengerModal(false)}
-            showWarning={showWarning}
-            showMinWarning={showMinWarning}
-            onDismissWarning={() => setShowWarning(false)}
-            onDismissMinWarning={() => setShowMinWarning(false)}
-          />
-
           {[
-            // 좌석 + 경유 횟수
             { label: "좌석", value: seatClass, type: "seatClass" },
             { label: "경유횟수", value: stopover, type: "stopover" },
           ].map((item) => (
@@ -197,6 +222,18 @@ const SearchScreen = () => {
           ))}
         </View>
 
+        <PassengerSelector
+          visible={showPassengerModal}
+          counts={passengerCounts}
+          onIncrement={increment}
+          onDecrement={decrement}
+          onClose={() => setShowPassengerModal(false)}
+          showWarning={showWarning}
+          showMinWarning={showMinWarning}
+          onDismissWarning={() => setShowWarning(false)}
+          onDismissMinWarning={() => setShowMinWarning(false)}
+        />
+
         <SeatStopoverSelector
           visible={modalVisible}
           modalType={modalType}
@@ -206,6 +243,7 @@ const SearchScreen = () => {
             else setStopover(value);
           }}
         />
+
         <SearchButtons
           onReset={resetForm}
           onSearch={() => {
@@ -220,17 +258,23 @@ const SearchScreen = () => {
                 adults: totalPassengers,
                 travelClass: seatClass,
                 stopover,
-                results: mockResults, 
+                results: mockResults,
               });
             }, 2000);
           }}
           disabled={!departure || !destination}
         />
+
         <FlightLoadingModal visible={loading} />
-
-        {/* // FlightResult로 네비게이션, 검색 애니메이션 2초로 일단 고정 */}
-
         <PopularScreen />
+        <SearchModal
+  visible={showSearchModal}
+  onClose={() => setShowSearchModal(false)}
+  onSelect={handleSelectAirport}
+  data={airportData}
+  fieldLabel={selectedField === "departure" ? "출발지" : "도착지"}
+/>
+
       </View>
     </ScrollView>
   );

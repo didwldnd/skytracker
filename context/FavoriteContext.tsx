@@ -37,7 +37,7 @@ export const FavoriteProvider = ({
     favorites.some((f) => isSameFlight(f, flight));
   // favorites 배열 중 하나라도 isSameFlight 조건 만족 시 true 변환
 
-  const savaToStorage = async (data: FlightSearchResponseDto[]) => {
+  const saveToStorage = async (data: FlightSearchResponseDto[]) => {
     try {
       await AsyncStorage.setItem(FAVORITE_KEY, JSON.stringify(data));
     } catch (e) {
@@ -54,7 +54,7 @@ export const FavoriteProvider = ({
       const updated = exists
         ? prev.filter((f) => !isSameFlight(f, flight))
         : [...prev, flight];
-      savaToStorage(updated);
+      saveToStorage(updated);
       return updated;
     });
   };
