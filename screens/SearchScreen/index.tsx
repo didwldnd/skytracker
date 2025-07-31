@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,33 +16,10 @@ import SeatStopoverSelector from "./SeatStopoverSelector";
 import SearchButtons from "./SearchButtons";
 import PopularScreen from "./PopularScreen";
 import FlightLoadingModal from "../../components/FlightLoadingModal";
-import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 import SearchModal from "../../components/SearchModal";
 import { searchFlights } from "../../utils/api";
 import { FlightSearchRequestDto } from "../../types/FlightSearchRequestDto";
-
-const airportData = [
-  { city: "인천", airport: "인천국제공항", code: "ICN" },
-  { city: "뉴델리", airport: "인디라간디국제공항", code: "DEL" },
-  { city: "인도르", airport: "인도레공항", code: "IDR" },
-  { city: "인디애나폴리스", airport: "인디애나폴리스국제공항", code: "IND" },
-  { city: "인스브루크", airport: "인스브루크 공항", code: "INN" },
-  { city: "도쿄", airport: "나리타국제공항", code: "NRT" },
-  { city: "파리", airport: "샤를드골공항", code: "CDG" },
-  { city: "런던", airport: "히드로공항", code: "LHR" },
-  { city: "뉴욕", airport: "존 F. 케네디국제공항", code: "JFK" },
-  { city: "로스앤젤레스", airport: "로스앤젤레스국제공항", code: "LAX" },
-  { city: "시드니", airport: "시드니국제공항", code: "SYD" },
-  { city: "싱가포르", airport: "창이국제공항", code: "SIN" },
-  { city: "홍콩", airport: "홍콩국제공항", code: "HKG" },
-  { city: "베이징", airport: "수도국제공항", code: "PEK" },
-  { city: "상하이", airport: "푸동국제공항", code: "PVG" },
-  { city: "오사카", airport: "간사이국제공항", code: "KIX" },
-  { city: "방콕", airport: "수완나품국제공항", code: "BKK" },
-  { city: "토론토", airport: "피어슨국제공항", code: "YYZ" },
-  { city: "프랑크푸르트", airport: "프랑크푸르트공항", code: "FRA" },
-  { city: "암스테르담", airport: "스키폴공항", code: "AMS" },
-];
+import { airportData } from "../../data/airportData";
 
 const SearchScreen = () => {
   const navigation =
