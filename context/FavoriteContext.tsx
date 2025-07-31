@@ -23,8 +23,8 @@ export const FavoriteProvider = ({
 }) => {
   const [favorites, setFavorites] = useState<FlightSearchResponseDto[]>([]);
 
-  const getFlightKey = (flight: FlightSearchResponseDto) =>
-    `${flight.airlineCode}-${flight.flightNumber}-${flight.departureAirport}-${flight.arrivalAirport}-${flight.departureTime}`;
+const getFlightKey = (flight: FlightSearchResponseDto) =>
+  `${flight.airlineCode}-${flight.flightNumber}-${flight.departureAirport}-${flight.arrivalAirport}-${flight.outboundDepartureTime}-${flight.returnDepartureTime}`;
 
   const isSameFlight = (
     a: FlightSearchResponseDto,

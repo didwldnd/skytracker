@@ -14,7 +14,8 @@ const formatTime = (iso: string) => {
   ).padStart(2, "0")}`;
 };
 
-const formatDuration = (iso: string) => {
+const formatDuration = (iso: string | undefined) => {
+  if (!iso) return "정보 없음";
   const match = iso.match(/PT(\d+H)?(\d+M)?/);
   const hours = match?.[1]?.replace("H", "") ?? "0";
   const minutes = match?.[2]?.replace("M", "") ?? "0";
@@ -28,24 +29,30 @@ const FlightCard = ({
   flight: FlightSearchResponseDto;
   onPress?: () => void;
 }) => {
+  
   const { toggleFavorite, isFavorite } = useFavorite();
   const favorite = isFavorite(flight);
 
+  
+  const departureTime = flight.departureTime || flight.outboundDepartureTime;
+  const arrivalTime = flight.arrivalTime || flight.returnArrivalTime;
+  const duration = flight.duration || flight.outboundDuration;
+
   return (
     <TouchableOpacity onPress={onPress}>
-      <View style={styles.card}>
+        <View style={styles.card}>
         <View style={styles.row}>
           <View style={styles.timeColumn}>
-            <Text style={styles.timeText}>{formatTime(flight.departureTime)}</Text>
+            <Text style={styles.timeText}>{formatTime(departureTime ?? "")}</Text>
             <Text style={styles.airportText}>{flight.departureAirport}</Text>
           </View>
           <View style={styles.centerColumn}>
             <View style={styles.line} />
-            <Text style={styles.durationText}>{formatDuration(flight.duration)}</Text>
+            <Text style={styles.durationText}>{formatDuration(duration)}</Text>
             <View style={styles.line} />
           </View>
           <View style={styles.timeColumn}>
-            <Text style={styles.timeText}>{formatTime(flight.arrivalTime)}</Text>
+            <Text style={styles.timeText}>{formatTime(arrivalTime ?? "")}</Text>
             <Text style={styles.airportText}>{flight.arrivalAirport}</Text>
           </View>
         </View>

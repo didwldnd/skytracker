@@ -18,6 +18,8 @@ import PopularScreen from "./PopularScreen";
 import FlightLoadingModal from "../../components/FlightLoadingModal";
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 import SearchModal from "../../components/SearchModal";
+import { searchFlights } from "../../utils/api";
+import { FlightSearchRequestDto } from "../../types/FlightSearchRequestDto";
 
 const airportData = [
   { city: "인천", airport: "인천국제공항", code: "ICN" },
@@ -140,26 +142,6 @@ const SearchScreen = () => {
     setMarkedDates({});
   };
 
-  const mockResults: FlightSearchResponseDto[] = [
-    {
-      airlineCode: "KE",
-      airlineName: "KOREAN AIR",
-      flightNumber: 907,
-      departureAirport: "ICN",
-      departureTime: "2025-07-25",
-      arrivalAirport: "LHR",
-      arrivalTime: "2025-07-25T17:20:00",
-      duration: "PT14H25M",
-      travelClass: "ECONOMY",
-      numberOfBookableSeats: 9,
-      hasCheckedBags: true,
-      isRefundable: false,
-      isChangeable: false,
-      currency: "KRW",
-      price: 1118800,
-    },
-  ];
-
   return (
     <ScrollView>
       <View style={styles.container}>
@@ -246,21 +228,44 @@ const SearchScreen = () => {
 
         <SearchButtons
           onReset={resetForm}
-          onSearch={() => {
+          onSearch={async () => {
             setLoading(true);
-            setTimeout(() => {
-              setLoading(false);
+            try {
+              const requestDto: FlightSearchRequestDto = {
+                originLocationAirport: departure,
+                destinationLocationAirPort: destination,
+                departureDate: departureDate.toISOString().split("T")[0],
+                returnDate: returnDate.toISOString().split("T")[0],
+                currencyCode: "KRW",
+                nonStop: stopover === "직항",
+                travelClass:
+                  seatClass === "일반석"
+                    ? "ECONOMY"
+                    : seatClass === "비즈니스석"
+                    ? "BUSINESS"
+                    : undefined,
+                adults: passengerCounts.adult,
+                max: 10,
+              };
+
+              const results = await searchFlights(requestDto);
+
               navigation.navigate("FlightResult", {
                 originLocationCode: departure,
                 destinationLocationCode: destination,
                 departureDate: departureDate.toISOString(),
                 returnDate: returnDate.toISOString(),
-                adults: totalPassengers,
+                adults: passengerCounts.adult,
                 travelClass: seatClass,
                 stopover,
-                results: mockResults,
+                results,
               });
-            }, 2000);
+            } catch (error) {
+              console.error("항공편 검색 실패:", error);
+              // 원한다면 여기에서 Alert.alert(...) 같은 사용자 알림도 가능
+            } finally {
+              setLoading(false);
+            }
           }}
           disabled={!departure || !destination}
         />
@@ -268,13 +273,12 @@ const SearchScreen = () => {
         <FlightLoadingModal visible={loading} />
         <PopularScreen />
         <SearchModal
-  visible={showSearchModal}
-  onClose={() => setShowSearchModal(false)}
-  onSelect={handleSelectAirport}
-  data={airportData}
-  fieldLabel={selectedField === "departure" ? "출발지" : "도착지"}
-/>
-
+          visible={showSearchModal}
+          onClose={() => setShowSearchModal(false)}
+          onSelect={handleSelectAirport}
+          data={airportData}
+          fieldLabel={selectedField === "departure" ? "출발지" : "도착지"}
+        />
       </View>
     </ScrollView>
   );

@@ -1,7 +1,12 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
 import { formatFlightTime, formatDuration } from "../../utils/formatFlightTime";
-import { FontAwesome, Feather, Entypo, MaterialCommunityIcons } from "@expo/vector-icons";
+import {
+  FontAwesome,
+  Feather,
+  Entypo,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../../App";
 
@@ -10,6 +15,7 @@ type DetailRouteProp = RouteProp<RootStackParamList, "FlightDetail">;
 const FlightDetailScreen: React.FC = () => {
   const { params } = useRoute<DetailRouteProp>();
   const { flight } = params;
+  console.log("상세 flight 데이터:", flight);
 
   return (
     <ScrollView style={styles.container}>
@@ -35,23 +41,56 @@ const FlightDetailScreen: React.FC = () => {
 
       {/* 비행 정보 */}
       <SectionCard
-        title="비행 정보"
+        title="가는 편 정보"
         icon={<Entypo name="location-pin" size={20} color="#0be5ecd7" />}
       >
         <LocationBlock
           title="출발"
           airport={flight.departureAirport}
-          time={formatFlightTime(flight.departureTime, flight.departureAirport)}
+          time={formatFlightTime(
+            flight.outboundDepartureTime,
+            flight.departureAirport
+          )}
         />
         <LocationBlock
           title="도착"
           airport={flight.arrivalAirport}
-          time={formatFlightTime(flight.arrivalTime, flight.arrivalAirport)}
+          time={formatFlightTime(
+            flight.outboundArrivalTime,
+            flight.arrivalAirport
+          )}
         />
         <InfoRow
           icon={<Feather name="calendar" size={18} color="#0be5ecd7" />}
           label="비행 시간"
-          value={formatDuration(flight.duration)}
+          value={formatDuration(flight.outboundDuration)}
+        />
+      </SectionCard>
+
+      <SectionCard
+        title="오는 편 정보"
+        icon={<Entypo name="location-pin" size={20} color="#0be5ecd7" />}
+      >
+        <LocationBlock
+          title="출발"
+          airport={flight.arrivalAirport}
+          time={formatFlightTime(
+            flight.returnDepartureTime,
+            flight.arrivalAirport
+          )}
+        />
+        <LocationBlock
+          title="도착"
+          airport={flight.departureAirport}
+          time={formatFlightTime(
+            flight.returnArrivalTime,
+            flight.departureAirport
+          )}
+        />
+        <InfoRow
+          icon={<Feather name="calendar" size={18} color="#0be5ecd7" />}
+          label="비행 시간"
+          value={formatDuration(flight.returnDuration)}
         />
       </SectionCard>
 
@@ -81,7 +120,11 @@ const FlightDetailScreen: React.FC = () => {
       <View style={styles.card}>
         <View style={styles.priceHeader}>
           <View style={styles.headerTitleRow}>
-            <MaterialCommunityIcons name="currency-krw" size={20} color="white" />
+            <MaterialCommunityIcons
+              name="currency-krw"
+              size={20}
+              color="white"
+            />
             <Text style={styles.priceTitle}>가격 정보</Text>
           </View>
         </View>
@@ -157,13 +200,13 @@ const LocationBlock = ({
   time,
 }: {
   title: string;
-  airport: string;
-  time: string;
+  airport?: string;
+  time?: string;
 }) => (
   <View style={{ marginBottom: 12 }}>
     <Text style={{ fontWeight: "600", color: "#1e293b" }}>{title}</Text>
     <Text style={{ fontSize: 18, fontWeight: "bold", color: "#111827" }}>
-      {airport}
+      {airport || "정보 없음"}
     </Text>
     <View
       style={{
@@ -174,7 +217,7 @@ const LocationBlock = ({
       }}
     >
       <Feather name="clock" size={16} color="#6b7280" />
-      <Text style={{ color: "#6b7280" }}>{time} (현지시간)</Text>
+      <Text style={{ color: "#6b7280" }}>{time || "시간 없음"} (현지시간)</Text>
     </View>
   </View>
 );
@@ -186,7 +229,7 @@ const InfoRow = ({
 }: {
   icon: React.ReactNode;
   label: string;
-  value: string;
+  value?: string;
 }) => (
   <View
     style={{
@@ -200,7 +243,7 @@ const InfoRow = ({
     <View>
       <Text style={{ fontWeight: "600", color: "#1e293b" }}>{label}</Text>
       <Text style={{ fontSize: 18, fontWeight: "bold", color: "black" }}>
-        {value}
+        {value || "정보 없음"}
       </Text>
     </View>
   </View>
@@ -247,5 +290,3 @@ const ToggleRow = ({ label, value }: { label: string; value: boolean }) => (
 );
 
 export default FlightDetailScreen;
-
-// 현지시간은 계속 추가 시켜줘야함

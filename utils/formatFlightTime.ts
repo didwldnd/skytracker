@@ -1,28 +1,19 @@
-// 현지시간 변환 luxon
+export const formatFlightTime = (iso?: string, airportCode?: string) => {
+  if (!iso) return "시간 없음";
+  const date = new Date(iso);
+  if (isNaN(date.getTime())) return "시간 없음";
 
-import { DateTime } from "luxon"; // DateTime 객체
-import { airportTimezones } from "./airportTimezones";
-
-// 출도착 시간 포맷
-export const formatFlightTime = (isoDate: string, airportCode: string) => {
-  const timezone = airportTimezones[airportCode];
-  if (!timezone) return isoDate;
-
-  const local = DateTime.fromISO(isoDate, { zone: timezone });
-  return local.toFormat("M월 d일 a h:mm");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
 };
 
-// duration (PT14H25M) → '14시간 25분'
-export const formatDuration = (isoDuration: string): string => {
-  const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
-  // 정규식 : PT뒤에 값에 따라 match
-  if (!match) return isoDuration;
+export const formatDuration = (duration?: string) => {
+  if (!duration) return "정보 없음";
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!match) return "정보 없음";
 
-  const hours = parseInt(match[1] ?? "0", 10);
-  const minutes = parseInt(match[2] ?? "0", 10);
-
-  const hourPart = hours > 0 ? `${hours}시간` : "";
-  const minutePart = minutes > 0 ? `${minutes}분` : "";
-
-  return `${hourPart} ${minutePart}`.trim() || "0분";
+  const hours = match[1] ?? "0";
+  const minutes = match[2] ?? "0";
+  return `${hours}시간 ${minutes}분`;
 };

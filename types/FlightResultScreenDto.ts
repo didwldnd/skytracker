@@ -15,4 +15,11 @@ export interface FlightSearchResponseDto {
   isChangeable: boolean;
   currency: string;
   price: number;
+
+  outboundDepartureTime: string;
+  outboundArrivalTime: string;
+  outboundDuration: string;
+  returnDepartureTime: string;
+  returnArrivalTime: string;
+  returnDuration: string;
 }
