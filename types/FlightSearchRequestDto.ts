@@ -5,7 +5,8 @@ export interface FlightSearchRequestDto {
   returnDate?: string;        // 왕복일 경우
   currencyCode?: string;
   nonStop?: boolean;
-  travelClass?: 'ECONOMY' | 'BUSINESS';
+  travelClass?: "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST";
   adults: number;
+  maxNumberOfConnections?: number;
   max?: number;
 }

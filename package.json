@@ -15,7 +15,7 @@
     "@react-native-community/datetimepicker": "8.4.1",
     "@react-native-picker/picker": "2.11.1",
     "@react-navigation/bottom-tabs": "^6.5.17",
-    "@react-navigation/native": "^6.1.7",
+    "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.9.12",
     "axios": "^1.11.0",
     "expo": "~53.0.17",
@@ -33,7 +33,7 @@
     "react-native-reanimated": "~3.17.4",
     "react-native-root-toast": "^4.0.1",
     "react-native-safe-area-context": "^5.5.2",
-    "react-native-screens": "~4.12.0",
+    "react-native-screens": "~4.11.1",
     "react-native-switch-toggle": "^2.2.1",
     "react-native-vector-icons": "^10.2.0"
   },

@@ -6,69 +6,14 @@ import {
   Switch,
   TouchableOpacity,
   StyleSheet,
+  Modal,
 } from "react-native";
-import { Modal } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
-
-// 예시 데이터
-const alertData = [
-  {
-    id: "1",
-    airlineCode: "BX",
-    airlineName: "AIR BUSAN",
-    flightNumber: 101,
-    departureAirport: "PUS",
-    departureTime: "2025-08-25T08:00:00",
-    arrivalAirport: "GMP",
-    arrivalTime: "2025-08-28T09:10:00",
-    duration: "PT1H10M",
-    travelClass: "ECONOMY",
-    numberOfBookableSeats: 1,
-    hasCheckedBags: true,
-    isRefundable: false,
-    isChangeable: false,
-    currency: "KRW",
-    price: 86010,
-  },
-  {
-    id: "2",
-    airlineCode: "TW",
-    airlineName: "T'WAY AIR",
-    flightNumber: 202,
-    departureAirport: "ICN",
-    departureTime: "2025-09-02T12:30:00",
-    arrivalAirport: "CJU",
-    arrivalTime: "2025-09-05T13:40:00",
-    duration: "PT1H10M",
-    travelClass: "ECONOMY",
-    numberOfBookableSeats: 2,
-    hasCheckedBags: false,
-    isRefundable: true,
-    isChangeable: true,
-    currency: "KRW",
-    price: 49500,
-  },
-  {
-    id: "3",
-    airlineCode: "JL",
-    airlineName: "JAPAN AIRLINES",
-    flightNumber: 305,
-    departureAirport: "JFK",
-    departureTime: "2025-09-22T14:00:00",
-    arrivalAirport: "NRT",
-    arrivalTime: "2025-09-25T16:30:00",
-    duration: "PT14H30M",
-    travelClass: "ECONOMY",
-    numberOfBookableSeats: 4,
-    hasCheckedBags: true,
-    isRefundable: true,
-    isChangeable: false,
-    currency: "KRW",
-    price: 249500,
-  },
-];
+import { usePriceAlert } from "../../context/PriceAlertContext";
+import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const airportMap: Record<string, string> = {
   PUS: "부산",
@@ -77,6 +22,57 @@ const airportMap: Record<string, string> = {
   CJU: "제주",
   JFK: "뉴욕",
   NRT: "도쿄",
+  AKL: "오클랜드",
+  AMS: "암스테르담",
+  ARN: "스톡홀름",
+  ATL: "애틀랜타",
+  BCN: "바르셀로나",
+  BKK: "방콕",
+  BOM: "뭄바이",
+  BRU: "브뤼셀",
+  CDG: "파리",
+  CPH: "코펜하겐",
+  CPT: "케이프타운",
+  DCA: "워싱턴 D.C.",
+  DEL: "델리",
+  DFW: "댈러스",
+  DOH: "도하",
+  DUB: "더블린",
+  DXB: "두바이",
+  EWR: "뉴욕",
+  FCO: "로마",
+  FRA: "프랑크푸르트",
+  GIG: "리우데자네이루",
+  GRU: "상파울루",
+  HEL: "헬싱키",
+  HKG: "홍콩",
+  HND: "도쿄",
+  IST: "이스탄불",
+  KIX: "오사카",
+  KUL: "쿠알라룸푸르",
+  LAX: "로스앤젤레스",
+  LGA: "뉴욕",
+  LGW: "런던",
+  LHR: "런던",
+  MAD: "마드리드",
+  MEL: "멜버른",
+  MIA: "마이애미",
+  MUC: "뮌헨",
+  MXP: "밀라노",
+  ORD: "시카고",
+  ORY: "파리",
+  OSL: "오슬로",
+  PEK: "베이징",
+  PER: "퍼스",
+  PVG: "상하이",
+  SFO: "샌프란시스코",
+  SIN: "싱가포르",
+  SYD: "시드니",
+  VIE: "빈",
+  YUL: "몬트리올",
+  YVR: "밴쿠버",
+  YYZ: "토론토",
+  ZRH: "취리히",
 };
 
 const formatDate = (isoDate: string) => {
@@ -88,42 +84,47 @@ const formatPrice = (price: number) => {
   return price.toLocaleString("ko-KR") + " KRW";
 };
 
-const formatSeatClass = (cls: string) =>
-  cls === "ECONOMY" ? "일반석" : cls.toLowerCase();
+const formatSeatClass = (cls: string) => {
+  switch (cls) {
+    case "ECONOMY":
+      return "일반석";
+    case "PREMIUM_ECONOMY":
+      return "프리미엄일반석";
+    case "BUSINESS":
+      return "비즈니스석";
+    case "FIRST":
+      return "일등석";
+    default:
+      return cls;
+  }
+};
 
-const getTripType = (depart: string, ret: string) =>
-  depart.split("T")[0] !== ret.split("T")[0] ? "왕복" : "편도";
+const getTripType = (depart?: string, ret?: string) =>
+  depart?.split("T")[0] !== ret?.split("T")[0] ? "왕복" : "편도";
 
 export default function PriceAlertScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  const { alerts, removeAlert } = usePriceAlert();
+
   const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
     {}
   );
-
-  // 초기 스위치 상태를 설정하는 useEffect
-  // 각 알림 항목에 대해 switchStates[id]를 true로 명시적으로 초기화해줘야 함
-  // 그렇지 않으면 초기 렌더 시 undefined로 처리되어 UI 깜빡임(꺼졌다가 다시 켜지는 현상)이 발생함
-  useEffect(() => {
-    const initialStates: { [key: string]: boolean } = {};
-    alertData.forEach((item) => {
-      initialStates[item.id] = true;
-    });
-    setSwitchStates(initialStates);
-  }, []);
-
-  const [globalSwitch, setGlobalSwitch] = useState(true); // 전체 알림 ON
-  const [alerts, setAlerts] = useState(alertData);
+  const [globalSwitch, setGlobalSwitch] = useState(true);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  // 알림 삭제 함수
-  const handleDelete = (id: string) => {
-    setAlerts((prev) => prev.filter((item) => item.id !== id));
-  };
+  // 초기 스위치 ON으로 세팅
+  useEffect(() => {
+    const initialStates: { [key: string]: boolean } = {};
+    alerts.forEach((item) => {
+      const key = `${item.flightNumber}-${item.outboundDepartureTime}`;
+      initialStates[key] = true;
+    });
+    setSwitchStates(initialStates);
+  }, [alerts]);
 
-  // 개별 스위치 토글
   const toggleSwitch = (id: string) => {
     setSwitchStates((prev) => ({
       ...prev,
@@ -131,29 +132,35 @@ export default function PriceAlertScreen() {
     }));
   };
 
-  // 전체 알림 ON/OFF
   const toggleGlobalSwitch = () => {
     const newValue = !globalSwitch;
     setGlobalSwitch(newValue);
 
     const updatedStates: { [key: string]: boolean } = {};
-    alertData.forEach((item) => {
-      updatedStates[item.id] = newValue;
+    alerts.forEach((item) => {
+      const key = `${item.flightNumber}-${item.outboundDepartureTime}`;
+      updatedStates[key] = newValue;
     });
     setSwitchStates(updatedStates);
   };
 
-  const renderItem = ({ item }: { item: (typeof alertData)[0] }) => {
+  const renderItem = ({ item }: { item: FlightSearchResponseDto }) => {
+    const id = `${item.flightNumber}-${item.outboundDepartureTime}`;
     const from =
-      airportMap[item.departureAirport] + ` (${item.departureAirport})`;
-    const to = airportMap[item.arrivalAirport] + ` (${item.arrivalAirport})`;
-    const departDate = formatDate(item.departureTime);
-    const returnDate = formatDate(item.arrivalTime);
+      airportMap[item.departureAirport.toUpperCase()] +
+      ` (${item.departureAirport})`;
+    const to =
+      airportMap[item.arrivalAirport.toUpperCase()] +
+      ` (${item.arrivalAirport})`;
+    const departDate = formatDate(item.outboundDepartureTime);
+    const returnDate = item.returnArrivalTime
+      ? formatDate(item.returnArrivalTime)
+      : "-";
     const seat = `${getTripType(
-      item.departureTime,
-      item.arrivalTime
+      item.outboundDepartureTime,
+      item.returnArrivalTime
     )}, ${formatSeatClass(item.travelClass)}`;
-    const passenger = `${item.numberOfBookableSeats}여행객`;
+    const passenger = `잔여 ${item.numberOfBookableSeats}석`;
     const price = formatPrice(item.price);
 
     return (
@@ -176,7 +183,7 @@ export default function PriceAlertScreen() {
           <View style={styles.right}>
             <TouchableOpacity
               onPress={() => {
-                setPendingDeleteId(item.id);
+                setPendingDeleteId(id);
                 setConfirmVisible(true);
               }}
             >
@@ -193,12 +200,13 @@ export default function PriceAlertScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
         <View style={styles.footer}>
           <View style={styles.footerRight}>
             <Text style={styles.footerLabel}>알림</Text>
             <Switch
-              value={switchStates[item.id] ?? true}
-              onValueChange={() => toggleSwitch(item.id)}
+              value={switchStates[id] ?? true}
+              onValueChange={() => toggleSwitch(id)}
             />
           </View>
         </View>
@@ -209,16 +217,25 @@ export default function PriceAlertScreen() {
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <View style={styles.globalToggle}>
-        <Text style={styles.globalToggleText}>
-          {globalSwitch ? "전체 알림" : "전체 알림"}
-        </Text>
+        <Text style={styles.globalToggleText}>전체 알림</Text>
         <Switch value={globalSwitch} onValueChange={toggleGlobalSwitch} />
       </View>
 
       <FlatList
         data={alerts}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) =>
+          `${item.flightNumber}-${item.departureAirport}-${
+            item.arrivalAirport
+          }-${item.outboundDepartureTime}-${
+            item.returnDepartureTime ?? "NONE"
+          }-${item.price}`
+        }
         renderItem={renderItem}
+        ListEmptyComponent={
+          <Text style={{ textAlign: "center", marginTop: 30, color: "#888" }}>
+            등록된 항공 알림이 없습니다.
+          </Text>
+        }
       />
 
       <Modal visible={confirmVisible} transparent animationType="fade">
@@ -232,11 +249,12 @@ export default function PriceAlertScreen() {
               <TouchableOpacity
                 style={styles.confirmDelete}
                 onPress={() => {
-                  if (pendingDeleteId) {
-                    setAlerts((prev) =>
-                      prev.filter((item) => item.id !== pendingDeleteId)
-                    );
-                  }
+                  const flight = alerts.find(
+                    (f) =>
+                      `${f.flightNumber}-${f.outboundDepartureTime}` ===
+                      pendingDeleteId
+                  );
+                  if (flight) removeAlert(flight);
                   setConfirmVisible(false);
                   setPendingDeleteId(null);
                 }}
@@ -325,7 +343,7 @@ const styles = StyleSheet.create({
   footer: {
     marginTop: 12,
     flexDirection: "row",
-    justifyContent: "flex-end", // 오른쪽 정렬
+    justifyContent: "flex-end",
     alignItems: "center",
   },
   deleteText: {
@@ -366,11 +384,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 6,
-  },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
   },
   footerRight: {
     flexDirection: "row",

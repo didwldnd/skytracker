@@ -203,49 +203,64 @@ const SearchScreen = () => {
           }}
         />
 
-        <SearchButtons
-          onReset={resetForm}
-          onSearch={async () => {
-            setLoading(true);
-            try {
-              const requestDto: FlightSearchRequestDto = {
-                originLocationAirport: departure,
-                destinationLocationAirPort: destination,
-                departureDate: departureDate.toISOString().split("T")[0],
-                returnDate: returnDate.toISOString().split("T")[0],
-                currencyCode: "KRW",
-                nonStop: stopover === "직항",
-                travelClass:
-                  seatClass === "일반석"
-                    ? "ECONOMY"
-                    : seatClass === "비즈니스석"
-                    ? "BUSINESS"
-                    : undefined,
-                adults: passengerCounts.adult,
-                max: 10,
-              };
+       <SearchButtons
+  onReset={resetForm}
+  onSearch={async () => {
+    setLoading(true);
+    try {
+      // stopover 옵션을 API에 맞춰 변환
+      let nonStop: boolean | undefined = undefined;
+      let maxNumberOfConnections: number | undefined = undefined;
 
-              const results = await searchFlights(requestDto);
+      if (stopover === "직항만") {
+        nonStop = true;
+      } else if (stopover === "직항 또는 1회") {
+        maxNumberOfConnections = 1;
+      }
 
-              navigation.navigate("FlightResult", {
-                originLocationCode: departure,
-                destinationLocationCode: destination,
-                departureDate: departureDate.toISOString(),
-                returnDate: returnDate.toISOString(),
-                adults: passengerCounts.adult,
-                travelClass: seatClass,
-                stopover,
-                results,
-              });
-            } catch (error) {
-              console.error("항공편 검색 실패:", error);
-              // 원한다면 여기에서 Alert.alert(...) 같은 사용자 알림도 가능
-            } finally {
-              setLoading(false);
-            }
-          }}
-          disabled={!departure || !destination}
-        />
+      const requestDto: FlightSearchRequestDto = {
+        originLocationAirport: departure,
+        destinationLocationAirPort: destination,
+        departureDate: departureDate.toISOString().split("T")[0],
+        returnDate: returnDate.toISOString().split("T")[0],
+        currencyCode: "KRW",
+        travelClass:
+          seatClass === "일반석"
+            ? "ECONOMY"
+            : seatClass === "프리미엄일반석"
+            ? "PREMIUM_ECONOMY"
+            : seatClass === "비즈니스"
+            ? "BUSINESS"
+            : seatClass === "일등석"
+            ? "FIRST"
+            : undefined,
+        adults: passengerCounts.adult,
+        max: 10,
+        nonStop, // 직항만이면 true
+        maxNumberOfConnections, // 직항 또는 1회면 1
+      };
+
+      const results = await searchFlights(requestDto);
+
+      navigation.navigate("FlightResult", {
+        originLocationCode: departure,
+        destinationLocationCode: destination,
+        departureDate: departureDate.toISOString(),
+        returnDate: returnDate.toISOString(),
+        adults: passengerCounts.adult,
+        travelClass: seatClass,
+        stopover,
+        results,
+      });
+    } catch (error) {
+      console.error("항공편 검색 실패:", error);
+    } finally {
+      setLoading(false);
+    }
+  }}
+  disabled={!departure || !destination}
+/>
+
 
         <FlightLoadingModal visible={loading} />
         <PopularScreen />

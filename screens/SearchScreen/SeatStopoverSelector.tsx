@@ -1,4 +1,3 @@
-// screens/SearchScreen/SeatStopoverSelector.tsx
 import React from "react";
 import {
   View,

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
-import { fetchAirports } from "../utils/amadeus"; // 경로 확인
 
 interface Airport {
   city: string;

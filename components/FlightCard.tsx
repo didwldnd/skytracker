@@ -3,6 +3,8 @@ import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import { FontAwesome } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
+import { usePriceAlert } from "../context/PriceAlertContext";
 import { useFavorite } from "../context/FavoriteContext";
 
 const THEME_COLOR = "#0be5ecd7";
@@ -29,21 +31,24 @@ const FlightCard = ({
   flight: FlightSearchResponseDto;
   onPress?: () => void;
 }) => {
-  
   const { toggleFavorite, isFavorite } = useFavorite();
   const favorite = isFavorite(flight);
 
-  
+  const { addAlert, removeAlert, isAlerted } = usePriceAlert();
+  const alerted = isAlerted(flight);
+
   const departureTime = flight.departureTime || flight.outboundDepartureTime;
   const arrivalTime = flight.arrivalTime || flight.returnArrivalTime;
   const duration = flight.duration || flight.outboundDuration;
 
   return (
     <TouchableOpacity onPress={onPress}>
-        <View style={styles.card}>
+      <View style={styles.card}>
         <View style={styles.row}>
           <View style={styles.timeColumn}>
-            <Text style={styles.timeText}>{formatTime(departureTime ?? "")}</Text>
+            <Text style={styles.timeText}>
+              {formatTime(departureTime ?? "")}
+            </Text>
             <Text style={styles.airportText}>{flight.departureAirport}</Text>
           </View>
           <View style={styles.centerColumn}>
@@ -58,17 +63,27 @@ const FlightCard = ({
         </View>
 
         <View style={styles.bottomRow}>
-          <Text style={styles.priceText}>{flight.price.toLocaleString()} KRW</Text>
+          <Text style={styles.priceText}>
+            {flight.price.toLocaleString()} KRW
+          </Text>
           <Text style={styles.carrierText}>{flight.airlineName}</Text>
         </View>
 
         <View style={styles.iconRow}>
-          <TouchableOpacity onPress={() => toggleFavorite(flight)}>
-              <FontAwesome
-    name={favorite ? "heart" : "heart-o"}
+          <TouchableOpacity onPress={() => (alerted ? removeAlert(flight) : addAlert(flight))}>
+  <Ionicons
+    name={alerted ? "notifications" : "notifications-outline"}
     size={20}
-    color={favorite ? "red" : "gray"}
+    color={alerted ? "gold" : "gray"}
   />
+</TouchableOpacity>
+
+          <TouchableOpacity onPress={() => toggleFavorite(flight)}>
+            <FontAwesome
+              name={favorite ? "heart" : "heart-o"}
+              size={20}
+              color={favorite ? "red" : "gray"}
+            />
           </TouchableOpacity>
           <TouchableOpacity>
             <MaterialIcons name="ios-share" size={20} color="gray" />
