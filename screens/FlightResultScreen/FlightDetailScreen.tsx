@@ -9,6 +9,7 @@ import {
 } from "@expo/vector-icons";
 import { RouteProp, useRoute } from "@react-navigation/native";
 import { RootStackParamList } from "../../App";
+import { formatPrice } from "../../utils/formatters";
 
 type DetailRouteProp = RouteProp<RootStackParamList, "FlightDetail">;
 
@@ -16,6 +17,14 @@ const FlightDetailScreen: React.FC = () => {
   const { params } = useRoute<DetailRouteProp>();
   const { flight } = params;
   console.log("상세 flight 데이터:", flight);
+
+  const isOneWay = !!flight.departureTime && !flight.outboundDepartureTime;
+
+  const departTime = isOneWay
+    ? flight.departureTime
+    : flight.outboundDepartureTime;
+  const arriveTime = isOneWay ? flight.arrivalTime : flight.outboundArrivalTime;
+  const flightDuration = isOneWay ? flight.duration : flight.outboundDuration;
 
   return (
     <ScrollView style={styles.container}>
@@ -47,52 +56,48 @@ const FlightDetailScreen: React.FC = () => {
         <LocationBlock
           title="출발"
           airport={flight.departureAirport}
-          time={formatFlightTime(
-            flight.outboundDepartureTime,
-            flight.departureAirport
-          )}
+          time={formatFlightTime(departTime, flight.departureAirport)}
         />
         <LocationBlock
           title="도착"
           airport={flight.arrivalAirport}
-          time={formatFlightTime(
-            flight.outboundArrivalTime,
-            flight.arrivalAirport
-          )}
+          time={formatFlightTime(arriveTime, flight.arrivalAirport)}
         />
         <InfoRow
           icon={<Feather name="calendar" size={18} color="#0be5ecd7" />}
           label="비행 시간"
-          value={formatDuration(flight.outboundDuration)}
+          value={formatDuration(flightDuration)}
         />
       </SectionCard>
 
-      <SectionCard
-        title="오는 편 정보"
-        icon={<Entypo name="location-pin" size={20} color="#0be5ecd7" />}
-      >
-        <LocationBlock
-          title="출발"
-          airport={flight.arrivalAirport}
-          time={formatFlightTime(
-            flight.returnDepartureTime,
-            flight.arrivalAirport
-          )}
-        />
-        <LocationBlock
-          title="도착"
-          airport={flight.departureAirport}
-          time={formatFlightTime(
-            flight.returnArrivalTime,
-            flight.departureAirport
-          )}
-        />
-        <InfoRow
-          icon={<Feather name="calendar" size={18} color="#0be5ecd7" />}
-          label="비행 시간"
-          value={formatDuration(flight.returnDuration)}
-        />
-      </SectionCard>
+      {flight.returnDepartureTime && flight.returnArrivalTime && (
+        <SectionCard
+          title="오는 편 정보"
+          icon={<Entypo name="location-pin" size={20} color="#0be5ecd7" />}
+        >
+          <LocationBlock
+            title="출발"
+            airport={flight.arrivalAirport}
+            time={formatFlightTime(
+              flight.returnDepartureTime,
+              flight.arrivalAirport
+            )}
+          />
+          <LocationBlock
+            title="도착"
+            airport={flight.departureAirport}
+            time={formatFlightTime(
+              flight.returnArrivalTime,
+              flight.departureAirport
+            )}
+          />
+          <InfoRow
+            icon={<Feather name="calendar" size={18} color="#0be5ecd7" />}
+            label="비행 시간"
+            value={formatDuration(flight.returnDuration)}
+          />
+        </SectionCard>
+      )}
 
       {/* 좌석 및 서비스 */}
       <SectionCard
@@ -130,7 +135,7 @@ const FlightDetailScreen: React.FC = () => {
         </View>
         <View style={styles.priceBody}>
           <Text style={styles.priceText}>
-            {flight.price.toLocaleString()} {flight.currency}
+            {formatPrice(flight.price, flight.currency ?? "KRW")}
           </Text>
           <Text style={styles.priceDesc}>총 항공료 (세금 포함)</Text>
         </View>

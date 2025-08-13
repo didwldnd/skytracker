@@ -6,6 +6,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 import { usePriceAlert } from "../context/PriceAlertContext";
 import { useFavorite } from "../context/FavoriteContext";
+import { formatPrice } from "../utils/formatters";
 
 const THEME_COLOR = "#0be5ecd7";
 
@@ -64,7 +65,7 @@ const FlightCard = ({
 
         <View style={styles.bottomRow}>
           <Text style={styles.priceText}>
-            {flight.price.toLocaleString()} KRW
+            {formatPrice(flight.price, flight.currency ?? "KRW")}
           </Text>
           <Text style={styles.carrierText}>{flight.airlineName}</Text>
         </View>

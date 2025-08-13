@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+} from "react";
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -11,18 +17,26 @@ interface PriceAlertContextProps {
   isAlerted: (flight: FlightSearchResponseDto) => boolean;
 }
 
-const PriceAlertContext = createContext<PriceAlertContextProps | undefined>(undefined);
+const PriceAlertContext = createContext<PriceAlertContextProps | undefined>(
+  undefined
+);
 
 export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
   const [alerts, setAlerts] = useState<FlightSearchResponseDto[]>([]);
 
   // 알림 식별 키 생성 (왕복 여부 포함)
   const getFlightKey = (flight: FlightSearchResponseDto) =>
-    `${flight.airlineCode}-${flight.flightNumber}-${flight.departureAirport}-${flight.arrivalAirport}-${flight.outboundDepartureTime}-${flight.returnDepartureTime ?? "ONEWAY"}-${flight.travelClass}`;
+    `${flight.airlineCode}-${flight.flightNumber}-${flight.departureAirport}-${
+      flight.arrivalAirport
+    }-${flight.outboundDepartureTime}-${
+      flight.returnDepartureTime ?? "ONEWAY"
+    }-${flight.travelClass}`;
 
   // 두 항공편이 동일한지 판단
-  const isSameFlight = (a: FlightSearchResponseDto, b: FlightSearchResponseDto) =>
-    getFlightKey(a) === getFlightKey(b);
+  const isSameFlight = (
+    a: FlightSearchResponseDto,
+    b: FlightSearchResponseDto
+  ) => getFlightKey(a) === getFlightKey(b);
 
   // 초기 AsyncStorage 로딩
   useEffect(() => {

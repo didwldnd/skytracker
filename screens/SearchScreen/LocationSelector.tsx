@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  View,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-} from "react-native";
+import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
 
 interface Props {
   departure: string;
@@ -21,7 +16,10 @@ export default function LocationSelector({
 }: Props) {
   return (
     <View style={styles.locationWrapper}>
-      <TouchableOpacity onPress={() => onSelectField("departure")} style={styles.input}>
+      <TouchableOpacity
+        onPress={() => onSelectField("departure")}
+        style={styles.input}
+      >
         <Text style={styles.inputText}>
           {departure ? departure : "출발지 선택"}
         </Text>
@@ -31,7 +29,10 @@ export default function LocationSelector({
         <Text style={styles.swapIcon}>⇅</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => onSelectField("destination")} style={styles.input}>
+      <TouchableOpacity
+        onPress={() => onSelectField("destination")}
+        style={styles.input}
+      >
         <Text style={styles.inputText}>
           {destination ? destination : "도착지 선택"}
         </Text>

@@ -13,7 +13,10 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
 import { usePriceAlert } from "../../context/PriceAlertContext";
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { generateFlightKey } from "../../utils/generateFlightKey";
+import { Buffer } from "buffer";
+import { formatPrice } from "../../utils/formatters";
+global.Buffer = Buffer;
 
 const airportMap: Record<string, string> = {
   PUS: "부산",
@@ -76,13 +79,13 @@ const airportMap: Record<string, string> = {
 };
 
 const formatDate = (isoDate: string) => {
+  if (!isoDate) return "-";
   const date = new Date(isoDate);
   return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-const formatPrice = (price: number) => {
-  return price.toLocaleString("ko-KR") + " KRW";
-};
+const priceText = (price?: number, currency: string = "KRW") =>
+  formatPrice(price, currency, "ko-KR");
 
 const formatSeatClass = (cls: string) => {
   switch (cls) {
@@ -100,12 +103,11 @@ const formatSeatClass = (cls: string) => {
 };
 
 const getTripType = (depart?: string, ret?: string) =>
-  depart?.split("T")[0] !== ret?.split("T")[0] ? "왕복" : "편도";
+  depart && ret && depart.split("T")[0] !== ret.split("T")[0] ? "왕복" : "편도";
 
 export default function PriceAlertScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
   const { alerts, removeAlert } = usePriceAlert();
 
   const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
@@ -115,11 +117,10 @@ export default function PriceAlertScreen() {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  // 초기 스위치 ON으로 세팅
   useEffect(() => {
     const initialStates: { [key: string]: boolean } = {};
     alerts.forEach((item) => {
-      const key = `${item.flightNumber}-${item.outboundDepartureTime}`;
+      const key = generateFlightKey(item);
       initialStates[key] = true;
     });
     setSwitchStates(initialStates);
@@ -133,35 +134,44 @@ export default function PriceAlertScreen() {
   };
 
   const toggleGlobalSwitch = () => {
-    const newValue = !globalSwitch;
-    setGlobalSwitch(newValue);
+    const newVal = !globalSwitch;
+    setGlobalSwitch(newVal);
 
     const updatedStates: { [key: string]: boolean } = {};
     alerts.forEach((item) => {
-      const key = `${item.flightNumber}-${item.outboundDepartureTime}`;
-      updatedStates[key] = newValue;
+      const key = generateFlightKey(item);
+      updatedStates[key] = newVal;
     });
+
     setSwitchStates(updatedStates);
   };
 
   const renderItem = ({ item }: { item: FlightSearchResponseDto }) => {
-    const id = `${item.flightNumber}-${item.outboundDepartureTime}`;
-    const from =
-      airportMap[item.departureAirport.toUpperCase()] +
-      ` (${item.departureAirport})`;
-    const to =
-      airportMap[item.arrivalAirport.toUpperCase()] +
-      ` (${item.arrivalAirport})`;
-    const departDate = formatDate(item.outboundDepartureTime);
-    const returnDate = item.returnArrivalTime
-      ? formatDate(item.returnArrivalTime)
-      : "-";
+    const id = generateFlightKey(item);
+
+    const from = `${
+      airportMap[item.departureAirport] ?? item.departureAirport
+    } (${item.departureAirport})`;
+    const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${
+      item.arrivalAirport
+    })`;
+
+    const departDate =
+      item.outboundDepartureTime || item.departureTime
+        ? formatDate(item.outboundDepartureTime || item.departureTime!)
+        : "-";
+    const returnDate =
+      item.returnArrivalTime &&
+      item.returnArrivalTime !== item.outboundDepartureTime
+        ? formatDate(item.returnArrivalTime)
+        : null;
+
     const seat = `${getTripType(
       item.outboundDepartureTime,
       item.returnArrivalTime
     )}, ${formatSeatClass(item.travelClass)}`;
     const passenger = `잔여 ${item.numberOfBookableSeats}석`;
-    const price = formatPrice(item.price);
+    const price = priceText(item.price, item.currency ?? "KRW");
 
     return (
       <View style={styles.card}>
@@ -177,7 +187,8 @@ export default function PriceAlertScreen() {
               {departDate} 출발 · {seat}
             </Text>
             <Text style={styles.info}>
-              {returnDate} 도착 · {passenger}
+              {returnDate ? `${returnDate} 도착 · ` : ""}
+              {passenger}
             </Text>
           </View>
           <View style={styles.right}>
@@ -192,9 +203,9 @@ export default function PriceAlertScreen() {
             <Text style={styles.price}>{price}</Text>
             <TouchableOpacity
               style={styles.button}
-              onPress={() => {
-                navigation.navigate("FlightDetail", { flight: item });
-              }}
+              onPress={() =>
+                navigation.navigate("FlightDetail", { flight: item })
+              }
             >
               <Text style={styles.buttonText}>보기</Text>
             </TouchableOpacity>
@@ -223,13 +234,7 @@ export default function PriceAlertScreen() {
 
       <FlatList
         data={alerts}
-        keyExtractor={(item) =>
-          `${item.flightNumber}-${item.departureAirport}-${
-            item.arrivalAirport
-          }-${item.outboundDepartureTime}-${
-            item.returnDepartureTime ?? "NONE"
-          }-${item.price}`
-        }
+        keyExtractor={(item) => generateFlightKey(item)}
         renderItem={renderItem}
         ListEmptyComponent={
           <Text style={{ textAlign: "center", marginTop: 30, color: "#888" }}>
@@ -244,16 +249,14 @@ export default function PriceAlertScreen() {
             <Text style={styles.confirmText}>
               정말 해당 항목을 삭제하시겠어요?
             </Text>
-
             <View style={styles.confirmButtons}>
               <TouchableOpacity
                 style={styles.confirmDelete}
                 onPress={() => {
                   const flight = alerts.find(
-                    (f) =>
-                      `${f.flightNumber}-${f.outboundDepartureTime}` ===
-                      pendingDeleteId
+                    (f) => generateFlightKey(f) === pendingDeleteId
                   );
+
                   if (flight) removeAlert(flight);
                   setConfirmVisible(false);
                   setPendingDeleteId(null);
@@ -261,7 +264,6 @@ export default function PriceAlertScreen() {
               >
                 <Text style={{ color: "#fff" }}>삭제</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.confirmCancel}
                 onPress={() => setConfirmVisible(false)}
@@ -295,10 +297,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     elevation: 2,
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
+  row: { flexDirection: "row", alignItems: "center" },
   circle: {
     width: 40,
     height: 40,
@@ -308,27 +307,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  middle: {
-    flex: 1,
-  },
-  route: {
-    fontWeight: "bold",
-    fontSize: 14,
-  },
-  info: {
-    fontSize: 12,
-    color: "#555",
-  },
+  middle: { flex: 1 },
+  route: { fontWeight: "bold", fontSize: 14 },
+  info: { fontSize: 12, color: "#555" },
   right: {
     alignItems: "flex-end",
     justifyContent: "space-between",
     height: 60,
   },
-  price: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#333",
-  },
+  price: { fontSize: 14, fontWeight: "bold", color: "#333" },
   button: {
     marginTop: 4,
     backgroundColor: "#0be5ecd7",
@@ -336,21 +323,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 4,
   },
-  buttonText: {
-    color: "#fff",
-    fontSize: 12,
-  },
+  buttonText: { color: "#fff", fontSize: 12 },
   footer: {
     marginTop: 12,
     flexDirection: "row",
     justifyContent: "flex-end",
     alignItems: "center",
   },
-  deleteText: {
-    fontSize: 12,
-    color: "red",
-    marginBottom: 4,
-  },
+  deleteText: { fontSize: 12, color: "red", marginBottom: 4 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -364,15 +344,8 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: "center",
   },
-  confirmText: {
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: "center",
-  },
-  confirmButtons: {
-    flexDirection: "row",
-    gap: 12,
-  },
+  confirmText: { fontSize: 16, marginBottom: 20, textAlign: "center" },
+  confirmButtons: { flexDirection: "row", gap: 12 },
   confirmDelete: {
     backgroundColor: "#333",
     paddingHorizontal: 16,
@@ -385,13 +358,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 6,
   },
-  footerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  footerLabel: {
-    fontSize: 13,
-    color: "#333",
-  },
+  footerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
+  footerLabel: { fontSize: 13, color: "#333" },
 });

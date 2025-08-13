@@ -1,7 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Modal } from "react-native";
-import { Calendar } from "react-native-calendars";
-import { LocaleConfig } from "react-native-calendars";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  Animated,
+} from "react-native";
+import { Calendar, LocaleConfig } from "react-native-calendars";
 
 LocaleConfig.locales["ko"] = {
   monthNames: [
@@ -48,6 +54,7 @@ LocaleConfig.locales["ko"] = {
 LocaleConfig.defaultLocale = "ko";
 
 interface Props {
+  tripType: "왕복" | "편도";
   departureDate: Date;
   returnDate: Date;
   showDeparturePicker: boolean;
@@ -65,6 +72,7 @@ interface Props {
 }
 
 const DateSelector = ({
+  tripType,
   departureDate,
   returnDate,
   showDeparturePicker,
@@ -81,16 +89,44 @@ const DateSelector = ({
   setCurrentMonth,
 }: Props) => {
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
+  const isOneWay = tripType === "편도";
+
+  // 👇 귀국일 페이드 아웃용 애니메이션 값
+  const returnOpacity = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.timing(returnOpacity, {
+      toValue: isOneWay ? 0.35 : 1, // 편도면 흐릿하게(0.35~0.5 사이 추천)
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [isOneWay, returnOpacity]);
 
   const onDayPress = (day: { dateString: string }) => {
     const today = new Date(formatDate(new Date()));
     const selectedDate = new Date(day.dateString);
-
     if (selectedDate < today) return;
 
     setCurrentMonth(day.dateString);
+
+    // 편도: 한 날짜만 선택
+    if (isOneWay) {
+      setStartDate(day.dateString);
+      setEndDate(null);
+      setMarkedDates({
+        [day.dateString]: {
+          startingDay: true,
+          endingDay: true,
+          color: "#0be5ecd7",
+          textColor: "#fff",
+        },
+      });
+      setDepartureDate(new Date(day.dateString));
+      setReturnDate(new Date(day.dateString)); // 내부 형식 통일 목적
+      return;
+    }
+
+    // 왕복: 기존 로직
     if (!startDate || (startDate && endDate)) {
-      // 첫 번째 선택 -> 출발 후보일
       setStartDate(day.dateString);
       setEndDate(null);
       setMarkedDates({
@@ -101,16 +137,13 @@ const DateSelector = ({
         },
       });
     } else {
-      // 두 번째 날짜 선택 -> 범위 확정
       const first = new Date(startDate);
       const second = new Date(day.dateString);
-
       const earlier = first < second ? startDate : day.dateString;
       const later = first < second ? day.dateString : startDate;
 
       const range = getDatesBetween(earlier, later);
       const newMarked: Record<string, any> = {};
-
       range.forEach((date, index) => {
         if (index === 0) {
           newMarked[date] = {
@@ -125,78 +158,85 @@ const DateSelector = ({
             textColor: "#fff",
           };
         } else {
-          newMarked[date] = {
-            color: "#FFE0B2",
-            textColor: "#000",
-          };
+          newMarked[date] = { color: "#FFE0B2", textColor: "#000" };
         }
       });
 
       setStartDate(earlier);
       setEndDate(later);
       setMarkedDates(newMarked);
-
-      // 출발일/귀국일도 정렬해서 부모에 전달
       setDepartureDate(new Date(earlier));
       setReturnDate(new Date(later));
     }
   };
 
   const getDatesBetween = (start: string, end: string): string[] => {
-    const dates = [];
+    const dates: string[] = [];
     let current = new Date(start);
     let last = new Date(end);
-
     if (current > last) [current, last] = [last, current];
-
     while (current <= last) {
       dates.push(current.toISOString().split("T")[0]);
       current.setDate(current.getDate() + 1);
     }
-
     return dates;
   };
 
-  // reset 되었을 때 내부 달력 초기화 처리
+  // reset 시 달력 초기화
   useEffect(() => {
     if (!startDate && !endDate) {
       setMarkedDates({});
-      setCurrentMonth(formatDate(new Date())); // 현재 날짜의 월로 되돌림
+      setCurrentMonth(formatDate(new Date()));
     }
   }, [startDate, endDate]);
 
   return (
     <View style={styles.dateRow}>
+      {/* 출발일 */}
       <View style={styles.dateColumn}>
         <Text style={styles.label}>출발일</Text>
         <TouchableOpacity
           style={styles.input}
           onPress={() => setShowDeparturePicker(true)}
         >
-          <Text>{formatDate(departureDate)}</Text>
+          <Text style={styles.inputText}>{formatDate(departureDate)}</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.dateColumn}>
-        <Text style={styles.label}>귀국일</Text>
+      {/* 귀국일: 항상 자리를 유지(폭 고정), 편도면 흐릿 + 터치 막기 */}
+      <Animated.View
+        style={[styles.dateColumn, { opacity: returnOpacity }]}
+        pointerEvents={isOneWay ? "none" : "auto"} // 터치 차단
+        accessibilityElementsHidden={isOneWay}
+        importantForAccessibility={isOneWay ? "no-hide-descendants" : "auto"}
+      >
+        <Text style={[styles.label, isOneWay && styles.disabledLabel]}>
+          귀국일
+        </Text>
         <TouchableOpacity
-          style={styles.input}
+          style={[styles.input, isOneWay && styles.inputDisabled]}
           onPress={() => setShowDeparturePicker(true)}
+          disabled={isOneWay} // 터치 비활성화
         >
-          <Text>{formatDate(returnDate)}</Text>
+          <Text
+            style={[styles.inputText, isOneWay && styles.inputTextDisabled]}
+          >
+            {isOneWay ? "-" : formatDate(returnDate)}
+          </Text>
         </TouchableOpacity>
-      </View>
+      </Animated.View>
 
+      {/* 달력 모달 */}
       <Modal visible={showDeparturePicker} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.calendarWrapper}>
             <Calendar
-              key={startDate + "_" + endDate}
-              current={currentMonth} // 현재 월 유지
+              key={String(startDate) + "_" + String(endDate)}
+              current={currentMonth}
               onDayPress={onDayPress}
               markedDates={markedDates}
               markingType={"period"}
-              minDate={formatDate(new Date())} // 오늘 날짜 이후만 선택 가능, 기본 라이브러리
+              minDate={formatDate(new Date())}
               theme={{
                 selectedDayBackgroundColor: "#0be5ecd7",
                 todayTextColor: "#0be5ecd7",
@@ -205,25 +245,20 @@ const DateSelector = ({
                 textMonthFontWeight: "bold",
               }}
             />
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={() => setShowDeparturePicker(false)}
-            >
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: "#ccc" }]}
-                  onPress={() => setShowDeparturePicker(false)}
-                >
-                  <Text style={styles.modalButtonText}>닫기</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, { backgroundColor: "#0be5ecd7" }]}
-                  onPress={() => setShowDeparturePicker(false)}
-                >
-                  <Text style={styles.modalButtonText}>적용</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.buttonRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+                onPress={() => setShowDeparturePicker(false)}
+              >
+                <Text style={styles.modalButtonText}>닫기</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: "#0be5ecd7" }]}
+                onPress={() => setShowDeparturePicker(false)}
+              >
+                <Text style={styles.modalButtonText}>적용</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -240,11 +275,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dateColumn: {
-    flex: 1,
+    flex: 1, // 박스 폭 고정(1:1)
   },
   label: {
     fontSize: 16,
     marginBottom: 4,
+    color: "#000",
+  },
+  disabledLabel: {
+    color: "#9aa0a6",
   },
   input: {
     borderColor: "#ccc",
@@ -252,6 +291,18 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     backgroundColor: "#f9f9f9",
+  },
+  inputDisabled: {
+    backgroundColor: "#f2f2f2",
+    borderColor: "#e0e0e0",
+  },
+  inputText: {
+    color: "#1f2937",
+    fontWeight: "600",
+  },
+  inputTextDisabled: {
+    color: "#9aa0a6",
+    fontWeight: "500",
   },
   modalContainer: {
     flex: 1,
@@ -263,17 +314,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-  },
-  closeButton: {
-    marginTop: 10,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  closeText: {
-    color: "#fff",
-    fontWeight: "bold",
-    fontSize: 16,
   },
   buttonRow: {
     flexDirection: "row",

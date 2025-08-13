@@ -7,7 +7,7 @@ interface Props {
   origin: string;
   destination: string;
   departureDate: string;
-  returnDate: string;
+  returnDate?: string;
   passengerCount: number;
   seatClass: string;
 }
@@ -21,6 +21,11 @@ const FlightResultHeader = ({
   seatClass,
 }: Props) => {
   const navigation = useNavigation();
+
+  // 날짜 표시 returnDate 있으면 왕복 없으면 편도로 처리
+  const dateText = returnDate
+    ? `${departureDate} – ${returnDate}`
+    : `${departureDate} · 편도`;
 
   return (
     <View style={styles.wrapper}>
@@ -40,7 +45,7 @@ const FlightResultHeader = ({
             style={styles.icon}
           />
           <Text style={styles.routeText}>
-            {origin} – {destination} · {departureDate} – {returnDate}
+            {origin} – {destination} · {dateText}
           </Text>
         </View>
 

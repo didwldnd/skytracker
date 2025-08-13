@@ -24,6 +24,7 @@ import { airportData } from "../../data/airportData";
 const SearchScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [tripType, setTripType] = useState<"왕복" | "편도">("왕복");
 
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
@@ -124,6 +125,29 @@ const SearchScreen = () => {
       <View style={styles.container}>
         <Text style={styles.title}>항공권 검색</Text>
 
+        {/* Trip Type Selector */}
+        <View style={styles.tripTypeRow}>
+          {["왕복", "편도"].map((type) => (
+            <TouchableOpacity
+              key={type}
+              onPress={() => setTripType(type as "왕복" | "편도")}
+              style={[
+                styles.tripTypeButton,
+                tripType === type && styles.tripTypeButtonActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tripTypeText,
+                  tripType === type && styles.tripTypeTextActive,
+                ]}
+              >
+                {type}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <LocationSelector
           departure={departure}
           destination={destination}
@@ -135,6 +159,7 @@ const SearchScreen = () => {
         />
 
         <DateSelector
+          tripType={tripType}
           departureDate={departureDate}
           returnDate={returnDate}
           showDeparturePicker={showDeparturePicker}
@@ -203,64 +228,65 @@ const SearchScreen = () => {
           }}
         />
 
-       <SearchButtons
-  onReset={resetForm}
-  onSearch={async () => {
-    setLoading(true);
-    try {
-      // stopover 옵션을 API에 맞춰 변환
-      let nonStop: boolean | undefined = undefined;
-      let maxNumberOfConnections: number | undefined = undefined;
+        <SearchButtons
+          onReset={resetForm}
+          onSearch={async () => {
+            setLoading(true);
+            try {
+              let nonStop: boolean | undefined = undefined;
+              let maxNumberOfConnections: number | undefined = undefined;
 
-      if (stopover === "직항만") {
-        nonStop = true;
-      } else if (stopover === "직항 또는 1회") {
-        maxNumberOfConnections = 1;
-      }
+              if (stopover === "직항만") {
+                nonStop = true;
+              } else if (stopover === "직항 또는 1회") {
+                maxNumberOfConnections = 1;
+              }
 
-      const requestDto: FlightSearchRequestDto = {
-        originLocationAirport: departure,
-        destinationLocationAirPort: destination,
-        departureDate: departureDate.toISOString().split("T")[0],
-        returnDate: returnDate.toISOString().split("T")[0],
-        currencyCode: "KRW",
-        travelClass:
-          seatClass === "일반석"
-            ? "ECONOMY"
-            : seatClass === "프리미엄일반석"
-            ? "PREMIUM_ECONOMY"
-            : seatClass === "비즈니스"
-            ? "BUSINESS"
-            : seatClass === "일등석"
-            ? "FIRST"
-            : undefined,
-        adults: passengerCounts.adult,
-        max: 10,
-        nonStop, // 직항만이면 true
-        maxNumberOfConnections, // 직항 또는 1회면 1
-      };
+              const requestDto: FlightSearchRequestDto = {
+                originLocationAirport: departure,
+                destinationLocationAirPort: destination,
+                departureDate: departureDate.toISOString().split("T")[0],
+                returnDate:
+                  tripType === "왕복"
+                    ? returnDate.toISOString().split("T")[0]
+                    : undefined,
+                currencyCode: "KRW",
+                travelClass:
+                  seatClass === "일반석"
+                    ? "ECONOMY"
+                    : seatClass === "프리미엄일반석"
+                    ? "PREMIUM_ECONOMY"
+                    : seatClass === "비즈니스"
+                    ? "BUSINESS"
+                    : seatClass === "일등석"
+                    ? "FIRST"
+                    : undefined,
+                adults: passengerCounts.adult,
+                max: 10,
+                nonStop,
+                maxNumberOfConnections,
+              };
 
-      const results = await searchFlights(requestDto);
+              const results = await searchFlights(requestDto);
 
-      navigation.navigate("FlightResult", {
-        originLocationCode: departure,
-        destinationLocationCode: destination,
-        departureDate: departureDate.toISOString(),
-        returnDate: returnDate.toISOString(),
-        adults: passengerCounts.adult,
-        travelClass: seatClass,
-        stopover,
-        results,
-      });
-    } catch (error) {
-      console.error("항공편 검색 실패:", error);
-    } finally {
-      setLoading(false);
-    }
-  }}
-  disabled={!departure || !destination}
-/>
-
+              navigation.navigate("FlightResult", {
+                originLocationCode: departure,
+                destinationLocationCode: destination,
+                departureDate: departureDate.toISOString(),
+                returnDate: tripType === "왕복" ? returnDate.toISOString() : "",
+                adults: passengerCounts.adult,
+                travelClass: seatClass,
+                stopover,
+                results,
+              });
+            } catch (error) {
+              console.error("항공편 검색 실패:", error);
+            } finally {
+              setLoading(false);
+            }
+          }}
+          disabled={!departure || !destination}
+        />
 
         <FlightLoadingModal visible={loading} />
         <PopularScreen />
@@ -289,6 +315,32 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
+  },
+  tripTypeRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginBottom: 10,
+    gap: 15,
+  },
+  tripTypeButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    backgroundColor: "#f0f0f0",
+  },
+  tripTypeButtonActive: {
+    backgroundColor: "#0be5ecd7",
+    borderColor: "#0be5ecd7",
+  },
+  tripTypeText: {
+    fontSize: 16,
+    color: "#666",
+  },
+  tripTypeTextActive: {
+    color: "#fff",
+    fontWeight: "bold",
   },
   label: {
     fontSize: 16,
