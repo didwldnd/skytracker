@@ -1,73 +1,59 @@
-// utils/normalizeFlight.ts
-import { FlightSearchRequestDto } from "../types/FlightSearchRequestDto";
+import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 
-// 원본의 필수 표시 필드들을 Omit하고, optional로 재선언
-export type NormalizedFlight = Omit<
-  FlightSearchRequestDto,
-  | "departureTime" | "arrivalTime" | "duration"
-  | "returnDepartureTime" | "returnArrivalTime" | "returnDuration"
-  | "price" | "currency" | "airlineName"
-> & {
-  // 표준 표시 필드(선택)
-  departureTime?: string;
-  arrivalTime?: string;
-  duration?: string;
+export type NormalizedFlight = FlightSearchResponseDto & {
+  outboundDepartureTime: string;
+  outboundArrivalTime: string;
+  outboundDuration: string;
+  returnDepartureTime: string;
+  returnArrivalTime: string;
+  returnDuration: string;
+  // 빈 문자열이라도 항상 존재하도록
 
-  returnDepartureTime?: string;
-  returnArrivalTime?: string;
-  returnDuration?: string;
-
-  // 표시/계산을 위한 보강
-  price?: number;
   currency?: string;
   airlineName?: string;
+  // 값 없으면 기본값 대입됨
 };
 
-const toMaybeString = (v: unknown): string | undefined => {
-  if (typeof v === "string" && v.trim().length > 0) return v;
-  return undefined;
-};
+const toMaybeString = (v: unknown): string | undefined =>
+  typeof v === "string" && v.trim() ? v : undefined;
 
 const toMaybeNumber = (v: unknown): number | undefined => {
   if (typeof v === "number" && Number.isFinite(v)) return v;
-  if (v != null && !Number.isNaN(Number(v))) return Number(v);
-  return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
 };
 
-export const normalizeFlightData = (flight: FlightSearchRequestDto): NormalizedFlight => {
-  const departureTime =
-    toMaybeString((flight as any).departureTime) ??
-    toMaybeString((flight as any).outboundDepartureTime);
+/** 검색 결과(응답)를 화면/키 계산에 적합하게 정규화 */
+export const normalizeFlightData = (raw: FlightSearchResponseDto): NormalizedFlight => {
+  const outboundDepartureTime =
+    toMaybeString((raw as any).outboundDepartureTime) ?? toMaybeString((raw as any).departureTime) ?? "";
 
-  const arrivalTime =
-    toMaybeString((flight as any).arrivalTime) ??
-    toMaybeString((flight as any).outboundArrivalTime);
+  const outboundArrivalTime =
+    toMaybeString((raw as any).outboundArrivalTime) ?? toMaybeString((raw as any).arrivalTime) ?? "";
 
-  const duration =
-    toMaybeString((flight as any).duration) ??
-    toMaybeString((flight as any).outboundDuration);
+  const outboundDuration =
+    toMaybeString((raw as any).outboundDuration) ?? toMaybeString((raw as any).duration) ?? "";
 
-  const returnDepartureTime = toMaybeString((flight as any).returnDepartureTime);
-  const returnArrivalTime = toMaybeString((flight as any).returnArrivalTime);
-  const returnDuration = toMaybeString((flight as any).returnDuration);
+  // 왕복이 아닐 수도 있으니 빈 문자열 허용
+  const returnDepartureTime = toMaybeString((raw as any).returnDepartureTime) ?? "";
+  const returnArrivalTime   = toMaybeString((raw as any).returnArrivalTime) ?? "";
+  const returnDuration      = toMaybeString((raw as any).returnDuration) ?? "";
 
-  const price = toMaybeNumber((flight as any).price);
-  const currency = toMaybeString((flight as any).currency) ?? "KRW";
-
+  const price    = toMaybeNumber((raw as any).price);
+  const currency = toMaybeString((raw as any).currency) ?? "KRW";
   const airlineName =
-    toMaybeString((flight as any).airlineName) ??
-    toMaybeString((flight as any).carrierName);
+    toMaybeString((raw as any).airlineName) ?? toMaybeString((raw as any).carrierName);
 
   return {
-    ...flight, // 원본 보존
-    departureTime,
-    arrivalTime,
-    duration,
+    ...raw,
+    outboundDepartureTime,
+    outboundArrivalTime,
+    outboundDuration,
     returnDepartureTime,
     returnArrivalTime,
     returnDuration,
     price,
     currency,
     airlineName,
-  };
+  } as NormalizedFlight;
 };

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
+import { generateFavoriteKey } from "../utils/generateFavoriteKey"; // ★ 즐겨찾기용 키 (가격 포함)
 
 type FavoriteContextType = {
   favorites: FlightSearchResponseDto[];
@@ -8,34 +9,22 @@ type FavoriteContextType = {
   isFavorite: (flight: FlightSearchResponseDto) => boolean;
   isLoaded: boolean;
 };
-// 타입 정의
 
-const FavoriteContext = createContext<FavoriteContextType | undefined>(
-  undefined
-);
-// createContext -> 전역 상태로 만드는 함수, FavotireContext라는 새로운 Context를 만듦
-const FAVORITE_KEY = "FAVORITE_FLIGHTS";
+const FavoriteContext = createContext<FavoriteContextType | undefined>(undefined);
 
-export const FavoriteProvider = ({
-  children,
-}: {
-  children: React.ReactNode;
-}) => {
+// ★ V2로 바꿔서 예전 저장값과 구분 (키 스키마 변경)
+const FAVORITE_KEY = "FAVORITE_FLIGHTS_V2";
+
+export const FavoriteProvider = ({ children }: { children: React.ReactNode }) => {
   const [favorites, setFavorites] = useState<FlightSearchResponseDto[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
-const getFlightKey = (flight: FlightSearchResponseDto) =>
-  `${flight.airlineCode}-${flight.flightNumber}-${flight.departureAirport}-${flight.arrivalAirport}-${flight.outboundDepartureTime}-${flight.returnDepartureTime}`;
-
-  const isSameFlight = (
-    a: FlightSearchResponseDto,
-    b: FlightSearchResponseDto
-  ) => getFlightKey(a) === getFlightKey(b);
-
-  // 즐겨찾기 중복방지
+  // ★ 동일 운임(=가격 포함)인지 판단: generateFavoriteKey 사용
+  const sameFavorite = (a: FlightSearchResponseDto, b: FlightSearchResponseDto) =>
+    generateFavoriteKey(a) === generateFavoriteKey(b);
 
   const isFavorite = (flight: FlightSearchResponseDto) =>
-    favorites.some((f) => isSameFlight(f, flight));
-  // favorites 배열 중 하나라도 isSameFlight 조건 만족 시 true 변환
+    favorites.some((f) => sameFavorite(f, flight));
 
   const saveToStorage = async (data: FlightSearchResponseDto[]) => {
     try {
@@ -45,45 +34,49 @@ const getFlightKey = (flight: FlightSearchResponseDto) =>
     }
   };
 
-  const [isLoaded, setIsLoaded] = useState(false);
-
   const toggleFavorite = (flight: FlightSearchResponseDto) => {
     setFavorites((prev) => {
-      const exists = prev.some((f) => isSameFlight(f, flight));
-      // some 메서드 => 조건 만족하는 요소 하나라도 있으면 true, 아니면 false 반환
-      const updated = exists
-        ? prev.filter((f) => !isSameFlight(f, flight))
-        : [...prev, flight];
-      saveToStorage(updated);
-      return updated;
+      const exists = prev.some((f) => sameFavorite(f, flight));
+      const next = exists ? prev.filter((f) => !sameFavorite(f, flight)) : [...prev, flight];
+      // 저장은 비동기지만 상태는 즉시 반영
+      saveToStorage(next);
+      return next;
     });
   };
-  // 즐찾 토글 (추가 또는 삭제)
 
   useEffect(() => {
-    const loadFromStorage = async () => {
-      const saved = await AsyncStorage.getItem(FAVORITE_KEY);
-      if (saved) {
-        setFavorites(JSON.parse(saved));
+    (async () => {
+      try {
+        const saved = await AsyncStorage.getItem(FAVORITE_KEY);
+        if (saved) {
+          // 혹시 중복이 있으면 키 기준으로 정리
+          const arr: FlightSearchResponseDto[] = JSON.parse(saved);
+          const seen = new Set<string>();
+          const dedup = arr.filter((f) => {
+            const k = generateFavoriteKey(f);
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+          setFavorites(dedup);
+        }
+      } catch (e) {
+        console.error("즐겨찾기 로드 실패:", e);
+      } finally {
+        setIsLoaded(true);
       }
-      setIsLoaded(true); 
-    };
-    loadFromStorage();
+    })();
   }, []);
 
   return (
-    <FavoriteContext.Provider
-      value={{ favorites, toggleFavorite, isFavorite, isLoaded }}
-    >
+    <FavoriteContext.Provider value={{ favorites, toggleFavorite, isFavorite, isLoaded }}>
       {children}
     </FavoriteContext.Provider>
   );
-  // context에 기능 제공
 };
 
 export const useFavorite = () => {
-  const context = useContext(FavoriteContext);
-  if (!context)
-    throw new Error("useFavorite must be used within FavoriteProvider");
-  return context;
+  const ctx = useContext(FavoriteContext);
+  if (!ctx) throw new Error("useFavorite must be used within FavoriteProvider");
+  return ctx;
 };

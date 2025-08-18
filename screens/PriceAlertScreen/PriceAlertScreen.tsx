@@ -13,11 +13,12 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
 import { usePriceAlert } from "../../context/PriceAlertContext";
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
-import { generateFlightKey } from "../../utils/generateFlightKey";
+import { generateAlertKey } from "../../utils/generateAlertKey"; 
 import { Buffer } from "buffer";
 import { formatPrice } from "../../utils/formatters";
 global.Buffer = Buffer;
 
+// 공항 코드 → 라벨
 const airportMap: Record<string, string> = {
   PUS: "부산",
   GMP: "서울",
@@ -102,6 +103,7 @@ const formatSeatClass = (cls: string) => {
   }
 };
 
+// 같은 날 출발/복귀 존재 여부로 간단 유형 표기
 const getTripType = (depart?: string, ret?: string) =>
   depart && ret && depart.split("T")[0] !== ret.split("T")[0] ? "왕복" : "편도";
 
@@ -110,6 +112,12 @@ export default function PriceAlertScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { alerts, removeAlert } = usePriceAlert();
 
+  // ★ V2 컨텍스트가 alerts를 "맵"으로 주더라도 화면에선 배열이 편하니 통일
+  const alertList: FlightSearchResponseDto[] = Array.isArray(alerts)
+    ? alerts
+    : Object.values(alerts || {});
+
+  // 각 카드 스위치 상태
   const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -117,14 +125,15 @@ export default function PriceAlertScreen() {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
+  // ★ 알리미는 "가격 제외 키"로 동일 항공편을 묶어야 하므로 generateAlertKey 통일 사용
   useEffect(() => {
     const initialStates: { [key: string]: boolean } = {};
-    alerts.forEach((item) => {
-      const key = generateFlightKey(item);
+    alertList.forEach((item) => {
+      const key = generateAlertKey(item);
       initialStates[key] = true;
     });
     setSwitchStates(initialStates);
-  }, [alerts]);
+  }, [alertList.length]); // 길이만 의존해서 불필요 재계산 방지
 
   const toggleSwitch = (id: string) => {
     setSwitchStates((prev) => ({
@@ -136,40 +145,32 @@ export default function PriceAlertScreen() {
   const toggleGlobalSwitch = () => {
     const newVal = !globalSwitch;
     setGlobalSwitch(newVal);
-
     const updatedStates: { [key: string]: boolean } = {};
-    alerts.forEach((item) => {
-      const key = generateFlightKey(item);
+    alertList.forEach((item) => {
+      const key = generateAlertKey(item);
       updatedStates[key] = newVal;
     });
-
     setSwitchStates(updatedStates);
   };
 
   const renderItem = ({ item }: { item: FlightSearchResponseDto }) => {
-    const id = generateFlightKey(item);
+    const id = generateAlertKey(item); // ★ 통일 포인트
 
-    const from = `${
-      airportMap[item.departureAirport] ?? item.departureAirport
-    } (${item.departureAirport})`;
-    const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${
-      item.arrivalAirport
-    })`;
+    const from = `${airportMap[item.departureAirport] ?? item.departureAirport} (${item.departureAirport})`;
+    const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${item.arrivalAirport})`;
 
     const departDate =
       item.outboundDepartureTime || item.departureTime
         ? formatDate(item.outboundDepartureTime || item.departureTime!)
         : "-";
+
     const returnDate =
       item.returnArrivalTime &&
       item.returnArrivalTime !== item.outboundDepartureTime
         ? formatDate(item.returnArrivalTime)
         : null;
 
-    const seat = `${getTripType(
-      item.outboundDepartureTime,
-      item.returnArrivalTime
-    )}, ${formatSeatClass(item.travelClass)}`;
+    const seat = `${getTripType(item.outboundDepartureTime, item.returnArrivalTime)}, ${formatSeatClass(item.travelClass)}`;
     const passenger = `잔여 ${item.numberOfBookableSeats}석`;
     const price = priceText(item.price, item.currency ?? "KRW");
 
@@ -187,8 +188,7 @@ export default function PriceAlertScreen() {
               {departDate} 출발 · {seat}
             </Text>
             <Text style={styles.info}>
-              {returnDate ? `${returnDate} 도착 · ` : ""}
-              {passenger}
+              {returnDate ? `${returnDate} 도착 · ` : ""}{passenger}
             </Text>
           </View>
           <View style={styles.right}>
@@ -233,8 +233,8 @@ export default function PriceAlertScreen() {
       </View>
 
       <FlatList
-        data={alerts}
-        keyExtractor={(item) => generateFlightKey(item)}
+        data={alertList}
+        keyExtractor={(item) => generateAlertKey(item)} // ★ 통일 포인트
         renderItem={renderItem}
         ListEmptyComponent={
           <Text style={{ textAlign: "center", marginTop: 30, color: "#888" }}>
@@ -253,10 +253,10 @@ export default function PriceAlertScreen() {
               <TouchableOpacity
                 style={styles.confirmDelete}
                 onPress={() => {
-                  const flight = alerts.find(
-                    (f) => generateFlightKey(f) === pendingDeleteId
+                  // ★ 삭제도 같은 키 기준으로 찾는다
+                  const flight = alertList.find(
+                    (f) => generateAlertKey(f) === pendingDeleteId
                   );
-
                   if (flight) removeAlert(flight);
                   setConfirmVisible(false);
                   setPendingDeleteId(null);

@@ -1,4 +1,4 @@
-// types/FlightSearchResponseDto.ts
+// API에서 받은 항공편 검색 결과 데이터 형식
 export interface FlightSearchResponseDto {
   airlineCode: string;
   airlineName: string;

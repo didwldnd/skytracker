@@ -1,51 +1,35 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  ReactNode,
-  useEffect,
-} from "react";
-import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
+import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
+import { generateAlertKey } from "../utils/generateAlertKey";
 
-const ALERT_STORAGE_KEY = "price_alerts";
+// ★ 키 스키마 변경 → 기존 저장본과 구분하기 위해 V2로 버전업
+const ALERT_STORAGE_KEY = "price_alerts_V2";
 
 interface PriceAlertContextProps {
-  alerts: FlightSearchResponseDto[];
+  alerts: Record<string, FlightSearchResponseDto>; // 키-값 맵으로 관리 → 조회 O(1)
   addAlert: (flight: FlightSearchResponseDto) => void;
   removeAlert: (flight: FlightSearchResponseDto) => void;
   isAlerted: (flight: FlightSearchResponseDto) => boolean;
 }
 
-const PriceAlertContext = createContext<PriceAlertContextProps | undefined>(
-  undefined
-);
+const PriceAlertContext = createContext<PriceAlertContextProps | undefined>(undefined);
 
 export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
-  const [alerts, setAlerts] = useState<FlightSearchResponseDto[]>([]);
+  const [alerts, setAlerts] = useState<Record<string, FlightSearchResponseDto>>({});
 
-  // 알림 식별 키 생성 (왕복 여부 포함)
-  const getFlightKey = (flight: FlightSearchResponseDto) =>
-    `${flight.airlineCode}-${flight.flightNumber}-${flight.departureAirport}-${
-      flight.arrivalAirport
-    }-${flight.outboundDepartureTime}-${
-      flight.returnDepartureTime ?? "ONEWAY"
-    }-${flight.travelClass}`;
-
-  // 두 항공편이 동일한지 판단
-  const isSameFlight = (
-    a: FlightSearchResponseDto,
-    b: FlightSearchResponseDto
-  ) => getFlightKey(a) === getFlightKey(b);
-
-  // 초기 AsyncStorage 로딩
+  // 초기 로드(중복 있으면 키 기준으로 자동 dedup)
   useEffect(() => {
     (async () => {
       try {
         const json = await AsyncStorage.getItem(ALERT_STORAGE_KEY);
         if (json) {
-          const parsed: FlightSearchResponseDto[] = JSON.parse(json);
-          setAlerts(parsed);
+          const arr: FlightSearchResponseDto[] = JSON.parse(json);
+          const map: Record<string, FlightSearchResponseDto> = {};
+          for (const f of arr) {
+            map[generateAlertKey(f)] = f;
+          }
+          setAlerts(map);
         }
       } catch (e) {
         console.error("알림 불러오기 실패", e);
@@ -53,48 +37,44 @@ export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
     })();
   }, []);
 
-  // 저장 함수
-  const saveToStorage = async (updated: FlightSearchResponseDto[]) => {
+  const persist = async (map: Record<string, FlightSearchResponseDto>) => {
+    setAlerts(map);
     try {
-      setAlerts(updated);
-      await AsyncStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(updated));
+      await AsyncStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(Object.values(map)));
     } catch (e) {
       console.error("알림 저장 실패", e);
     }
   };
 
-  // 알림 추가
   const addAlert = (flight: FlightSearchResponseDto) => {
-    const alreadyExists = alerts.some((f) => isSameFlight(f, flight));
-    if (!alreadyExists) {
-      const updated = [...alerts, flight];
-      saveToStorage(updated);
-    }
+    const key = generateAlertKey(flight);
+    if (alerts[key]) return; // 이미 존재
+    const next = { ...alerts, [key]: flight };
+    persist(next);
   };
 
-  // 알림 제거
   const removeAlert = (flight: FlightSearchResponseDto) => {
-    const updated = alerts.filter((f) => !isSameFlight(f, flight));
-    saveToStorage(updated);
+    const key = generateAlertKey(flight);
+    if (!alerts[key]) return;
+    const next = { ...alerts };
+    delete next[key];
+    persist(next);
   };
 
-  // 알림 여부 확인
-  const isAlerted = (flight: FlightSearchResponseDto) =>
-    alerts.some((f) => isSameFlight(f, flight));
+  const isAlerted = (flight: FlightSearchResponseDto) => {
+    const key = generateAlertKey(flight);
+    return !!alerts[key];
+  };
 
   return (
-    <PriceAlertContext.Provider
-      value={{ alerts, addAlert, removeAlert, isAlerted }}
-    >
+    <PriceAlertContext.Provider value={{ alerts, addAlert, removeAlert, isAlerted }}>
       {children}
     </PriceAlertContext.Provider>
   );
 };
 
 export const usePriceAlert = () => {
-  const context = useContext(PriceAlertContext);
-  if (!context) {
-    throw new Error("usePriceAlert must be used within PriceAlertProvider");
-  }
-  return context;
+  const ctx = useContext(PriceAlertContext);
+  if (!ctx) throw new Error("usePriceAlert must be used within PriceAlertProvider");
+  return ctx;
 };
