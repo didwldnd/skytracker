@@ -21,6 +21,8 @@ interface Props {
   onSelect: (code: string) => void;
   data: Airport[];
   fieldLabel?: string;
+  /** 반대편에서 이미 선택된 공항 코드 → 목록에서 제외(동일 공항 선택 방지) */
+  excludeCode?: string;
 }
 
 export default function SearchModal({
@@ -29,12 +31,16 @@ export default function SearchModal({
   onSelect,
   data,
   fieldLabel = "출발지",
+  excludeCode,
 }: Props) {
   const [query, setQuery] = useState("");
 
-  // query에 포함되는 city, airport, code 항목을 먼저 필터링한 뒤,
-  // 공항 코드(code)를 기준으로 중복 항목 제거
-  // → Map을 이용해 동일한 code는 하나만 남기고 중복 제거함
+  // 모달 닫힐 때 검색어 초기화
+  useEffect(() => {
+    if (!visible) setQuery("");
+  }, [visible]);
+
+  // 1) 검색어 필터 → 2) excludeCode 제거 → 3) code 기준 중복 제거(Map)
   const filtered = Array.from(
     new Map(
       data
@@ -43,8 +49,9 @@ export default function SearchModal({
             field.toLowerCase().includes(query.toLowerCase())
           )
         )
-        .map((item) => [item.code, item]) // code를 key로 설정해서 Map 생성 → 중복 자동 제거
-    ).values() // Map에서 고유한 값들만 배열로 변환
+        .filter(({ code }) => !excludeCode || code !== excludeCode)
+        .map((item) => [item.code, item])
+    ).values()
   );
 
   return (
@@ -58,6 +65,15 @@ export default function SearchModal({
           <Text style={styles.title}>{fieldLabel}</Text>
           <View style={{ width: 24 }} />
         </View>
+
+        {/* (옵션) 동일 공항 제외 안내 */}
+        {excludeCode ? (
+          <View style={styles.notice}>
+            <Text style={styles.noticeText}>
+              {`선택된 반대편 공항(${excludeCode})은 목록에서 제외됩니다.`}
+            </Text>
+          </View>
+        ) : null}
 
         {/* 검색창 */}
         <TextInput
@@ -94,54 +110,29 @@ export default function SearchModal({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
+  container: { flex: 1, backgroundColor: "#fff" },
   header: {
-    height: 56,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
+    height: 56, flexDirection: "row", alignItems: "center",
+    justifyContent: "space-between", paddingHorizontal: 16,
+    borderBottomWidth: 1, borderColor: "#eee",
   },
-  closeIcon: {
-    fontSize: 20,
+  closeIcon: { fontSize: 20 },
+  title: { fontSize: 16, fontWeight: "bold" },
+  notice: {
+    marginHorizontal: 16, marginTop: 10, padding: 8,
+    backgroundColor: "#f4f6f8", borderRadius: 8,
   },
-  title: {
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  noticeText: { fontSize: 12, color: "#556" },
   input: {
-    borderColor: "#ccc",
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    margin: 16,
-    backgroundColor: "#f9f9f9",
+    borderColor: "#ccc", borderWidth: 1, borderRadius: 8,
+    padding: 12, margin: 16, backgroundColor: "#f9f9f9",
   },
   item: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderColor: "#eee",
+    flexDirection: "row", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderColor: "#eee",
   },
-  city: {
-    fontWeight: "bold",
-    fontSize: 16,
-  },
-  airport: {
-    fontSize: 13,
-    color: "#666",
-  },
-  code: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#333",
-    alignSelf: "center",
-  },
+  city: { fontWeight: "bold", fontSize: 16 },
+  airport: { fontSize: 13, color: "#666" },
+  code: { fontSize: 16, fontWeight: "bold", color: "#333", alignSelf: "center" },
 });

@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -67,6 +68,11 @@ const SearchScreen = () => {
     (a, b) => a + b,
     0
   );
+
+  const sameAirports =
+    !!departure && !!destination && departure === destination;
+
+  const isSearchDisabled = !departure || !destination || sameAirports;
 
   const handleSelectAirport = (code: string) => {
     if (selectedField === "departure") setDeparture(code);
@@ -231,6 +237,10 @@ const SearchScreen = () => {
         <SearchButtons
           onReset={resetForm}
           onSearch={async () => {
+            if (sameAirports) {
+              Alert.alert("잘못된 경로", "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요.");
+              return;
+            }
             setLoading(true);
             try {
               let nonStop: boolean | undefined = undefined;
@@ -285,7 +295,7 @@ const SearchScreen = () => {
               setLoading(false);
             }
           }}
-          disabled={!departure || !destination}
+          disabled={isSearchDisabled}
         />
 
         <FlightLoadingModal visible={loading} />
