@@ -1,6 +1,11 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
-import { formatFlightTime, formatDuration } from "../../utils/formatFlightTime";
+ import {
+   formatFlightTime,
+   formatDuration,              // 어댑터에서 formatDurationKo로 연결됨
+   formatDayShiftBadge,
+   dayShiftByDuration,          // ✅ 새로 사용
+ } from "../../utils/formatFlightTime";
 import {
   FontAwesome,
   Feather,
@@ -13,18 +18,40 @@ import { formatPrice } from "../../utils/formatters";
 
 type DetailRouteProp = RouteProp<RootStackParamList, "FlightDetail">;
 
+const THEME = "#0be5ecd7";
+
 const FlightDetailScreen: React.FC = () => {
   const { params } = useRoute<DetailRouteProp>();
   const { flight } = params;
   console.log("상세 flight 데이터:", flight);
+  console.log("[CHK]",
+  flight.outboundDepartureTime,
+  flight.outboundArrivalTime,
+  flight.outboundDuration,
+  flight.returnDuration
+);
 
-  const isOneWay = !!flight.departureTime && !flight.outboundDepartureTime;
 
-  const departTime = isOneWay
-    ? flight.departureTime
-    : flight.outboundDepartureTime;
-  const arriveTime = isOneWay ? flight.arrivalTime : flight.outboundArrivalTime;
-  const flightDuration = isOneWay ? flight.duration : flight.outboundDuration;
+  // ✅ 왕복/편도 판별: return* 존재 여부로
+  const isRoundTrip = !!(flight.returnDepartureTime && flight.returnArrivalTime);
+
+  // ✅ 가는 편 세트
+  const oDep = flight.outboundDepartureTime;
+  const oArr = flight.outboundArrivalTime;
+  const oDur = flight.outboundDuration;
+  const oShift = formatDayShiftBadge(dayShiftByDuration(oDur));
+  const oArrText = oShift
+    ? `${formatFlightTime(oArr, flight.arrivalAirport)}  ${oShift}`
+    : formatFlightTime(oArr, flight.arrivalAirport);
+
+  // ✅ 오는 편 세트(있을 때만)
+  const rDep = flight.returnDepartureTime;
+  const rArr = flight.returnArrivalTime;
+  const rDur = flight.returnDuration;
+  const rShift = formatDayShiftBadge(dayShiftByDuration(rDur));
+  const rArrText = rShift
+    ? `${formatFlightTime(rArr, flight.departureAirport)}  ${rShift}`
+    : formatFlightTime(rArr, flight.departureAirport);
 
   return (
     <ScrollView style={styles.container}>
@@ -48,53 +75,48 @@ const FlightDetailScreen: React.FC = () => {
         </View>
       </View>
 
-      {/* 비행 정보 */}
+      {/* 가는 편 */}
       <SectionCard
         title="가는 편 정보"
-        icon={<Entypo name="location-pin" size={20} color="#0be5ecd7" />}
+        icon={<Entypo name="location-pin" size={20} color={THEME} />}
       >
         <LocationBlock
           title="출발"
           airport={flight.departureAirport}
-          time={formatFlightTime(departTime, flight.departureAirport)}
+          time={formatFlightTime(oDep, flight.departureAirport)}
         />
         <LocationBlock
           title="도착"
           airport={flight.arrivalAirport}
-          time={formatFlightTime(arriveTime, flight.arrivalAirport)}
+          time={oArrText}
         />
         <InfoRow
-          icon={<Feather name="calendar" size={18} color="#0be5ecd7" />}
-          label="비행 시간"
-          value={formatDuration(flightDuration)}
+          icon={<Feather name="calendar" size={18} color={THEME} />}
+          label="총 소요 시간"
+          value={formatDuration(oDur)}
         />
       </SectionCard>
 
-      {flight.returnDepartureTime && flight.returnArrivalTime && (
+      {/* 오는 편 (왕복일 때만) */}
+      {isRoundTrip && (
         <SectionCard
           title="오는 편 정보"
-          icon={<Entypo name="location-pin" size={20} color="#0be5ecd7" />}
+          icon={<Entypo name="location-pin" size={20} color={THEME} />}
         >
           <LocationBlock
             title="출발"
             airport={flight.arrivalAirport}
-            time={formatFlightTime(
-              flight.returnDepartureTime,
-              flight.arrivalAirport
-            )}
+            time={formatFlightTime(rDep, flight.arrivalAirport)}
           />
           <LocationBlock
             title="도착"
             airport={flight.departureAirport}
-            time={formatFlightTime(
-              flight.returnArrivalTime,
-              flight.departureAirport
-            )}
+            time={rArrText}
           />
           <InfoRow
-            icon={<Feather name="calendar" size={18} color="#0be5ecd7" />}
+            icon={<Feather name="calendar" size={18} color={THEME} />}
             label="비행 시간"
-            value={formatDuration(flight.returnDuration)}
+            value={formatDuration(rDur)}
           />
         </SectionCard>
       )}
@@ -102,7 +124,7 @@ const FlightDetailScreen: React.FC = () => {
       {/* 좌석 및 서비스 */}
       <SectionCard
         title="좌석 및 서비스"
-        icon={<FontAwesome name="users" size={20} color="#0be5ecd7" />}
+        icon={<FontAwesome name="users" size={20} color={THEME} />}
       >
         <SimpleRow label="좌석 등급" value={flight.travelClass} />
         <SimpleRow
@@ -114,22 +136,19 @@ const FlightDetailScreen: React.FC = () => {
       {/* 정책 정보 */}
       <SectionCard
         title="정책 정보"
-        icon={<FontAwesome name="suitcase" size={20} color="#0be5ecd7" />}
+        icon={<FontAwesome name="suitcase" size={20} color={THEME} />}
       >
-        <ToggleRow label="수하물 포함" value={flight.hasCheckedBags} />
-        <ToggleRow label="환불 가능" value={flight.isRefundable} />
-        <ToggleRow label="변경 가능" value={flight.isChangeable} />
+        <ToggleRow label="수하물 포함" value={!!flight.hasCheckedBags} />
+        {/* ✅ 필드명 교정: refundable / changeable */}
+        <ToggleRow label="환불 가능" value={!!flight.isRefundable} />
+        <ToggleRow label="변경 가능" value={!!flight.isChangeable} />
       </SectionCard>
 
       {/* 가격 정보 */}
       <View style={styles.card}>
         <View style={styles.priceHeader}>
           <View style={styles.headerTitleRow}>
-            <MaterialCommunityIcons
-              name="currency-krw"
-              size={20}
-              color="white"
-            />
+            <MaterialCommunityIcons name="currency-krw" size={20} color="white" />
             <Text style={styles.priceTitle}>가격 정보</Text>
           </View>
         </View>
@@ -149,11 +168,11 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "#0be5ecd7",
+    borderColor: THEME,
     borderRadius: 8,
     overflow: "hidden",
   },
-  headerCard: { backgroundColor: "#0be5ecd7", padding: 16 },
+  headerCard: { backgroundColor: THEME, padding: 16 },
   headerTitleRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   airlineName: { color: "white", fontSize: 20, fontWeight: "bold" },
   airlineCode: { color: "white", fontSize: 16, opacity: 0.9 },
@@ -163,9 +182,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
+    alignSelf: "flex-start",
   },
   flightBadgeText: { color: "black", fontWeight: "600" },
-  priceHeader: { backgroundColor: "#0be5ecd7", padding: 16 },
+  priceHeader: { backgroundColor: THEME, padding: 16 },
   priceTitle: { color: "white", fontSize: 18, marginLeft: 8 },
   priceBody: { padding: 24, alignItems: "center" },
   priceText: {

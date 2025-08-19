@@ -1,20 +1,17 @@
-export const formatFlightTime = (iso?: string, code?: string) => {
-  if (!iso) return "시간 없음";
-  const date = new Date(iso);
-  if (isNaN(date.getTime())) return "시간 없음";
+// utils/formatFlightTime.ts
 
-  const hour = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${hour}:${min} (${code})`;
-};
+export { formatFlightTime } from "./formatters";
 
+// 과거 이름 호환: formatDuration -> 내부의 formatDurationKo 사용
+export { formatDurationKo as formatDuration } from "./formatters";
 
-export const formatDuration = (iso?: string) => {
-  if (!iso) return "정보 없음";
-  const match = iso.match(/PT(\d+H)?(\d+M)?/);
-  if (!match) return "정보 없음";
+// 필요시 함께 쓰던 헬퍼도 그대로 전달 가능
+export {
+  formatTimeHHmm,
+  dayShiftBetween,
+  formatDayShiftBadge,
+  formatPrice,
+} from "./formatters";
 
-  const hours = match[1]?.replace("H", "") ?? "0";
-  const minutes = match[2]?.replace("M", "") ?? "0";
-  return `${hours}시간 ${minutes}분`;
-};
+export { dayShiftByDuration } from "./formatters";
+

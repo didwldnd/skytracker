@@ -7,7 +7,6 @@
  * - locale: 기본 "ko-KR"
  * - currencyDisplay: "symbol" | "code" | "name" (기본 "symbol")
  * - fractionDigits: 소수점 자릿수 강제 지정(기본: Intl 기본값 사용)
- *   - 예: KRW/JPY는 0, USD/EUR는 2가 기본. 강제하려면 { fractionDigits: 0 } 처럼 넘기세요.
  */
 export const formatPrice = (
   price: unknown,
@@ -18,7 +17,6 @@ export const formatPrice = (
     fractionDigits,
   }: { currencyDisplay?: "symbol" | "code" | "name"; fractionDigits?: number } = {}
 ): string => {
-  // 문자열 가격에 콤마 등 제거
   const normalizeNumber = (v: unknown): number | undefined => {
     if (typeof v === "number" && Number.isFinite(v)) return v;
     if (typeof v === "string") {
@@ -48,9 +46,10 @@ export const formatPrice = (
     }
     return new Intl.NumberFormat(locale, opts).format(n);
   } catch {
-    // 통화 코드가 이상해도 안전하게 표기 (기호 대신 코드 표기)
     const base = n.toLocaleString(locale);
-    return currencyDisplay === "symbol" ? `${base} ${currency}`.trim() : `${base} ${currency}`.trim();
+    return currencyDisplay === "symbol"
+      ? `${base} ${currency}`.trim()
+      : `${base} ${currency}`.trim();
   }
 };
 
@@ -69,6 +68,20 @@ export const formatTimeHHmm = (iso?: string, useUTC = false): string => {
   const mm = String(getM()).padStart(2, "0");
   return `${hh}:${mm}`;
 };
+
+/**
+ * 항공권 표기용 "HH:mm (ICN)" 형태
+ * - code 없으면 "(ICN)" 없이 시간만 반환
+ * - 잘못된 값이면 "시간 없음" 반환
+ */
+export function formatFlightTime(iso?: string, code?: string): string {
+  if (!iso) return "시간 없음";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "시간 없음";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return code ? `${hh}:${mm} (${code})` : `${hh}:${mm}`;
+}
 
 /**
  * ISO 8601 Duration(PT#H#M[#S]) -> "X시간 Y분"
@@ -92,3 +105,49 @@ export const formatDurationKo = (iso?: string, showSeconds = false): string => {
 
   return parts.join(" ").trim();
 };
+
+/* -------------------------- 항공 보조 유틸 -------------------------- */
+
+/**
+ * "YYYY-MM-DDTHH:mm:ss" 두 개를 비교하여
+ * 도착이 출발보다 며칠 뒤(+)인지 전(-)인지 계산
+ * - 날짜 단위만 비교 (현지-로컬 표기 혼선 최소화)
+ */
+export function dayShiftBetween(fromIso?: string, toIso?: string): number {
+  if (!fromIso || !toIso) return 0;
+  const fromD = fromIso.split("T")[0];
+  const toD = toIso.split("T")[0];
+  if (!fromD || !toD) return 0;
+
+  const [fy, fm, fd] = fromD.split("-").map(Number);
+  const [ty, tm, td] = toD.split("-").map(Number);
+
+  const fromUtc = Date.UTC(fy, fm - 1, fd);
+  const toUtc = Date.UTC(ty, tm - 1, td);
+  const diffDays = Math.round((toUtc - fromUtc) / 86400000);
+  return diffDays;
+}
+
+/** +N/-N일 배지 텍스트 생성 (0이면 빈 문자열) */
+export function formatDayShiftBadge(n: number): string {
+  if (n === 0) return "";
+  return n > 0 ? `+${n}일` : `${n}일`;
+}
+
+// utils/formatters.ts (맨 아래 보조 유틸 섹션에 추가)
+
+export function parseIsoDurationToMinutes(iso?: string): number | null {
+  if (!iso) return null;
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!m) return null;
+  const h = m[1] ? Number(m[1]) : 0;
+  const min = m[2] ? Number(m[2]) : 0;
+  const s = m[3] ? Number(m[3]) : 0; // 초가 오면 필요시 반영
+  return h * 60 + min + Math.floor(s / 60);
+}
+
+export function dayShiftByDuration(iso?: string): number {
+  const mins = parseIsoDurationToMinutes(iso);
+  if (mins == null) return 0;
+  return Math.floor(mins / 1440); // 24h 단위
+}

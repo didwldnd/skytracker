@@ -38,9 +38,9 @@ const FlightCard = ({
   const { addAlert, removeAlert, isAlerted } = usePriceAlert();
   const alerted = isAlerted(flight);
 
-  const departureTime = flight.departureTime || flight.outboundDepartureTime;
-  const arrivalTime = flight.arrivalTime || flight.returnArrivalTime;
-  const duration = flight.duration || flight.outboundDuration;
+  const departureTime = flight.outboundDepartureTime ?? flight.departureTime;
+  const arrivalTime = flight.outboundArrivalTime ?? flight.arrivalTime;
+  const duration = flight.outboundDuration ?? flight.duration;
 
   return (
     <TouchableOpacity onPress={onPress}>
@@ -52,11 +52,13 @@ const FlightCard = ({
             </Text>
             <Text style={styles.airportText}>{flight.departureAirport}</Text>
           </View>
+
           <View style={styles.centerColumn}>
             <View style={styles.line} />
             <Text style={styles.durationText}>{formatDuration(duration)}</Text>
             <View style={styles.line} />
           </View>
+
           <View style={styles.timeColumn}>
             <Text style={styles.timeText}>{formatTime(arrivalTime ?? "")}</Text>
             <Text style={styles.airportText}>{flight.arrivalAirport}</Text>
@@ -71,13 +73,15 @@ const FlightCard = ({
         </View>
 
         <View style={styles.iconRow}>
-          <TouchableOpacity onPress={() => (alerted ? removeAlert(flight) : addAlert(flight))}>
-  <Ionicons
-    name={alerted ? "notifications" : "notifications-outline"}
-    size={20}
-    color={alerted ? "gold" : "gray"}
-  />
-</TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => (alerted ? removeAlert(flight) : addAlert(flight))}
+          >
+            <Ionicons
+              name={alerted ? "notifications" : "notifications-outline"}
+              size={20}
+              color={alerted ? "gold" : "gray"}
+            />
+          </TouchableOpacity>
 
           <TouchableOpacity onPress={() => toggleFavorite(flight)}>
             <FontAwesome

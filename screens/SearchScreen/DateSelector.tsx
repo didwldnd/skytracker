@@ -50,7 +50,6 @@ LocaleConfig.locales["ko"] = {
   dayNamesShort: ["일", "월", "화", "수", "목", "금", "토"],
   today: "오늘",
 };
-
 LocaleConfig.defaultLocale = "ko";
 
 interface Props {
@@ -70,6 +69,8 @@ interface Props {
   currentMonth: string;
   setCurrentMonth: (month: string) => void;
 }
+
+const THEME = "#0be5ecd7";
 
 const DateSelector = ({
   tripType,
@@ -91,15 +92,29 @@ const DateSelector = ({
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
   const isOneWay = tripType === "편도";
 
-  // 👇 귀국일 페이드 아웃용 애니메이션 값
-  const returnOpacity = useRef(new Animated.Value(1)).current;
+  // --- 폭 기반 애니메이션 (세로 튐 방지) ---
+  const [rowWidth, setRowWidth] = useState(0);
+  const progress = useRef(new Animated.Value(isOneWay ? 0 : 1)).current; // 0: 편도(귀국일 닫힘), 1: 왕복(열림)
+  const labelOpacity = useRef(new Animated.Value(isOneWay ? 0 : 1)).current;
+
   useEffect(() => {
-    Animated.timing(returnOpacity, {
-      toValue: isOneWay ? 0.35 : 1, // 편도면 흐릿하게(0.35~0.5 사이 추천)
-      duration: 220,
-      useNativeDriver: true,
+    Animated.timing(progress, {
+      toValue: isOneWay ? 0 : 1,
+      duration: 260,
+      useNativeDriver: false, // width/opacity 애니메이션
     }).start();
-  }, [isOneWay, returnOpacity]);
+  }, [isOneWay, progress]);
+  useEffect(() => {
+    // 편도로 갈 때는 라벨을 더 빠르게 사라지게(140ms)
+    Animated.timing(labelOpacity, {
+      toValue: isOneWay ? 0 : 1,
+      duration: isOneWay ? 140 : 180,
+      useNativeDriver: false,
+    }).start();
+  }, [isOneWay, labelOpacity]);
+
+  const dividerOpacity = progress;
+  const returnOpacity = progress;
 
   const onDayPress = (day: { dateString: string }) => {
     const today = new Date(formatDate(new Date()));
@@ -108,7 +123,6 @@ const DateSelector = ({
 
     setCurrentMonth(day.dateString);
 
-    // 편도: 한 날짜만 선택
     if (isOneWay) {
       setStartDate(day.dateString);
       setEndDate(null);
@@ -116,7 +130,7 @@ const DateSelector = ({
         [day.dateString]: {
           startingDay: true,
           endingDay: true,
-          color: "#0be5ecd7",
+          color: THEME,
           textColor: "#fff",
         },
       });
@@ -125,14 +139,13 @@ const DateSelector = ({
       return;
     }
 
-    // 왕복: 기존 로직
     if (!startDate || (startDate && endDate)) {
       setStartDate(day.dateString);
       setEndDate(null);
       setMarkedDates({
         [day.dateString]: {
           startingDay: true,
-          color: "#0be5ecd7",
+          color: THEME,
           textColor: "#fff",
         },
       });
@@ -148,13 +161,13 @@ const DateSelector = ({
         if (index === 0) {
           newMarked[date] = {
             startingDay: true,
-            color: "#0be5ecd7",
+            color: THEME,
             textColor: "#fff",
           };
         } else if (index === range.length - 1) {
           newMarked[date] = {
             endingDay: true,
-            color: "#0be5ecd7",
+            color: THEME,
             textColor: "#fff",
           };
         } else {
@@ -182,7 +195,6 @@ const DateSelector = ({
     return dates;
   };
 
-  // reset 시 달력 초기화
   useEffect(() => {
     if (!startDate && !endDate) {
       setMarkedDates({});
@@ -190,41 +202,88 @@ const DateSelector = ({
     }
   }, [startDate, endDate]);
 
-  return (
-    <View style={styles.dateRow}>
-      {/* 출발일 */}
-      <View style={styles.dateColumn}>
-        <Text style={styles.label}>출발일</Text>
-        <TouchableOpacity
-          style={styles.input}
-          onPress={() => setShowDeparturePicker(true)}
-        >
-          <Text style={styles.inputText}>{formatDate(departureDate)}</Text>
-        </TouchableOpacity>
-      </View>
+  const returnTextOpacity = progress.interpolate({
+    inputRange: [0, 0.35, 1],
+    outputRange: [0, 0, 1],
+  });
 
-      {/* 귀국일: 항상 자리를 유지(폭 고정), 편도면 흐릿 + 터치 막기 */}
-      <Animated.View
-        style={[styles.dateColumn, { opacity: returnOpacity }]}
-        pointerEvents={isOneWay ? "none" : "auto"} // 터치 차단
-        accessibilityElementsHidden={isOneWay}
-        importantForAccessibility={isOneWay ? "no-hide-descendants" : "auto"}
+  const returnTextTranslateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [12, 0],
+  });
+
+  return (
+    <View>
+      {/* KAYAK 스타일: 붙어있는 두 입력 */}
+      <View
+        style={styles.pillRow}
+        onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}
       >
-        <Text style={[styles.label, isOneWay && styles.disabledLabel]}>
-          귀국일
-        </Text>
+        {/* 출발일 */}
         <TouchableOpacity
-          style={[styles.input, isOneWay && styles.inputDisabled]}
+          style={[styles.pillHalf, styles.pillLeft]}
           onPress={() => setShowDeparturePicker(true)}
-          disabled={isOneWay} // 터치 비활성화
+          accessibilityLabel="출발일 선택"
         >
-          <Text
-            style={[styles.inputText, isOneWay && styles.inputTextDisabled]}
-          >
-            {isOneWay ? "-" : formatDate(returnDate)}
-          </Text>
+          <Text style={styles.pillLabel}>출발일</Text>
+          <Text style={styles.pillValue}>{formatDate(departureDate)}</Text>
         </TouchableOpacity>
-      </Animated.View>
+
+        {/* 구분선 (왕복에서만 페이드인) */}
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.pillDivider, { opacity: dividerOpacity }]}
+        />
+
+        <Animated.View
+          style={[
+            styles.returnWrap,
+            rowWidth > 0 && {
+              width: progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, (rowWidth - 1) / 2],
+              }),
+              opacity: progress, // 컨테이너 페이드(기존)
+            },
+          ]}
+          pointerEvents={isOneWay ? "none" : "auto"}
+          accessibilityElementsHidden={isOneWay}
+          importantForAccessibility={isOneWay ? "no-hide-descendants" : "auto"}
+        >
+          <TouchableOpacity
+            style={[styles.pillHalf, styles.pillRight]}
+            onPress={() => setShowDeparturePicker(true)}
+            disabled={isOneWay}
+            accessibilityLabel="귀국일 선택"
+            activeOpacity={0.8}
+          >
+            {/* ✅ 라벨은 isOneWay 바뀌자마자 빠르게 페이드아웃 */}
+            <Animated.Text
+              style={[styles.pillLabel, { opacity: labelOpacity }]}
+              numberOfLines={1}
+            >
+              귀국일
+            </Animated.Text>
+
+            {/* ✅ 값 텍스트는 폭이 어느 정도 나온 뒤에 등장(겹침 방지) */}
+            <Animated.View
+              pointerEvents="none"
+              style={{
+                opacity: returnTextOpacity,
+                transform: [{ translateX: returnTextTranslateX }],
+              }}
+            >
+              <Text
+                style={styles.pillValue}
+                numberOfLines={1}
+                ellipsizeMode="clip"
+              >
+                {isOneWay ? "" : formatDate(returnDate)}
+              </Text>
+            </Animated.View>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
 
       {/* 달력 모달 */}
       <Modal visible={showDeparturePicker} transparent animationType="slide">
@@ -238,9 +297,9 @@ const DateSelector = ({
               markingType={"period"}
               minDate={formatDate(new Date())}
               theme={{
-                selectedDayBackgroundColor: "#0be5ecd7",
-                todayTextColor: "#0be5ecd7",
-                arrowColor: "#0be5ecd7",
+                selectedDayBackgroundColor: THEME,
+                todayTextColor: THEME,
+                arrowColor: THEME,
                 textDayFontWeight: "500",
                 textMonthFontWeight: "bold",
               }}
@@ -253,7 +312,7 @@ const DateSelector = ({
                 <Text style={styles.modalButtonText}>닫기</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: "#0be5ecd7" }]}
+                style={[styles.modalButton, { backgroundColor: THEME }]}
                 onPress={() => setShowDeparturePicker(false)}
               >
                 <Text style={styles.modalButtonText}>적용</Text>
@@ -269,41 +328,54 @@ const DateSelector = ({
 export default DateSelector;
 
 const styles = StyleSheet.create({
-  dateRow: {
+  // ====== 붙은 입력 필 ======
+  pillRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  dateColumn: {
-    flex: 1, // 박스 폭 고정(1:1)
-  },
-  label: {
-    fontSize: 16,
-    marginBottom: 4,
-    color: "#000",
-  },
-  disabledLabel: {
-    color: "#9aa0a6",
-  },
-  input: {
-    borderColor: "#ccc",
+    alignItems: "center",
     borderWidth: 1,
-    padding: 12,
-    borderRadius: 8,
-    backgroundColor: "#f9f9f9",
+    borderColor: "#e5e7eb",
+    backgroundColor: "#f9fafb",
+    borderRadius: 12,
+    overflow: "hidden",
+    height: 56, // ✅ 세로 고정으로 높이 튐 방지
   },
-  inputDisabled: {
-    backgroundColor: "#f2f2f2",
-    borderColor: "#e0e0e0",
+  pillHalf: {
+    flex: 1,
+    paddingHorizontal: 12,
+    justifyContent: "center",
+    height: "100%",
   },
-  inputText: {
-    color: "#1f2937",
+  pillLeft: {
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
+  },
+  pillRight: {
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  returnWrap: {
+    height: "100%",
+    overflow: "hidden", // ✅ 접히는 동안 내용 잘림 처리
+  },
+  pillDivider: {
+    width: 1,
+    backgroundColor: "#e5e7eb",
+    alignSelf: "stretch",
+  },
+  pillLabel: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginBottom: 2,
+    includeFontPadding: false,
+  },
+  pillValue: {
+    fontSize: 16,
+    color: "#111827",
     fontWeight: "600",
+    includeFontPadding: false,
   },
-  inputTextDisabled: {
-    color: "#9aa0a6",
-    fontWeight: "500",
-  },
+
+  // ====== 모달/캘린더 ======
   modalContainer: {
     flex: 1,
     justifyContent: "flex-end",
