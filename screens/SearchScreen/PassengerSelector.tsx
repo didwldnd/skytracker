@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   Modal,
   View,
@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Platform,
+  ToastAndroid,
+  Alert,
 } from "react-native";
 
 interface Props {
@@ -21,8 +24,8 @@ interface Props {
   onIncrement: (type: keyof Props["counts"]) => void;
   onDecrement: (type: keyof Props["counts"]) => void;
   onClose: () => void;
-  showWarning: boolean;
-  showMinWarning: boolean;
+  showWarning: boolean; // 최대 인원 경고
+  showMinWarning: boolean; // 최소 인원 경고
   onDismissWarning: () => void;
   onDismissMinWarning: () => void;
 }
@@ -51,6 +54,32 @@ const PassengerSelector = ({
   onDismissWarning,
   onDismissMinWarning,
 }: Props) => {
+  // 최대 인원 경고
+  useEffect(() => {
+    if (showWarning) {
+      const msg = "최대 9명까지 선택할 수 있습니다.";
+      if (Platform.OS === "android") {
+        ToastAndroid.show(msg, ToastAndroid.SHORT); // ★ 3.5초 표시
+      } else {
+        Alert.alert("", msg);
+      }
+      onDismissWarning();
+    }
+  }, [showWarning, onDismissWarning]);
+
+  // 최소 인원 경고
+  useEffect(() => {
+    if (showMinWarning) {
+      const msg = "최소한 1명의 승객을 추가해주시기 바랍니다.";
+      if (Platform.OS === "android") {
+        ToastAndroid.show(msg, ToastAndroid.SHORT); // ★ 3.5초 표시
+      } else {
+        Alert.alert("", msg);
+      }
+      onDismissMinWarning();
+    }
+  }, [showMinWarning, onDismissMinWarning]);
+
   return (
     <>
       {/* 승객 선택 모달 */}
@@ -64,19 +93,32 @@ const PassengerSelector = ({
                     <Text style={styles.optionText}>{group.label}</Text>
                     <Text style={{ color: "gray" }}>{group.description}</Text>
                   </View>
+
                   <View style={{ flexDirection: "row", alignItems: "center" }}>
                     <TouchableOpacity
-                      onPress={() => onDecrement(group.key)}
+                      onPress={() =>
+                        onDecrement(group.key as keyof Props["counts"])
+                      }
                       style={styles.btn}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${group.label} 감소`}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <Text>-</Text>
                     </TouchableOpacity>
+
                     <Text style={{ marginHorizontal: 10 }}>
-                      {counts[group.key]}
+                      {counts[group.key as keyof Props["counts"]]}
                     </Text>
+
                     <TouchableOpacity
-                      onPress={() => onIncrement(group.key)}
+                      onPress={() =>
+                        onIncrement(group.key as keyof Props["counts"])
+                      }
                       style={styles.btn}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${group.label} 증가`}
+                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                     >
                       <Text>+</Text>
                     </TouchableOpacity>
@@ -88,50 +130,14 @@ const PassengerSelector = ({
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="승객 수 적용"
             >
               <Text style={styles.modalCloseButtonText}>적용</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-
-      {/* 최대 인원 경고 */}
-      {showWarning && (
-        <Modal transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.warningBox}>
-              <Text style={styles.warningText}>
-                최대 9명까지 선택할 수 있습니다.
-              </Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={onDismissWarning}
-              >
-                <Text style={styles.modalCloseButtonText}>확인</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
-
-      {/* 최소 인원 경고 */}
-      {showMinWarning && (
-        <Modal transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.warningBox}>
-              <Text style={styles.warningText}>
-                최소한 1명의 승객을 추가해주시기 바랍니다.
-              </Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={onDismissMinWarning}
-              >
-                <Text style={styles.modalCloseButtonText}>확인</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
     </>
   );
 };
@@ -171,6 +177,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 5,
+    minWidth: 36,
+    alignItems: "center",
   },
   count: {
     marginHorizontal: 10,
@@ -187,19 +195,5 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
-  },
-  warningBox: {
-    backgroundColor: "white",
-    borderRadius: 10,
-    padding: 24,
-    width: 280,
-    alignItems: "center",
-    alignSelf: "center",
-    marginTop: "50%",
-  },
-  warningText: {
-    fontSize: 15,
-    textAlign: "center",
-    marginBottom: 20,
   },
 });

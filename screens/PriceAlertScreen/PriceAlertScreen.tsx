@@ -7,18 +7,19 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  Pressable, // ★ 카드 전체 탭을 위해 사용
+  GestureResponderEvent,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
 import { usePriceAlert } from "../../context/PriceAlertContext";
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
-import { generateAlertKey } from "../../utils/generateAlertKey"; 
+import { generateAlertKey } from "../../utils/generateAlertKey";
 import { Buffer } from "buffer";
 import { formatPrice } from "../../utils/formatters";
 global.Buffer = Buffer;
 
-// 공항 코드 → 라벨
 const airportMap: Record<string, string> = {
   PUS: "부산",
   GMP: "서울",
@@ -103,7 +104,6 @@ const formatSeatClass = (cls: string) => {
   }
 };
 
-// 같은 날 출발/복귀 존재 여부로 간단 유형 표기
 const getTripType = (depart?: string, ret?: string) =>
   depart && ret && depart.split("T")[0] !== ret.split("T")[0] ? "왕복" : "편도";
 
@@ -112,12 +112,10 @@ export default function PriceAlertScreen() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { alerts, removeAlert } = usePriceAlert();
 
-  // ★ V2 컨텍스트가 alerts를 "맵"으로 주더라도 화면에선 배열이 편하니 통일
   const alertList: FlightSearchResponseDto[] = Array.isArray(alerts)
     ? alerts
     : Object.values(alerts || {});
 
-  // 각 카드 스위치 상태
   const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
     {}
   );
@@ -125,7 +123,6 @@ export default function PriceAlertScreen() {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  // ★ 알리미는 "가격 제외 키"로 동일 항공편을 묶어야 하므로 generateAlertKey 통일 사용
   useEffect(() => {
     const initialStates: { [key: string]: boolean } = {};
     alertList.forEach((item) => {
@@ -133,7 +130,7 @@ export default function PriceAlertScreen() {
       initialStates[key] = true;
     });
     setSwitchStates(initialStates);
-  }, [alertList.length]); // 길이만 의존해서 불필요 재계산 방지
+  }, [alertList.length]);
 
   const toggleSwitch = (id: string) => {
     setSwitchStates((prev) => ({
@@ -153,8 +150,16 @@ export default function PriceAlertScreen() {
     setSwitchStates(updatedStates);
   };
 
+  // ★ 카드 탭(여백 포함) 시 상세 이동
+  const goDetail = (flight: FlightSearchResponseDto) => {
+    navigation.navigate("FlightDetail", { flight });
+  };
+
+  // ★ 자식 버튼에서 카드 onPress가 실행되지 않도록 전파 방지 헬퍼
+  const stop = (e: GestureResponderEvent) => e.stopPropagation();
+
   const renderItem = ({ item }: { item: FlightSearchResponseDto }) => {
-    const id = generateAlertKey(item); // ★ 통일 포인트
+    const id = generateAlertKey(item);
 
     const from = `${airportMap[item.departureAirport] ?? item.departureAirport} (${item.departureAirport})`;
     const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${item.arrivalAirport})`;
@@ -175,10 +180,17 @@ export default function PriceAlertScreen() {
     const price = priceText(item.price, item.currency ?? "KRW");
 
     return (
-      <View style={styles.card}>
+      // ★ Pressable로 카드 전체를 클릭 영역으로
+      <Pressable
+        style={styles.card}
+        onPress={() => goDetail(item)}
+        android_ripple={{ color: "rgba(0,0,0,0.05)" }}
+        accessibilityRole="button"
+        accessibilityLabel={`${from}에서 ${to}로 가는 항공편 상세 보기`}
+      >
         <View style={styles.row}>
           <View style={styles.circle}>
-            <Text>✈️</Text>
+            <Text style={{ fontSize: 18 }}>✈️</Text>
           </View>
           <View style={styles.middle}>
             <Text style={styles.route}>
@@ -191,29 +203,47 @@ export default function PriceAlertScreen() {
               {returnDate ? `${returnDate} 도착 · ` : ""}{passenger}
             </Text>
           </View>
+
+          {/* 우측 상단: 가격 & 보기 버튼 */}
           <View style={styles.right}>
-            <TouchableOpacity
-              onPress={() => {
-                setPendingDeleteId(id);
-                setConfirmVisible(true);
-              }}
-            >
-              <Text style={styles.deleteText}>삭제</Text>
-            </TouchableOpacity>
             <Text style={styles.price}>{price}</Text>
             <TouchableOpacity
-              style={styles.button}
-              onPress={() =>
-                navigation.navigate("FlightDetail", { flight: item })
-              }
+              onPress={(e) => {
+                stop(e);
+                goDetail(item);
+              }}
+              style={styles.viewBtn}
+              accessibilityRole="button"
+              accessibilityLabel="상세 보기"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Text style={styles.buttonText}>보기</Text>
+              <Text style={styles.viewBtnText}>보기</Text>
             </TouchableOpacity>
           </View>
         </View>
 
+        {/* 하단 푸터: 좌측에 큼직한 삭제 버튼, 우측에 스위치 */}
         <View style={styles.footer}>
-          <View style={styles.footerRight}>
+          {/* ★ 삭제 버튼을 큼직하고 눈에 띄게, 전파 차단 */}
+          <TouchableOpacity
+            onPress={(e) => {
+              stop(e);
+              setPendingDeleteId(id);
+              setConfirmVisible(true);
+            }}
+            style={styles.deleteBig}
+            accessibilityRole="button"
+            accessibilityLabel="이 항공편 알림 삭제"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+          >
+            <Text style={styles.deleteBigText}>삭제</Text>
+          </TouchableOpacity>
+
+          <View
+            style={styles.footerRight}
+            // ★ 스위치 조작 시 카드 탭이 눌리지 않도록 처리
+            onStartShouldSetResponder={() => true}
+          >
             <Text style={styles.footerLabel}>알림</Text>
             <Switch
               value={switchStates[id] ?? true}
@@ -221,7 +251,7 @@ export default function PriceAlertScreen() {
             />
           </View>
         </View>
-      </View>
+      </Pressable>
     );
   };
 
@@ -234,7 +264,7 @@ export default function PriceAlertScreen() {
 
       <FlatList
         data={alertList}
-        keyExtractor={(item) => generateAlertKey(item)} // ★ 통일 포인트
+        keyExtractor={(item) => generateAlertKey(item)}
         renderItem={renderItem}
         ListEmptyComponent={
           <Text style={{ textAlign: "center", marginTop: 30, color: "#888" }}>
@@ -253,7 +283,6 @@ export default function PriceAlertScreen() {
               <TouchableOpacity
                 style={styles.confirmDelete}
                 onPress={() => {
-                  // ★ 삭제도 같은 키 기준으로 찾는다
                   const flight = alertList.find(
                     (f) => generateAlertKey(f) === pendingDeleteId
                   );
@@ -262,7 +291,7 @@ export default function PriceAlertScreen() {
                   setPendingDeleteId(null);
                 }}
               >
-                <Text style={{ color: "#fff" }}>삭제</Text>
+                <Text style={{ color: "#fff", fontWeight: "600" }}>삭제</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.confirmCancel}
@@ -278,6 +307,8 @@ export default function PriceAlertScreen() {
   );
 }
 
+const MIN_TOUCH = 33;
+
 const styles = StyleSheet.create({
   globalToggle: {
     flexDirection: "row",
@@ -292,45 +323,70 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 14, // 살짝 더 둥글게
     padding: 16,
     marginBottom: 16,
     elevation: 2,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   row: { flexDirection: "row", alignItems: "center" },
   circle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#e0e0e0",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#f0f0f0",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
   middle: { flex: 1 },
-  route: { fontWeight: "bold", fontSize: 14 },
-  info: { fontSize: 12, color: "#555" },
+  route: { fontWeight: "bold", fontSize: 15, marginBottom: 2 },
+  info: { fontSize: 13, color: "#555" },
   right: {
     alignItems: "flex-end",
     justifyContent: "space-between",
-    height: 60,
+    height: 64,
   },
-  price: { fontSize: 14, fontWeight: "bold", color: "#333" },
-  button: {
-    marginTop: 4,
+  price: { fontSize: 15, fontWeight: "bold", color: "#333" },
+  viewBtn: {
+    marginTop: 6,
     backgroundColor: "#0be5ecd7",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minHeight: MIN_TOUCH,
+    justifyContent: "center",
   },
-  buttonText: { color: "#fff", fontSize: 12 },
+  viewBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+
   footer: {
-    marginTop: 12,
+    marginTop: 14,
     flexDirection: "row",
-    justifyContent: "flex-end",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  // ★ 기존 '삭제' 텍스트 대신 큼직한 버튼
+  deleteBig: {
+    backgroundColor: "#E53935",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minHeight: MIN_TOUCH,
+    minWidth: 50,
+    justifyContent: "center",
     alignItems: "center",
   },
-  deleteText: { fontSize: 12, color: "red", marginBottom: 4 },
+  deleteBigText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -338,26 +394,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   confirmBox: {
-    width: 280,
+    width: 300,
     backgroundColor: "#fff",
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 14,
+    padding: 22,
     alignItems: "center",
   },
   confirmText: { fontSize: 16, marginBottom: 20, textAlign: "center" },
   confirmButtons: { flexDirection: "row", gap: 12 },
   confirmDelete: {
     backgroundColor: "#333",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: "center",
   },
   confirmCancel: {
     backgroundColor: "#eee",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 6,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 8,
+    minWidth: 90,
+    alignItems: "center",
   },
-  footerRight: { flexDirection: "row", alignItems: "center", gap: 6 },
+
+  footerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+  },
   footerLabel: { fontSize: 13, color: "#333" },
 });
