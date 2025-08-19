@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -23,6 +23,36 @@ import { FlightSearchRequestDto } from "../../types/FlightSearchRequestDto";
 import { airportData } from "../../data/airportData";
 import { sanitizeResults } from "../../utils/flightSanitizer";
 
+// ====== 중복 제거용 공통 헬퍼 ======
+const norm = (s?: any) => (s == null ? "" : String(s).trim());
+const upper = (s?: any) => norm(s).toUpperCase();
+const toMs = (iso?: string) => {
+  const t = Date.parse(norm(iso));
+  return Number.isFinite(t) ? t : 0;
+};
+// (항공사, 편명, 출발공항, 도착공항, 출발시간, 도착시간) = 절대 고유 튜플
+const exactTupleKey = (f: any) => {
+  const depIso = f.outboundDepartureTime ?? f.departureTime ?? "";
+  const arrIso = f.outboundArrivalTime ?? f.arrivalTime ?? "";
+  return [
+    "TUPLE",
+    upper(f.airlineCode),
+    String(f.flightNumber ?? "").replace(/^0+/, "").trim(), // "0241" → "241"
+    upper(f.departureAirport),
+    upper(f.arrivalAirport),
+    toMs(depIso) || depIso, // ISO 파싱 실패하면 원문 고정
+    toMs(arrIso) || arrIso,
+  ].join("|");
+};
+const dedupeExact = (list: any[]) => {
+  const m = new Map<string, any>();
+  for (const it of Array.isArray(list) ? list : []) {
+    const k = exactTupleKey(it);
+    if (!m.has(k)) m.set(k, it);
+  }
+  return Array.from(m.values());
+};
+
 const SearchScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -30,7 +60,9 @@ const SearchScreen = () => {
 
   const [departure, setDeparture] = useState("");
   const [destination, setDestination] = useState("");
-  const [selectedField, setSelectedField] = useState<"departure" | "destination" | null>(null);
+  const [selectedField, setSelectedField] = useState<
+    "departure" | "destination" | null
+  >(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
 
   const [departureDate, setDepartureDate] = useState<Date>(new Date());
@@ -39,7 +71,9 @@ const SearchScreen = () => {
   const [seatClass, setSeatClass] = useState("일반석");
   const [stopover, setStopover] = useState("상관없음");
   const [modalVisible, setModalVisible] = useState(false);
-  const [modalType, setModalType] = useState<"seatClass" | "stopover">("seatClass");
+  const [modalType, setModalType] = useState<"seatClass" | "stopover">(
+    "seatClass"
+  );
   const [showPassengerModal, setShowPassengerModal] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [showMinWarning, setShowMinWarning] = useState(false);
@@ -48,7 +82,9 @@ const SearchScreen = () => {
   const [startDate, setStartDate] = useState<string | null>(null);
   const [endDate, setEndDate] = useState<string | null>(null);
   const [markedDates, setMarkedDates] = useState<Record<string, any>>({});
-  const [currentMonth, setCurrentMonth] = useState(new Date().toISOString().split("T")[0]);
+  const [currentMonth, setCurrentMonth] = useState(
+    new Date().toISOString().split("T")[0]
+  );
 
   const [passengerCounts, setPassengerCounts] = useState({
     adult: 1,
@@ -64,13 +100,11 @@ const SearchScreen = () => {
     [passengerCounts]
   );
 
-  // 출발=도착 여부
   const sameAirports = useMemo(
     () => !!departure && !!destination && departure === destination,
     [departure, destination]
   );
 
-  // 검색 버튼 비활성화 조건 (둘 다 선택 + 서로 달라야 함)
   const isSearchDisabled = !departure || !destination || sameAirports;
 
   const handleSelectAirport = (code: string) => {
@@ -98,7 +132,6 @@ const SearchScreen = () => {
     setPassengerCounts(newCounts);
   };
 
-  // 스왑: 하나라도 비었거나 동일하면 막는다(UX 혼동 방지)
   const handleSwap = () => {
     if (!departure || !destination) {
       Alert.alert("교환 불가", "출발지와 도착지를 모두 선택한 후 교환할 수 있습니다.");
@@ -133,6 +166,8 @@ const SearchScreen = () => {
     setEndDate(null);
     setMarkedDates({});
   };
+
+  const isSearchingRef = useRef(false);
 
   return (
     <ScrollView>
@@ -220,7 +255,7 @@ const SearchScreen = () => {
           ))}
         </View>
 
-        {/* 동일 공항 경고 라벨 (사용자 인지용) */}
+        {/* 동일 공항 경고 라벨 */}
         {sameAirports && (
           <Text style={{ color: "#d00", fontSize: 12, marginTop: 6 }}>
             출발지와 도착지가 같습니다. 다른 공항을 선택해주세요.
@@ -244,55 +279,60 @@ const SearchScreen = () => {
           modalType={modalType}
           onClose={() => setModalVisible(false)}
           onSelect={(type, value) => {
-            if (type === "seatClass") setSeatClass(value);
-            else setStopover(value);
+            if (type === "seatClass") {
+              if (value === "프리미엄일반석" || value === "일등석") {
+                Alert.alert("미지원", "해당 좌석 등급은 아직 지원하지 않습니다.");
+                return;
+              }
+              setSeatClass(value);
+            } else {
+              setStopover(value);
+            }
           }}
         />
 
         <SearchButtons
           onReset={resetForm}
           onSearch={async () => {
-            // 마지막 안전망: 같은 공항이면 중단
+            if (isSearchingRef.current) return; // 더블탭 가드
+            isSearchingRef.current = true;
+
             if (sameAirports) {
               Alert.alert("잘못된 경로", "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요.");
+              isSearchingRef.current = false; // 해제 누락 방지
               return;
             }
             setLoading(true);
             try {
-              // 경유 옵션 매핑
-              let nonStop: boolean | undefined = undefined;
-              let maxNumberOfConnections: number | undefined = undefined;
-              if (stopover === "직항만") nonStop = true;
-              else if (stopover === "직항 또는 1회") maxNumberOfConnections = 1;
+              // 경유 옵션 → nonStop 매핑
+              const nonStop = stopover === "직항만";
 
-              // 요청 DTO 구성
+              // 좌석 등급 → 백엔드 ENUM 매핑
+              let travelClass: "ECONOMY" | "BUSINESS" | undefined;
+              if (seatClass === "일반석") travelClass = "ECONOMY";
+              else if (seatClass === "비즈니스") travelClass = "BUSINESS";
+              else travelClass = undefined;
+
               const requestDto: FlightSearchRequestDto = {
                 originLocationAirport: departure,
                 destinationLocationAirPort: destination,
                 departureDate: departureDate.toISOString().split("T")[0],
-                returnDate: tripType === "왕복" ? returnDate.toISOString().split("T")[0] : undefined,
-                currencyCode: "KRW",
-                travelClass:
-                  seatClass === "일반석"
-                    ? "ECONOMY"
-                    : seatClass === "프리미엄일반석"
-                    ? "PREMIUM_ECONOMY"
-                    : seatClass === "비즈니스"
-                    ? "BUSINESS"
-                    : seatClass === "일등석"
-                    ? "FIRST"
-                    : undefined,
-                adults: passengerCounts.adult,
-                max: 10,
+                returnDate:
+                  tripType === "왕복" ? returnDate.toISOString().split("T")[0] : undefined,
                 nonStop,
-                maxNumberOfConnections,
+                travelClass,
+                adults: Math.max(1, passengerCounts.adult),
+                max: 10,
               };
 
-              // 검색 → 불완전 항공편 제거
+              console.log("[REQ] Flight search payload:", requestDto);
+
+              // 검색 → sanitize → 절대 중복 제거
               const rawResults = await searchFlights(requestDto);
               const { valid } = sanitizeResults(rawResults || []);
+              const uniq = dedupeExact(valid);
 
-              // 결과 화면으로 이동 (0건이면 결과 화면의 Empty 컴포넌트가 안내)
+              // 결과 화면으로 이동
               navigation.navigate("FlightResult", {
                 originLocationCode: departure,
                 destinationLocationCode: destination,
@@ -301,12 +341,13 @@ const SearchScreen = () => {
                 adults: passengerCounts.adult,
                 travelClass: seatClass,
                 stopover,
-                results: valid, // ⬅️ NaN/가격없음 등 불완전 데이터는 제외된 목록
+                results: uniq, // 💡 dedupe 결과만 전달
               });
             } catch (error) {
               console.error("항공편 검색 실패:", error);
             } finally {
               setLoading(false);
+              isSearchingRef.current = false;
             }
           }}
           disabled={isSearchDisabled}
@@ -321,7 +362,6 @@ const SearchScreen = () => {
           onSelect={handleSelectAirport}
           data={airportData}
           fieldLabel={selectedField === "departure" ? "출발지" : "도착지"}
-          // 동일 공항 선택 예방: 반대편 코드 제외 (SearchModal가 excludeCode 지원한다고 가정)
           excludeCode={selectedField === "departure" ? destination : departure}
         />
       </View>

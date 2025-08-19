@@ -23,14 +23,25 @@ const THEME = "#0be5ecd7";
 const FlightDetailScreen: React.FC = () => {
   const { params } = useRoute<DetailRouteProp>();
   const { flight } = params;
-  console.log("상세 flight 데이터:", flight);
-  console.log("[CHK]",
-  flight.outboundDepartureTime,
-  flight.outboundArrivalTime,
-  flight.outboundDuration,
-  flight.returnDuration
-);
 
+  console.log("상세 flight 데이터:", flight);
+  console.log(
+    "[CHK]",
+    flight.outboundDepartureTime,
+    flight.outboundArrivalTime,
+    flight.outboundDuration,
+    flight.returnDuration
+  );
+
+  // 추가: travelClass / price 확인 로그
+  console.log("[DIAG] TravelClass =", flight.travelClass, "Price =", flight.price);
+
+  // 수상한 패턴 감지
+  if (["ECONOMY", "BUSINESS"].includes(flight.travelClass)) {
+    if (!flight.price || flight.price <= 0) {
+      console.warn("[RED FLAG] 가격 정보 없음/0원 → 서버 응답 이상 가능성");
+    }
+  }
 
   // ✅ 왕복/편도 판별: return* 존재 여부로
   const isRoundTrip = !!(flight.returnDepartureTime && flight.returnArrivalTime);

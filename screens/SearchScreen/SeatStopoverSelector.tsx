@@ -1,11 +1,7 @@
+// components/SeatStopoverSelector.tsx
 import React from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  FlatList,
-  StyleSheet,
+  View, Text, TouchableOpacity, Modal, FlatList, StyleSheet, Alert, Platform, ToastAndroid
 } from "react-native";
 
 interface Props {
@@ -20,6 +16,14 @@ const options = {
   stopover: ["상관없음", "직항 또는 1회", "직항만"],
 };
 
+const unsupportedSeat = new Set(["프리미엄일반석", "일등석"]);
+
+const notifyUnsupported = () => {
+  const msg = "아직 미지원 좌석 등급입니다.";
+  if (Platform.OS === "android") ToastAndroid.show(msg, ToastAndroid.SHORT);
+  else Alert.alert(msg);
+};
+
 const SeatStopoverSelector = ({ visible, modalType, onClose, onSelect }: Props) => {
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -28,17 +32,21 @@ const SeatStopoverSelector = ({ visible, modalType, onClose, onSelect }: Props) 
           <FlatList
             data={options[modalType]}
             keyExtractor={(item) => item}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                onPress={() => {
-                  onSelect(modalType, item);
-                  onClose();
-                }}
-                style={styles.option}
-              >
-                <Text style={styles.optionText}>{item}</Text>
-              </TouchableOpacity>
-            )}
+            renderItem={({ item }) => {
+              const disabled = modalType === "seatClass" && unsupportedSeat.has(item);
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    if (disabled) { notifyUnsupported(); return; }
+                    onSelect(modalType, item);
+                    onClose();
+                  }}
+                  style={[styles.option, disabled && { opacity: 0.4 }]}
+                >
+                  <Text style={styles.optionText}>{item}{disabled ? " (미지원)" : ""}</Text>
+                </TouchableOpacity>
+              );
+            }}
           />
           <TouchableOpacity style={styles.modalCloseButton} onPress={onClose}>
             <Text style={styles.modalCloseButtonText}>닫기</Text>
@@ -52,37 +60,10 @@ const SeatStopoverSelector = ({ visible, modalType, onClose, onSelect }: Props) 
 export default SeatStopoverSelector;
 
 const styles = StyleSheet.create({
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalContent: {
-    backgroundColor: "#fff",
-    padding: 24,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "70%",
-  },
-  option: {
-    paddingVertical: 15,
-    borderBottomColor: "#ccc",
-    borderBottomWidth: 1,
-  },
-  optionText: {
-    fontSize: 18,
-  },
-  modalCloseButton: {
-    marginTop: 20,
-    backgroundColor: "#0be5ecd7",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    alignSelf: "stretch",
-  },
-  modalCloseButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  modalOverlay: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalContent: { backgroundColor: "#fff", padding: 24, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: "70%" },
+  option: { paddingVertical: 15, borderBottomColor: "#ccc", borderBottomWidth: 1 },
+  optionText: { fontSize: 18 },
+  modalCloseButton: { marginTop: 20, backgroundColor: "#0be5ecd7", paddingVertical: 12, borderRadius: 8, alignItems: "center", alignSelf: "stretch" },
+  modalCloseButtonText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });

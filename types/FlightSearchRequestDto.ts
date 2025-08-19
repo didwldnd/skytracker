@@ -1,13 +1,11 @@
-// 사용자가 검색할때 API로 보내는 요청 데이터 방식 (검색 조건 필터)
 export interface FlightSearchRequestDto {
   originLocationAirport: string;
-  destinationLocationAirPort: string;
-  departureDate: string;      // YYYY-MM-DD
-  returnDate?: string;        // 왕복일 경우
-  currencyCode?: string;
-  nonStop?: boolean;
-  travelClass?: "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST";
-  adults: number;
-  maxNumberOfConnections?: number;
-  max?: number;
+  destinationLocationAirPort: string; // 백엔드 DTO와 동일 (AirPort)
+  departureDate: string;              // YYYY-MM-DD
+  returnDate?: string;                // 편도면 미전송
+  // currencyCode?: string;           // 현재 미사용이므로 생략 권장 (있어도 무방)
+  nonStop?: boolean;                  // 직항만
+  travelClass?: "ECONOMY" | "BUSINESS"; // 현재는 이 2개만 지원
+  adults: number;                     // UI 값 그대로 전달
+  max: number;                        // 호출당 최대 결과 수 (기본 10)
 }

@@ -25,6 +25,16 @@ const formatDuration = (iso: string | undefined) => {
   return `${hours}시간 ${minutes}분`;
 };
 
+const formatFlightNo = (code?: string, num?: string | number) => {
+  const n = (num ?? "").toString().trim();
+  if (!code && !n) return "정보 없음";
+  return code ? `${code} ${n}` : n;
+};
+
+const seatLabel = (cls?: string) =>
+  cls === "BUSINESS" ? "비즈니스석" : cls === "ECONOMY" ? "일반석" : undefined;
+
+
 const FlightCard = ({
   flight,
   onPress,
@@ -42,9 +52,12 @@ const FlightCard = ({
   const arrivalTime = flight.outboundArrivalTime ?? flight.arrivalTime;
   const duration = flight.outboundDuration ?? flight.duration;
 
+  const cls = seatLabel(flight.travelClass);
+
   return (
     <TouchableOpacity onPress={onPress}>
       <View style={styles.card}>
+        {/* 상단 시간/공항 */}
         <View style={styles.row}>
           <View style={styles.timeColumn}>
             <Text style={styles.timeText}>
@@ -65,6 +78,21 @@ const FlightCard = ({
           </View>
         </View>
 
+        {/* ✅ 항공편/좌석 뱃지 */}
+        <View style={styles.metaRow}>
+          <View style={styles.badge}>
+            <Text style={styles.badgeText}>
+              항공편 {formatFlightNo(flight.airlineCode, flight.flightNumber)}
+            </Text>
+          </View>
+          {cls && (
+            <View style={[styles.badge, styles.seatBadge]}>
+              <Text style={[styles.badgeText, styles.seatBadgeText]}>{cls}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* 가격 & 항공사 */}
         <View style={styles.bottomRow}>
           <Text style={styles.priceText}>
             {formatPrice(flight.price, flight.currency ?? "KRW")}
@@ -72,6 +100,7 @@ const FlightCard = ({
           <Text style={styles.carrierText}>{flight.airlineName}</Text>
         </View>
 
+        {/* 아이콘 */}
         <View style={styles.iconRow}>
           <TouchableOpacity
             onPress={() => (alerted ? removeAlert(flight) : addAlert(flight))}
@@ -90,6 +119,7 @@ const FlightCard = ({
               color={favorite ? "red" : "gray"}
             />
           </TouchableOpacity>
+
           <TouchableOpacity>
             <MaterialIcons name="ios-share" size={20} color="gray" />
           </TouchableOpacity>
@@ -145,6 +175,35 @@ const styles = StyleSheet.create({
     color: "#555",
     marginVertical: 4,
   },
+
+  /* ✅ 추가 */
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 10,
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#f2f4f7",
+    borderWidth: 1,
+    borderColor: "#eceef1",
+  },
+  badgeText: {
+    fontSize: 12,
+    color: "#333",
+  },
+  seatBadge: {
+    backgroundColor: THEME_COLOR,
+    borderColor: THEME_COLOR,
+  },
+  seatBadgeText: {
+    color: "#00303a",
+    fontWeight: "600",
+  },
+
   bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
