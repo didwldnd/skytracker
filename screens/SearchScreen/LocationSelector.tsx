@@ -1,16 +1,11 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { View, TouchableOpacity, Text, StyleSheet, Alert } from "react-native";
+import { airportData } from "../../data/airportData";
 
 interface Props {
-  departure: string;
-  destination: string;
+  departure: string;   // IATA 코드, 예: "ICN"
+  destination: string; // IATA 코드, 예: "NRT"
   onSwap: () => void;
-  /**
-   * 선택 모달을 여는 콜백.
-   * - field: 어느 입력을 선택하는지
-   * - options.excludeCode: 목록에서 제외할 공항 코드(=반대편 코드)
-   *   → SearchModal에서 이 값을 이용해 동일 공항을 숨기면 실수 예방 가능
-   */
   onSelectField: (
     field: "departure" | "destination",
     options?: { excludeCode?: string }
@@ -23,10 +18,26 @@ export default function LocationSelector({
   onSwap,
   onSelectField,
 }: Props) {
+  // code -> city 맵
+  const codeToCity = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const a of airportData) {
+      map[a.code.toUpperCase().trim()] = a.city;
+    }
+    return map;
+  }, []);
+
+  // "도시 ( CODE )" 라벨
+  const labelFromCode = (code?: string) => {
+    if (!code) return "";
+    const normalized = code.toUpperCase().trim();
+    const city = codeToCity[normalized] || normalized;
+    return `${city} (${normalized})`;
+  };
+
   const sameOrEmpty = !departure || !destination || departure === destination;
 
   const handleSwap = () => {
-    // 출/도착 중 하나가 비었거나 동일하면 스왑 금지
     if (sameOrEmpty) {
       Alert.alert(
         "경로 교환 불가",
@@ -44,9 +55,10 @@ export default function LocationSelector({
       <TouchableOpacity
         onPress={() => onSelectField("departure", { excludeCode: destination })}
         style={styles.input}
+        accessibilityLabel="출발지 선택"
       >
         <Text style={styles.inputText}>
-          {departure ? departure : "출발지 선택"}
+          {departure ? labelFromCode(departure) : "출발지 선택"}
         </Text>
       </TouchableOpacity>
 
@@ -63,13 +75,13 @@ export default function LocationSelector({
       <TouchableOpacity
         onPress={() => onSelectField("destination", { excludeCode: departure })}
         style={styles.input}
+        accessibilityLabel="도착지 선택"
       >
         <Text style={styles.inputText}>
-          {destination ? destination : "도착지 선택"}
+          {destination ? labelFromCode(destination) : "도착지 선택"}
         </Text>
       </TouchableOpacity>
 
-      {/* 동일 공항 선택 시 안내 라벨 (선택 사항) */}
       {departure && destination && departure === destination && (
         <Text style={styles.helperText}>
           출발지와 도착지가 같습니다. 다른 공항을 선택해주세요.
@@ -80,10 +92,7 @@ export default function LocationSelector({
 }
 
 const styles = StyleSheet.create({
-  locationWrapper: {
-    position: "relative",
-    marginBottom: 15,
-  },
+  locationWrapper: { position: "relative", marginBottom: 15 },
   input: {
     borderColor: "#ccc",
     borderWidth: 1,
@@ -92,10 +101,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f9f9f9",
     marginBottom: 8,
   },
-  inputText: {
-    fontSize: 16,
-    color: "#333",
-  },
+  inputText: { fontSize: 16, color: "#333" },
   swapButton: {
     position: "absolute",
     top: 30,
@@ -110,15 +116,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
   },
-  swapDisabled: {
-    opacity: 0.4,
-  },
-  swapIcon: {
-    fontSize: 16,
-  },
-  helperText: {
-    marginTop: 4,
-    fontSize: 12,
-    color: "#d00",
-  },
+  swapDisabled: { opacity: 0.4 },
+  swapIcon: { fontSize: 16 },
+  helperText: { marginTop: 4, fontSize: 12, color: "#d00" },
 });
