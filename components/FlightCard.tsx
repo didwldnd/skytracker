@@ -34,7 +34,6 @@ const formatFlightNo = (code?: string, num?: string | number) => {
 const seatLabel = (cls?: string) =>
   cls === "BUSINESS" ? "비즈니스석" : cls === "ECONOMY" ? "일반석" : undefined;
 
-
 const FlightCard = ({
   flight,
   onPress,
@@ -87,7 +86,9 @@ const FlightCard = ({
           </View>
           {cls && (
             <View style={[styles.badge, styles.seatBadge]}>
-              <Text style={[styles.badgeText, styles.seatBadgeText]}>{cls}</Text>
+              <Text style={[styles.badgeText, styles.seatBadgeText]}>
+                {cls}
+              </Text>
             </View>
           )}
         </View>
@@ -107,7 +108,7 @@ const FlightCard = ({
           >
             <Ionicons
               name={alerted ? "notifications" : "notifications-outline"}
-              size={20}
+              size={25}
               color={alerted ? "gold" : "gray"}
             />
           </TouchableOpacity>
@@ -115,13 +116,13 @@ const FlightCard = ({
           <TouchableOpacity onPress={() => toggleFavorite(flight)}>
             <FontAwesome
               name={favorite ? "heart" : "heart-o"}
-              size={20}
+              size={25}
               color={favorite ? "red" : "gray"}
             />
           </TouchableOpacity>
 
           <TouchableOpacity>
-            <MaterialIcons name="ios-share" size={20} color="gray" />
+            <MaterialIcons name="ios-share" size={25} color="gray" />
           </TouchableOpacity>
         </View>
       </View>
