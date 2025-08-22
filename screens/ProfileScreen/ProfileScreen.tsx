@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,9 @@ import { useFavorite } from "../../context/FavoriteContext";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
+import { useUserSettings } from "../../context/UserSettingsContext";
+import SearchModal from "../../components/SearchModal";
+import { airportData } from "../../data/airportData";
 
 const themeColor = "white";
 
@@ -21,8 +24,17 @@ const ProfileScreen = () => {
     name: "양지웅",
     email: "wldnd4949@naver.com",
     profileImage: "",
-    departureAirport: "ICN",
   };
+
+  const { favorites } = useFavorite(); // 필요시 사용
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const {
+    preferredDepartureAirport,
+    setPreferredDepartureAirport,
+    loading,
+  } = useUserSettings();
 
   const handleLogout = () => Alert.alert("로그아웃", "로그아웃 되었습니다.");
   const handleDeleteAccount = () =>
@@ -35,11 +47,15 @@ const ProfileScreen = () => {
       },
     ]);
 
-    const FavoritesSection = () => {
-      const { favorites } = useFavorite();
-    }
-    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // 🔽 SearchModal 제어
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const openPicker = () => setPickerOpen(true);
+  const closePicker = () => setPickerOpen(false);
 
+  const handleSelectAirport = async (code: string) => {
+    await setPreferredDepartureAirport(code); // 컨텍스트 + AsyncStorage 저장
+    closePicker();
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -57,11 +73,27 @@ const ProfileScreen = () => {
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{user.name}</Text>
             <Text style={styles.email}>{user.email}</Text>
+
+            {/* 나의 출발 공항 행 */}
             <View style={styles.infoRow}>
               <Feather name="send" size={14} color="black" />
               <Text style={styles.infoText}>
-                나의 출발 공항: {user.departureAirport}
+                나의 출발 공항:{" "}
+                {loading ? "로딩중..." : preferredDepartureAirport ?? "미설정"}
               </Text>
+              <TouchableOpacity
+                onPress={openPicker}
+                style={{
+                  marginLeft: 8,
+                  paddingHorizontal: 8,
+                  paddingVertical: 4,
+                  borderWidth: 1,
+                  borderColor: "#cbd5e1",
+                  borderRadius: 6,
+                }}
+              >
+                <Text style={{ fontSize: 12 }}>변경</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -73,7 +105,6 @@ const ProfileScreen = () => {
           title: "내 정보 관리",
           icon: <Feather name="user" size={18} color={themeColor} />,
           items: [
-            // { label: "개인정보 수정", icon: "user" }, 필요시 추가
             { label: "알림 설정", icon: "bell" },
             { label: "언어 및 통화", icon: "globe" },
           ],
@@ -134,69 +165,33 @@ const ProfileScreen = () => {
           <Text style={[styles.logoutText, { color: "red" }]}>계정 탈퇴</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ✅ SearchModal 재사용 */}
+      <SearchModal
+        visible={pickerOpen}
+        onClose={closePicker}
+        onSelect={handleSelectAirport} // (code: string)
+        data={airportData}
+        fieldLabel="출발지"
+      />
     </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "white",
-    padding: 16,
-  },
+  container: { flex: 1, backgroundColor: "white", padding: 16 },
   profileHeader: {
     backgroundColor: themeColor,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
-  profileRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
-  },
-  avatar: {
-    backgroundColor: "white",
-    borderColor: themeColor,
-    borderWidth: 2,
-  },
-  name: {
-    color: "black",
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  email: {
-    color: "black",
-    marginBottom: 4,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  infoText: {
-    color: "black",
-    fontSize: 12,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 24,
-  },
-  statBox: {
-    alignItems: "center",
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: themeColor,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#666",
-  },
+  profileRow: { flexDirection: "row", alignItems: "center", gap: 16 },
+  avatar: { backgroundColor: "white", borderColor: themeColor, borderWidth: 2 },
+  name: { color: "black", fontSize: 20, fontWeight: "bold", marginBottom: 4 },
+  email: { color: "black", marginBottom: 4 },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
+  infoText: { color: "black", fontSize: 12 },
   sectionBox: {
     borderWidth: 1,
     borderColor: "#bae6fd",
@@ -213,11 +208,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "white",
-  },
+  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "white" },
   sectionItem: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -226,25 +217,15 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: "#f1f5f9",
   },
-  sectionLabel: {
-    fontSize: 14,
-    color: "#1e293b",
-  },
+  sectionLabel: { fontSize: 14, color: "#1e293b" },
   logoutRow: {
     flexDirection: "row",
     justifyContent: "space-around",
     marginTop: 24,
     paddingBottom: 40,
   },
-  logoutText: {
-    fontSize: 14,
-    color: "gray",
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginLeft: 4,
-  },
+  logoutText: { fontSize: 14, color: "gray" },
+  title: { fontSize: 24, fontWeight: "bold", marginLeft: 4 },
 });
 
 export default ProfileScreen;

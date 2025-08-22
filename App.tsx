@@ -12,6 +12,7 @@ import SplashScreen from "./screens/SplashScreen/SplashScreen";
 import { FavoriteProvider } from "./context/FavoriteContext";
 import FavoriteListScreen from "./screens/ProfileScreen/FavoriteListScreen";
 import { PriceAlertProvider } from "./context/PriceAlertContext";
+import { UserSettingsProvider } from "./context/UserSettingsContext";
 
 export type RootStackParamList = {
   Splash: undefined; // 추가
@@ -38,34 +39,36 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   return (
-    <PriceAlertProvider>
-      <FavoriteProvider>
-        <SafeAreaView style={{ flex: 1 }}>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <NavigationContainer>
-              <Stack.Navigator
-                initialRouteName="Splash" // 스플래시로 변경
-                screenOptions={{
-                  headerShown: false,
-                }}
-              >
-                <Stack.Screen name="Splash" component={SplashScreen} />
-                <Stack.Screen name="HomeScreen" component={HomeScreen} />
-                <Stack.Screen name="LoginScreen" component={LoginScreen} />
-                <Stack.Screen name="FlightResult" component={FlightResult} />
-                <Stack.Screen
-                  name="FlightDetail"
-                  component={FlightDetailScreen}
-                />
-                <Stack.Screen
-                  name="FavoriteList"
-                  component={FavoriteListScreen}
-                />
-              </Stack.Navigator>
-            </NavigationContainer>
-          </GestureHandlerRootView>
-        </SafeAreaView>
-      </FavoriteProvider>
-    </PriceAlertProvider>
+    <UserSettingsProvider>
+      <PriceAlertProvider>
+        <FavoriteProvider>
+          <SafeAreaView style={{ flex: 1 }}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <NavigationContainer>
+                <Stack.Navigator
+                  initialRouteName="Splash" // 스플래시로 변경
+                  screenOptions={{
+                    headerShown: false,
+                  }}
+                >
+                  <Stack.Screen name="Splash" component={SplashScreen} />
+                  <Stack.Screen name="HomeScreen" component={HomeScreen} />
+                  <Stack.Screen name="LoginScreen" component={LoginScreen} />
+                  <Stack.Screen name="FlightResult" component={FlightResult} />
+                  <Stack.Screen
+                    name="FlightDetail"
+                    component={FlightDetailScreen}
+                  />
+                  <Stack.Screen
+                    name="FavoriteList"
+                    component={FavoriteListScreen}
+                  />
+                </Stack.Navigator>
+              </NavigationContainer>
+            </GestureHandlerRootView>
+          </SafeAreaView>
+        </FavoriteProvider>
+      </PriceAlertProvider>
+    </UserSettingsProvider>
   );
 }

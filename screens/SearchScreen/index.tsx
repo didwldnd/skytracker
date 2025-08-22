@@ -1,4 +1,10 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -7,7 +13,7 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
 import LocationSelector from "./LocationSelector";
@@ -22,6 +28,7 @@ import { searchFlights } from "../../utils/api";
 import { FlightSearchRequestDto } from "../../types/FlightSearchRequestDto";
 import { airportData } from "../../data/airportData";
 import { sanitizeResults } from "../../utils/flightSanitizer";
+import { useUserSettings } from "../../context/UserSettingsContext";
 
 // ====== 중복 제거용 공통 헬퍼 ======
 const norm = (s?: any) => (s == null ? "" : String(s).trim());
@@ -37,7 +44,9 @@ const exactTupleKey = (f: any) => {
   return [
     "TUPLE",
     upper(f.airlineCode),
-    String(f.flightNumber ?? "").replace(/^0+/, "").trim(), // "0241" → "241"
+    String(f.flightNumber ?? "")
+      .replace(/^0+/, "")
+      .trim(), // "0241" → "241"
     upper(f.departureAirport),
     upper(f.arrivalAirport),
     toMs(depIso) || depIso, // ISO 파싱 실패하면 원문 고정
@@ -134,11 +143,17 @@ const SearchScreen = () => {
 
   const handleSwap = () => {
     if (!departure || !destination) {
-      Alert.alert("교환 불가", "출발지와 도착지를 모두 선택한 후 교환할 수 있습니다.");
+      Alert.alert(
+        "교환 불가",
+        "출발지와 도착지를 모두 선택한 후 교환할 수 있습니다."
+      );
       return;
     }
     if (sameAirports) {
-      Alert.alert("교환 불가", "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요.");
+      Alert.alert(
+        "교환 불가",
+        "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요."
+      );
       return;
     }
     setDeparture((prev) => {
@@ -147,8 +162,26 @@ const SearchScreen = () => {
     });
   };
 
+  const { preferredDepartureAirport, loading: settingsLoading } =
+    useUserSettings();
+
+  useEffect(() => {
+    // 화면 최초 진입 시(또는 앱 리로드 시) 한 번만 기본값 주입
+    if (!settingsLoading && !departure && preferredDepartureAirport) {
+      setDeparture(preferredDepartureAirport);
+    }
+  }, [settingsLoading, preferredDepartureAirport, departure]);
+
+  // ✅ 화면 포커스될 때마다 “무조건” 선호값으로 덮어쓰기
+  useFocusEffect(
+    useCallback(() => {
+      if (settingsLoading) return;
+      setDeparture(preferredDepartureAirport ?? ""); // <- 하드 싱크
+    }, [settingsLoading, preferredDepartureAirport])
+  );
+
   const resetForm = () => {
-    setDeparture("");
+    setDeparture(preferredDepartureAirport ?? ""); // 항상 선호값으로
     setDestination("");
     setDepartureDate(new Date());
     setReturnDate(new Date());
@@ -281,7 +314,10 @@ const SearchScreen = () => {
           onSelect={(type, value) => {
             if (type === "seatClass") {
               if (value === "프리미엄일반석" || value === "일등석") {
-                Alert.alert("미지원", "해당 좌석 등급은 아직 지원하지 않습니다.");
+                Alert.alert(
+                  "미지원",
+                  "해당 좌석 등급은 아직 지원하지 않습니다."
+                );
                 return;
               }
               setSeatClass(value);
@@ -298,7 +334,10 @@ const SearchScreen = () => {
             isSearchingRef.current = true;
 
             if (sameAirports) {
-              Alert.alert("잘못된 경로", "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요.");
+              Alert.alert(
+                "잘못된 경로",
+                "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요."
+              );
               isSearchingRef.current = false; // 해제 누락 방지
               return;
             }
@@ -318,7 +357,9 @@ const SearchScreen = () => {
                 destinationLocationAirPort: destination,
                 departureDate: departureDate.toISOString().split("T")[0],
                 returnDate:
-                  tripType === "왕복" ? returnDate.toISOString().split("T")[0] : undefined,
+                  tripType === "왕복"
+                    ? returnDate.toISOString().split("T")[0]
+                    : undefined,
                 nonStop,
                 travelClass,
                 adults: Math.max(1, passengerCounts.adult),
