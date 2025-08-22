@@ -18,6 +18,8 @@ import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 import { generateAlertKey } from "../../utils/generateAlertKey";
 import { Buffer } from "buffer";
 import { formatPrice } from "../../utils/formatters";
+import { Ionicons, FontAwesome } from "@expo/vector-icons";
+
 global.Buffer = Buffer;
 
 const airportMap: Record<string, string> = {
@@ -161,8 +163,12 @@ export default function PriceAlertScreen() {
   const renderItem = ({ item }: { item: FlightSearchResponseDto }) => {
     const id = generateAlertKey(item);
 
-    const from = `${airportMap[item.departureAirport] ?? item.departureAirport} (${item.departureAirport})`;
-    const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${item.arrivalAirport})`;
+    const from = `${
+      airportMap[item.departureAirport] ?? item.departureAirport
+    } (${item.departureAirport})`;
+    const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${
+      item.arrivalAirport
+    })`;
 
     const departDate =
       item.outboundDepartureTime || item.departureTime
@@ -175,7 +181,10 @@ export default function PriceAlertScreen() {
         ? formatDate(item.returnArrivalTime)
         : null;
 
-    const seat = `${getTripType(item.outboundDepartureTime, item.returnArrivalTime)}, ${formatSeatClass(item.travelClass)}`;
+    const seat = `${getTripType(
+      item.outboundDepartureTime,
+      item.returnArrivalTime
+    )}, ${formatSeatClass(item.travelClass)}`;
     const passenger = `잔여 ${item.numberOfBookableSeats}석`;
     const price = priceText(item.price, item.currency ?? "KRW");
 
@@ -185,8 +194,6 @@ export default function PriceAlertScreen() {
         style={styles.card}
         onPress={() => goDetail(item)}
         android_ripple={{ color: "rgba(0,0,0,0.05)" }}
-        accessibilityRole="button"
-        accessibilityLabel={`${from}에서 ${to}로 가는 항공편 상세 보기`}
       >
         <View style={styles.row}>
           <View style={styles.circle}>
@@ -200,11 +207,12 @@ export default function PriceAlertScreen() {
               {departDate} 출발 · {seat}
             </Text>
             <Text style={styles.info}>
-              {returnDate ? `${returnDate} 도착 · ` : ""}{passenger}
+              {returnDate ? `${returnDate} 도착 · ` : ""}
+              {passenger}
             </Text>
           </View>
 
-          {/* 우측 상단: 가격 & 보기 버튼 */}
+          {/* 우측 가격 & 보기 */}
           <View style={styles.right}>
             <Text style={styles.price}>{price}</Text>
             <TouchableOpacity
@@ -213,43 +221,40 @@ export default function PriceAlertScreen() {
                 goDetail(item);
               }}
               style={styles.viewBtn}
-              accessibilityRole="button"
-              accessibilityLabel="상세 보기"
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <Text style={styles.viewBtnText}>보기</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* 하단 푸터: 좌측에 큼직한 삭제 버튼, 우측에 스위치 */}
-        <View style={styles.footer}>
-          {/* ★ 삭제 버튼을 큼직하고 눈에 띄게, 전파 차단 */}
+        {/* ★ 아이콘 행 (오른쪽 하단) */}
+        <View style={styles.iconRow}>
+          {/* 알림 토글 */}
+          <TouchableOpacity
+            onPress={(e) => {
+              stop(e);
+              toggleSwitch(id);
+            }}
+          >
+            <Ionicons
+              name={
+                switchStates[id] ? "notifications" : "notifications-outline"
+              }
+              size={22}
+              color={switchStates[id] ? "gold" : "gray"}
+            />
+          </TouchableOpacity>
+
+          {/* 삭제 버튼 */}
           <TouchableOpacity
             onPress={(e) => {
               stop(e);
               setPendingDeleteId(id);
               setConfirmVisible(true);
             }}
-            style={styles.deleteBig}
-            accessibilityRole="button"
-            accessibilityLabel="이 항공편 알림 삭제"
-            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
-            <Text style={styles.deleteBigText}>삭제</Text>
+            <FontAwesome name="trash" size={25} color="#E53935" />
           </TouchableOpacity>
-
-          <View
-            style={styles.footerRight}
-            // ★ 스위치 조작 시 카드 탭이 눌리지 않도록 처리
-            onStartShouldSetResponder={() => true}
-          >
-            <Text style={styles.footerLabel}>알림</Text>
-            <Switch
-              value={switchStates[id] ?? true}
-              onValueChange={() => toggleSwitch(id)}
-            />
-          </View>
         </View>
       </Pressable>
     );
@@ -259,7 +264,13 @@ export default function PriceAlertScreen() {
     <View style={{ flex: 1, padding: 16 }}>
       <View style={styles.globalToggle}>
         <Text style={styles.globalToggleText}>전체 알림</Text>
-        <Switch value={globalSwitch} onValueChange={toggleGlobalSwitch} />
+        <TouchableOpacity onPress={toggleGlobalSwitch}>
+          <Ionicons
+            name={globalSwitch ? "notifications" : "notifications-outline"}
+            size={26}
+            color={globalSwitch ? "gold" : "gray"}
+          />
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -428,4 +439,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   footerLabel: { fontSize: 13, color: "#333" },
+  iconRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 15,
+    gap: 25,
+  },
 });
