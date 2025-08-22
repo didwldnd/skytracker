@@ -13,7 +13,7 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
 import LocationSelector from "./LocationSelector";
@@ -165,23 +165,15 @@ const SearchScreen = () => {
   const { preferredDepartureAirport, loading: settingsLoading } =
     useUserSettings();
 
-  useEffect(() => {
-    // 화면 최초 진입 시(또는 앱 리로드 시) 한 번만 기본값 주입
-    if (!settingsLoading && !departure && preferredDepartureAirport) {
-      setDeparture(preferredDepartureAirport);
-    }
-  }, [settingsLoading, preferredDepartureAirport, departure]);
-
-  // ✅ 화면 포커스될 때마다 “무조건” 선호값으로 덮어쓰기
-  useFocusEffect(
-    useCallback(() => {
-      if (settingsLoading) return;
-      setDeparture(preferredDepartureAirport ?? ""); // <- 하드 싱크
-    }, [settingsLoading, preferredDepartureAirport])
-  );
+useEffect(() => {
+  // 화면 최초 진입(또는 앱 리로드) 때 departure가 비어 있으면 한 번만 세팅
+  if (!settingsLoading && !departure && preferredDepartureAirport) {
+    setDeparture(preferredDepartureAirport);
+  }
+}, [settingsLoading, preferredDepartureAirport, departure]);
 
   const resetForm = () => {
-    setDeparture(preferredDepartureAirport ?? ""); // 항상 선호값으로
+    setDeparture(preferredDepartureAirport ?? "");
     setDestination("");
     setDepartureDate(new Date());
     setReturnDate(new Date());

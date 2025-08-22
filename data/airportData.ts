@@ -1,5 +1,5 @@
 export const airportData = [
-  { city: "대한민국, 서울", airport: "인천국제공항", code: "ICN" },
+  { city: "대한민국, 인천", airport: "인천국제공항", code: "ICN" },
   { city: "대한민국, 부산", airport: "김해국제공항", code: "PUS" },
   { city: "일본, 도쿄", airport: "하네다국제공항", code: "HND" },
   { city: "일본, 오사카", airport: "간사이국제공항", code: "KIX" },
