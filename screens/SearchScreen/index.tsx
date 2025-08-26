@@ -346,7 +346,7 @@ useEffect(() => {
 
               const requestDto: FlightSearchRequestDto = {
                 originLocationAirport: departure,
-                destinationLocationAirPort: destination,
+                destinationLocationAirport: destination,
                 departureDate: departureDate.toISOString().split("T")[0],
                 returnDate:
                   tripType === "왕복"

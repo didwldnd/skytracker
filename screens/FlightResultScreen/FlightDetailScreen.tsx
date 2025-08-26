@@ -1,11 +1,11 @@
 import React from "react";
 import { View, Text, ScrollView, StyleSheet } from "react-native";
- import {
-   formatFlightTime,
-   formatDuration,              // 어댑터에서 formatDurationKo로 연결됨
-   formatDayShiftBadge,
-   dayShiftByDuration,          // ✅ 새로 사용
- } from "../../utils/formatFlightTime";
+import {
+  formatFlightTime,
+  formatDuration, // 어댑터에서 formatDurationKo로 연결됨
+  formatDayShiftBadge,
+  dayShiftByDuration, // ✅ 새로 사용
+} from "../../utils/formatFlightTime";
 import {
   FontAwesome,
   Feather,
@@ -34,7 +34,38 @@ const FlightDetailScreen: React.FC = () => {
   );
 
   // 추가: travelClass / price 확인 로그
-  console.log("[DIAG] TravelClass =", flight.travelClass, "Price =", flight.price);
+  console.log(
+    "[DIAG] TravelClass =",
+    flight.travelClass,
+    "Price =",
+    flight.price
+  );
+
+  // FlightDetailScreen에서
+const outSegs = (flight as any).__segmentsOutbound ?? [];
+const retSegs = (flight as any).__segmentsReturn ?? [];
+
+const stopsCount = (segs: any[]) => Math.max(0, segs.length - 1);
+const viaCodes = (segs: any[]) => segs.slice(0, -1).map(s => s.arrival?.iataCode);
+const layoversMin = (segs: any[]) =>
+  segs.slice(0, -1).map((s, i) => {
+    const currArr = new Date(s.arrival.at).getTime();
+    const nextDep = new Date(segs[i + 1].departure.at).getTime();
+    return Math.max(0, Math.round((nextDep - currArr) / 60000));
+  });
+
+// ✅ 콘솔 확인 포인트 (클릭 후 detail 진입 시)
+console.log("[LAYOVER] OUT stops:", stopsCount(outSegs));
+console.log("[LAYOVER] OUT via:", viaCodes(outSegs));
+console.log("[LAYOVER] OUT layovers(min):", layoversMin(outSegs));
+
+console.log("[LAYOVER] RET stops:", stopsCount(retSegs));
+console.log("[LAYOVER] RET via:", viaCodes(retSegs));
+console.log("[LAYOVER] RET layovers(min):", layoversMin(retSegs));
+console.log("[SEGCHK] outSegs exists?", !!outSegs, "len:", outSegs?.length);
+console.log("[SEGCHK] retSegs exists?", !!retSegs, "len:", retSegs?.length);
+console.log("[SEGCHK] first outbound seg:", outSegs?.[0]);
+
 
   // 수상한 패턴 감지
   if (["ECONOMY", "BUSINESS"].includes(flight.travelClass)) {
@@ -44,7 +75,9 @@ const FlightDetailScreen: React.FC = () => {
   }
 
   // ✅ 왕복/편도 판별: return* 존재 여부로
-  const isRoundTrip = !!(flight.returnDepartureTime && flight.returnArrivalTime);
+  const isRoundTrip = !!(
+    flight.returnDepartureTime && flight.returnArrivalTime
+  );
 
   // ✅ 가는 편 세트
   const oDep = flight.outboundDepartureTime;
@@ -159,7 +192,11 @@ const FlightDetailScreen: React.FC = () => {
       <View style={styles.card}>
         <View style={styles.priceHeader}>
           <View style={styles.headerTitleRow}>
-            <MaterialCommunityIcons name="currency-krw" size={20} color="white" />
+            <MaterialCommunityIcons
+              name="currency-krw"
+              size={20}
+              color="white"
+            />
             <Text style={styles.priceTitle}>가격 정보</Text>
           </View>
         </View>

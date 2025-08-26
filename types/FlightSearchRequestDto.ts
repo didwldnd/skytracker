@@ -1,6 +1,6 @@
 export interface FlightSearchRequestDto {
   originLocationAirport: string;
-  destinationLocationAirPort: string; // 백엔드 DTO와 동일 (AirPort)
+  destinationLocationAirport: string; // 백엔드 DTO와 동일 (AirPort)
   departureDate: string;              // YYYY-MM-DD
   returnDate?: string;                // 편도면 미전송
   // currencyCode?: string;           // 현재 미사용이므로 생략 권장 (있어도 무방)
