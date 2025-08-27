@@ -13,6 +13,7 @@ import { FavoriteProvider } from "./context/FavoriteContext";
 import FavoriteListScreen from "./screens/ProfileScreen/FavoriteListScreen";
 import { PriceAlertProvider } from "./context/PriceAlertContext";
 import { UserSettingsProvider } from "./context/UserSettingsContext";
+import CityFlightListScreen from "./screens/SearchScreen/CityFlightListScreen";
 
 export type RootStackParamList = {
   Splash: undefined; // 추가
@@ -33,6 +34,9 @@ export type RootStackParamList = {
     flight: FlightSearchResponseDto;
   };
   FavoriteList: undefined;
+  CityFlightList: {
+    city: { cityKo: string; cityEn: string };
+  };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -62,6 +66,11 @@ export default function App() {
                   <Stack.Screen
                     name="FavoriteList"
                     component={FavoriteListScreen}
+                  />
+                  <Stack.Screen
+                    name="CityFlightList"
+                    component={CityFlightListScreen}
+                    options={{ title: "도시별 항공편" }}
                   />
                 </Stack.Navigator>
               </NavigationContainer>

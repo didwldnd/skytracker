@@ -24,48 +24,7 @@ const FlightDetailScreen: React.FC = () => {
   const { params } = useRoute<DetailRouteProp>();
   const { flight } = params;
 
-  console.log("상세 flight 데이터:", flight);
-  console.log(
-    "[CHK]",
-    flight.outboundDepartureTime,
-    flight.outboundArrivalTime,
-    flight.outboundDuration,
-    flight.returnDuration
-  );
-
-  // 추가: travelClass / price 확인 로그
-  console.log(
-    "[DIAG] TravelClass =",
-    flight.travelClass,
-    "Price =",
-    flight.price
-  );
-
-  // FlightDetailScreen에서
-const outSegs = (flight as any).__segmentsOutbound ?? [];
-const retSegs = (flight as any).__segmentsReturn ?? [];
-
-const stopsCount = (segs: any[]) => Math.max(0, segs.length - 1);
-const viaCodes = (segs: any[]) => segs.slice(0, -1).map(s => s.arrival?.iataCode);
-const layoversMin = (segs: any[]) =>
-  segs.slice(0, -1).map((s, i) => {
-    const currArr = new Date(s.arrival.at).getTime();
-    const nextDep = new Date(segs[i + 1].departure.at).getTime();
-    return Math.max(0, Math.round((nextDep - currArr) / 60000));
-  });
-
-// ✅ 콘솔 확인 포인트 (클릭 후 detail 진입 시)
-console.log("[LAYOVER] OUT stops:", stopsCount(outSegs));
-console.log("[LAYOVER] OUT via:", viaCodes(outSegs));
-console.log("[LAYOVER] OUT layovers(min):", layoversMin(outSegs));
-
-console.log("[LAYOVER] RET stops:", stopsCount(retSegs));
-console.log("[LAYOVER] RET via:", viaCodes(retSegs));
-console.log("[LAYOVER] RET layovers(min):", layoversMin(retSegs));
-console.log("[SEGCHK] outSegs exists?", !!outSegs, "len:", outSegs?.length);
-console.log("[SEGCHK] retSegs exists?", !!retSegs, "len:", retSegs?.length);
-console.log("[SEGCHK] first outbound seg:", outSegs?.[0]);
-
+  console.log("✅ 상세 flight 데이터:", flight);
 
   // 수상한 패턴 감지
   if (["ECONOMY", "BUSINESS"].includes(flight.travelClass)) {
