@@ -1,10 +1,4 @@
-import React, {
-  useState,
-  useMemo,
-  useRef,
-  useEffect,
-  useCallback,
-} from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -29,6 +23,7 @@ import { FlightSearchRequestDto } from "../../types/FlightSearchRequestDto";
 import { airportData } from "../../data/airportData";
 import { sanitizeResults } from "../../utils/flightSanitizer";
 import { useUserSettings } from "../../context/UserSettingsContext";
+import axios from "axios";
 
 // ====== 중복 제거용 공통 헬퍼 ======
 const norm = (s?: any) => (s == null ? "" : String(s).trim());
@@ -37,6 +32,8 @@ const toMs = (iso?: string) => {
   const t = Date.parse(norm(iso));
   return Number.isFinite(t) ? t : 0;
 };
+const isDirect = (f: any) =>
+  f?.nonStop === true || f?.nonStop === "true" || f?.nonStop === 1;
 // (항공사, 편명, 출발공항, 도착공항, 출발시간, 도착시간) = 절대 고유 튜플
 const exactTupleKey = (f: any) => {
   const depIso = f.outboundDepartureTime ?? f.departureTime ?? "";
@@ -165,12 +162,12 @@ const SearchScreen = () => {
   const { preferredDepartureAirport, loading: settingsLoading } =
     useUserSettings();
 
-useEffect(() => {
-  // 화면 최초 진입(또는 앱 리로드) 때 departure가 비어 있으면 한 번만 세팅
-  if (!settingsLoading && !departure && preferredDepartureAirport) {
-    setDeparture(preferredDepartureAirport);
-  }
-}, [settingsLoading, preferredDepartureAirport, departure]);
+  useEffect(() => {
+    // 화면 최초 진입(또는 앱 리로드) 때 departure가 비어 있으면 한 번만 세팅
+    if (!settingsLoading && !departure && preferredDepartureAirport) {
+      setDeparture(preferredDepartureAirport);
+    }
+  }, [settingsLoading, preferredDepartureAirport, departure]);
 
   const resetForm = () => {
     setDeparture(preferredDepartureAirport ?? "");
@@ -324,15 +321,19 @@ useEffect(() => {
           onSearch={async () => {
             if (isSearchingRef.current) return; // 더블탭 가드
             isSearchingRef.current = true;
+            // 경유 옵션 → nonStop 매핑  🔁 교체
+            // const nonStop = stopover === "직항만";
+            const nonStopParam = stopover === "직항만" ? true : undefined;
 
             if (sameAirports) {
               Alert.alert(
                 "잘못된 경로",
                 "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요."
               );
-              isSearchingRef.current = false; // 해제 누락 방지
+              isSearchingRef.current = false;
               return;
             }
+
             setLoading(true);
             try {
               // 경유 옵션 → nonStop 매핑
@@ -342,7 +343,6 @@ useEffect(() => {
               let travelClass: "ECONOMY" | "BUSINESS" | undefined;
               if (seatClass === "일반석") travelClass = "ECONOMY";
               else if (seatClass === "비즈니스") travelClass = "BUSINESS";
-              else travelClass = undefined;
 
               const requestDto: FlightSearchRequestDto = {
                 originLocationAirport: departure,
@@ -352,7 +352,7 @@ useEffect(() => {
                   tripType === "왕복"
                     ? returnDate.toISOString().split("T")[0]
                     : undefined,
-                nonStop,
+                nonStop: nonStopParam, // ✅ '직항만'일 때만 보냄, 그 외엔 undefined
                 travelClass,
                 adults: Math.max(1, passengerCounts.adult),
                 max: 10,
@@ -360,12 +360,14 @@ useEffect(() => {
 
               console.log("[REQ] Flight search payload:", requestDto);
 
-              // 검색 → sanitize → 절대 중복 제거
               const rawResults = await searchFlights(requestDto);
               const { valid } = sanitizeResults(rawResults || []);
               const uniq = dedupeExact(valid);
 
-              // 결과 화면으로 이동
+              // 🔽 추가: '경유만'이면 직항 제거
+              const filtered =
+                stopover === "경유만" ? uniq.filter((f) => !isDirect(f)) : uniq;
+
               navigation.navigate("FlightResult", {
                 originLocationCode: departure,
                 destinationLocationCode: destination,
@@ -374,10 +376,39 @@ useEffect(() => {
                 adults: passengerCounts.adult,
                 travelClass: seatClass,
                 stopover,
-                results: uniq, // 💡 dedupe 결과만 전달
+                results: filtered, // ✅ 필터된 결과 사용
               });
-            } catch (error) {
-              console.error("항공편 검색 실패:", error);
+
+              navigation.navigate("FlightResult", {
+                originLocationCode: departure,
+                destinationLocationCode: destination,
+                departureDate: departureDate.toISOString(),
+                returnDate: tripType === "왕복" ? returnDate.toISOString() : "",
+                adults: passengerCounts.adult,
+                travelClass: seatClass,
+                stopover,
+                results: uniq,
+              });
+            } catch (err: any) {
+              if (axios.isAxiosError(err)) {
+                console.log("🔴 [API ERROR]");
+                console.log("  message:", err.message);
+                console.log("  code:", err.code);
+                console.log("  status:", err.response?.status);
+                console.log("  data:", err.response?.data);
+                console.log("  config:", {
+                  baseURL: err.config?.baseURL,
+                  url: err.config?.url,
+                  method: err.config?.method,
+                  headers: err.config?.headers,
+                });
+              } else {
+                console.log("🔴 [UNKNOWN ERROR]", err);
+              }
+              Alert.alert(
+                "에러",
+                "항공편 검색 중 문제가 발생했습니다. 로그를 확인하세요."
+              );
             } finally {
               setLoading(false);
               isSearchingRef.current = false;

@@ -1,5 +1,6 @@
+// components/FlightCard.tsx
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import { FontAwesome } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -8,21 +9,27 @@ import { usePriceAlert } from "../context/PriceAlertContext";
 import { useFavorite } from "../context/FavoriteContext";
 import { formatPrice } from "../utils/formatters";
 
-const THEME_COLOR = "#0be5ecd7";
+const THEME = "#0be5ecd7";
+const { width } = Dimensions.get("window");
 
-const formatTime = (iso: string) => {
-  const date = new Date(iso);
-  return `${String(date.getHours()).padStart(2, "0")}:${String(
-    date.getMinutes()
-  ).padStart(2, "0")}`;
+/* ----- 기존 포맷/헬퍼 (로직 유지) ----- */
+const formatTime = (iso?: string) => {
+  if (!iso) return "--:--";
+  const d = new Date(iso);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
 };
 
-const formatDuration = (iso: string | undefined) => {
+const formatDuration = (iso?: string) => {
   if (!iso) return "정보 없음";
-  const match = iso.match(/PT(\d+H)?(\d+M)?/);
-  const hours = match?.[1]?.replace("H", "") ?? "0";
-  const minutes = match?.[2]?.replace("M", "") ?? "0";
-  return `${hours}시간 ${minutes}분`;
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!m) return "정보 없음";
+  const h = Number(m[1] || 0);
+  const min = Number(m[2] || 0);
+  if (h && min) return `${h}시간 ${min}분`;
+  if (h) return `${h}시간`;
+  return `${min}분`;
 };
 
 const formatFlightNo = (code?: string, num?: string | number) => {
@@ -34,96 +41,189 @@ const formatFlightNo = (code?: string, num?: string | number) => {
 const seatLabel = (cls?: string) =>
   cls === "BUSINESS" ? "비즈니스석" : cls === "ECONOMY" ? "일반석" : undefined;
 
+/* 🔸 선택값: previousPrice를 주면 diff 뱃지 표시(없으면 감춤) */
+const diffPct = (current?: number, previous?: number) => {
+  if (current == null || previous == null || previous === current)
+    return { text: "", trend: "flat" as const };
+  const pct = ((current - previous) / previous) * 100;
+  const sign = pct > 0 ? "+" : "";
+  return {
+    text: `${sign}${pct.toFixed(1)}%`,
+    trend: pct > 0 ? ("up" as const) : ("down" as const),
+  };
+};
+
 const FlightCard = ({
   flight,
   onPress,
 }: {
-  flight: FlightSearchResponseDto;
+  flight: FlightSearchResponseDto & {
+    previousPrice?: number;
+    nonStop?: boolean | "true" | "false" | 1 | 0;
+  };
   onPress?: () => void;
 }) => {
+  // ✅ 기존 컨텍스트/핸들러 로직 유지
   const { toggleFavorite, isFavorite } = useFavorite();
   const favorite = isFavorite(flight);
 
   const { addAlert, removeAlert, isAlerted } = usePriceAlert();
   const alerted = isAlerted(flight);
+  
 
-  const departureTime = flight.outboundDepartureTime ?? flight.departureTime;
-  const arrivalTime = flight.outboundArrivalTime ?? flight.arrivalTime;
-  const duration = flight.outboundDuration ?? flight.duration;
+  // ✅ 필드 우선순위 유지 (outbound* 우선)
+  const departureTime = flight.outboundDepartureTime ?? (flight as any).departureTime;
+  const arrivalTime = flight.outboundArrivalTime ?? (flight as any).arrivalTime;
+  const duration = flight.outboundDuration ?? (flight as any).duration;
 
   const cls = seatLabel(flight.travelClass);
+  const diff = diffPct(flight.price, flight.previousPrice);
 
   return (
-    <TouchableOpacity onPress={onPress}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
       <View style={styles.card}>
-        {/* 상단 시간/공항 */}
-        <View style={styles.row}>
-          <View style={styles.timeColumn}>
-            <Text style={styles.timeText}>
-              {formatTime(departureTime ?? "")}
-            </Text>
-            <Text style={styles.airportText}>{flight.departureAirport}</Text>
+        {/* 상단: 항공사/편명 + 가격(+변화) */}
+        <View style={styles.cardTop}>
+          <View style={styles.airlineRow}>
+            <View style={styles.logoDot}>
+              <Text style={styles.logoText}>{flight.airlineCode}</Text>
+            </View>
+            <View>
+              <Text style={styles.airlineName}>{flight.airlineName}</Text>
+              <Text style={styles.flightNo}>{formatFlightNo(flight.airlineCode, flight.flightNumber)}</Text>
+              {cls && <Text style={styles.seatText}>{cls}</Text>}
+            </View>
           </View>
 
-          <View style={styles.centerColumn}>
-            <View style={styles.line} />
-            <Text style={styles.durationText}>{formatDuration(duration)}</Text>
-            <View style={styles.line} />
-          </View>
-
-          <View style={styles.timeColumn}>
-            <Text style={styles.timeText}>{formatTime(arrivalTime ?? "")}</Text>
-            <Text style={styles.airportText}>{flight.arrivalAirport}</Text>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={styles.price}>{formatPrice(flight.price, flight.currency ?? "KRW")}</Text>
+            {!!diff.text && (
+              <View style={[styles.diffBadge, diff.trend === "up" ? styles.diffUp : styles.diffDown]}>
+                <Text
+                  style={[
+                    styles.diffText,
+                    diff.trend === "up" ? { color: "#b91c1c" } : { color: "#065f46" },
+                  ]}
+                >
+                  {diff.text}
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
-        {/* ✅ 항공편/좌석 뱃지 */}
-        <View style={styles.metaRow}>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>
-              항공편 {formatFlightNo(flight.airlineCode, flight.flightNumber)}
-            </Text>
+        {/* 경로/소요시간 (CityFlightList 스타일) */}
+        <View style={styles.routeRow}>
+          <View style={styles.timeCol}>
+            <Text style={styles.timeBig}>{formatTime(departureTime)}</Text>
+            <Text style={styles.airportCode}>{flight.departureAirport}</Text>
           </View>
-          {cls && (
-            <View style={[styles.badge, styles.seatBadge]}>
-              <Text style={[styles.badgeText, styles.seatBadgeText]}>
-                {cls}
+
+          <View style={styles.timeline}>
+            <View style={styles.line} />
+            <View style={{ alignItems: "center" }}>
+              <Ionicons name="time-outline" size={14} color="#9ca3af" />
+              <Text style={styles.duration}>{formatDuration(duration)}</Text>
+              {flight.nonStop && <Text style={styles.nonStop}>직항</Text>}
+            </View>
+            <View style={styles.line} />
+          </View>
+
+          <View style={styles.timeCol}>
+            <Text style={styles.timeBig}>{formatTime(arrivalTime)}</Text>
+            <Text style={styles.airportCode}>{flight.arrivalAirport}</Text>
+          </View>
+        </View>
+
+        {/* 서비스/정책 배지 + 액션 아이콘(기존 로직 유지) */}
+        <View style={styles.bottomRow}>
+          <View style={styles.badgesRow}>
+            {/* 위탁수하물 */}
+            <View
+              style={[
+                styles.badge,
+                flight.hasCheckedBags ? styles.badgeGreen : styles.badgeGray,
+              ]}
+            >
+              <MaterialIcons
+                name="work"
+                size={12}
+                color={flight.hasCheckedBags ? "#047857" : "#6b7280"}
+              />
+              <Text
+                style={[
+                  styles.badgeTxt,
+                  { color: flight.hasCheckedBags ? "#047857" : "#6b7280" },
+                ]}
+              >
+                {flight.hasCheckedBags ? "수하물" : "별도"}
               </Text>
             </View>
-          )}
-        </View>
 
-        {/* 가격 & 항공사 */}
-        <View style={styles.bottomRow}>
-          <Text style={styles.priceText}>
-            {formatPrice(flight.price, flight.currency ?? "KRW")}
-          </Text>
-          <Text style={styles.carrierText}>{flight.airlineName}</Text>
-        </View>
+            {/* 환불/변경 */}
+            <View
+              style={[
+                styles.badge,
+                flight.isRefundable ? styles.badgeBlue : styles.badgeRed,
+              ]}
+            >
+              <MaterialIcons
+                name={flight.isRefundable ? "check-circle-outline" : "cancel"}
+                size={12}
+                color={flight.isRefundable ? "#1d4ed8" : "#b91c1c"}
+              />
+              <Text
+                style={[
+                  styles.badgeTxt,
+                  { color: flight.isRefundable ? "#1d4ed8" : "#b91c1c" },
+                ]}
+              >
+                {flight.isRefundable ? "환불" : "환불불가"}
+              </Text>
+            </View>
 
-        {/* 아이콘 */}
-        <View style={styles.iconRow}>
-          <TouchableOpacity
-            onPress={() => (alerted ? removeAlert(flight) : addAlert(flight))}
-          >
-            <Ionicons
-              name={alerted ? "notifications" : "notifications-outline"}
-              size={25}
-              color={alerted ? "gold" : "gray"}
-            />
-          </TouchableOpacity>
+            <View
+              style={[
+                styles.badge,
+                flight.isChangeable ? styles.badgePurple : styles.badgeRed,
+              ]}
+            >
+              <MaterialIcons
+                name="autorenew"
+                size={12}
+                color={flight.isChangeable ? "#6d28d9" : "#b91c1c"}
+              />
+              <Text
+                style={[
+                  styles.badgeTxt,
+                  { color: flight.isChangeable ? "#6d28d9" : "#b91c1c" },
+                ]}
+              >
+                {flight.isChangeable ? "변경" : "변경불가"}
+              </Text>
+            </View>
+          </View>
 
-          <TouchableOpacity onPress={() => toggleFavorite(flight)}>
-            <FontAwesome
-              name={favorite ? "heart" : "heart-o"}
-              size={25}
-              color={favorite ? "red" : "gray"}
-            />
-          </TouchableOpacity>
+          {/* 기존 아이콘 로직 그대로 */}
+          <View style={styles.iconRow}>
+            <TouchableOpacity
+              onPress={() => (alerted ? removeAlert(flight) : addAlert(flight))}
+            >
+              <Ionicons
+                name={alerted ? "notifications" : "notifications-outline"}
+                size={22}
+                color={alerted ? "gold" : "#6b7280"}
+              />
+            </TouchableOpacity>
 
-          <TouchableOpacity>
-            <MaterialIcons name="ios-share" size={25} color="gray" />
-          </TouchableOpacity>
+            <TouchableOpacity onPress={() => toggleFavorite(flight)}>
+              <FontAwesome
+                name={favorite ? "heart" : "heart-o"}
+                size={22}
+                color={favorite ? "red" : "#6b7280"}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </TouchableOpacity>
@@ -132,98 +232,92 @@ const FlightCard = ({
 
 export default FlightCard;
 
+/* ===== 스타일: CityFlightListScreen 카드 그대로 이식 ===== */
 const styles = StyleSheet.create({
   card: {
+    width: width - 32,
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 14,
     shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
     shadowRadius: 6,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+    alignSelf: "center",
+    marginBottom: 12,
   },
-  row: {
+
+  /* 상단 */
+  cardTop: {
     flexDirection: "row",
     justifyContent: "space-between",
+    marginBottom: 10,
     alignItems: "center",
   },
-  timeColumn: {
+  airlineRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  logoDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: "#e5e7eb",
     alignItems: "center",
+    justifyContent: "center",
   },
-  timeText: {
-    fontSize: 18,
-    fontWeight: "bold",
-  },
-  airportText: {
-    fontSize: 13,
-    color: THEME_COLOR,
-    marginTop: 4,
-  },
-  centerColumn: {
-    flex: 1,
-    alignItems: "center",
-    paddingHorizontal: 8,
-  },
-  line: {
-    width: "100%",
-    height: 1,
-    backgroundColor: "#ccc",
-  },
-  durationText: {
-    fontSize: 12,
-    color: "#555",
-    marginVertical: 4,
-  },
+  logoText: { fontSize: 12, fontWeight: "900", color: "#4b5563" },
+  airlineName: { fontSize: 14, fontWeight: "700", color: "#111827" },
+  flightNo: { fontSize: 12, color: "#6b7280", marginTop: 2 },
+  seatText: { marginTop: 2, fontSize: 12, fontWeight: "700", color: THEME },
 
-  /* ✅ 추가 */
-  metaRow: {
+  price: { fontSize: 20, fontWeight: "900", color: "#111827" },
+  diffBadge: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    alignSelf: "flex-end",
+  },
+  diffUp: { backgroundColor: "#fee2e2" },
+  diffDown: { backgroundColor: "#dcfce7" },
+  diffText: { fontSize: 11, fontWeight: "800" },
+
+  /* 경로/시간 */
+  routeRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 10,
+    justifyContent: "space-between",
+    marginBottom: 10,
   },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#f2f4f7",
-    borderWidth: 1,
-    borderColor: "#eceef1",
-  },
-  badgeText: {
-    fontSize: 12,
-    color: "#333",
-  },
-  seatBadge: {
-    backgroundColor: THEME_COLOR,
-    borderColor: THEME_COLOR,
-  },
-  seatBadgeText: {
-    color: "#00303a",
-    fontWeight: "600",
-  },
+  timeCol: { alignItems: "center", minWidth: 64 },
+  timeBig: { fontSize: 16, fontWeight: "800", color: "#111827" },
+  airportCode: { fontSize: 12, color: "#6b7280" },
 
+  timeline: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
+  line: { flex: 1, height: 1, backgroundColor: "#d1d5db" },
+  duration: { fontSize: 11, color: "#6b7280", marginTop: 2 },
+  nonStop: { fontSize: 11, fontWeight: "700", color: THEME, marginTop: 2 },
+
+  /* 하단 */
   bottomRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 12,
     alignItems: "center",
+    justifyContent: "space-between",
   },
-  priceText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#000",
-  },
-  carrierText: {
-    fontSize: 13,
-    color: "#666",
-  },
-  iconRow: {
+  badgesRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  badge: {
     flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 10,
-    gap: 12,
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
+  badgeGreen: { backgroundColor: "#d1fae5" },
+  badgeGray: { backgroundColor: "#f3f4f6" },
+  badgeBlue: { backgroundColor: "#dbeafe" },
+  badgePurple: { backgroundColor: "#ede9fe" },
+  badgeRed: { backgroundColor: "#fee2e2" },
+  badgeTxt: { fontSize: 11, fontWeight: "700" },
+
+  iconRow: { flexDirection: "row", alignItems: "center", gap: 14 },
 });

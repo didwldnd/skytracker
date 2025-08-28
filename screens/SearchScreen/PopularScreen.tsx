@@ -33,14 +33,42 @@ type PopularDestination = {
 };
 
 const mock: PopularDestination[] = [
-  { cityKo: "도쿄", cityEn: "Tokyo", image: require("../../assets/tokyo.png"), currentPrice: 158000, previousPrice: 172000 },
-  { cityKo: "오사카", cityEn: "Osaka", image: require("../../assets/osaka.png"), currentPrice: 132000, previousPrice: 129000 },
-  { cityKo: "파리", cityEn: "Paris", image: require("../../assets/paris.png"), currentPrice: 848000, previousPrice: 910000 },
-  { cityKo: "뉴욕", cityEn: "New York", image: require("../../assets/ny.png"), currentPrice: 769000, previousPrice: 769000 },
+  {
+    cityKo: "도쿄",
+    cityEn: "Tokyo",
+    image: require("../../assets/tokyo.png"),
+    currentPrice: 158000,
+    previousPrice: 172000,
+  },
+  {
+    cityKo: "오사카",
+    cityEn: "Osaka",
+    image: require("../../assets/osaka.png"),
+    currentPrice: 132000,
+    previousPrice: 129000,
+  },
+  {
+    cityKo: "파리",
+    cityEn: "Paris",
+    image: require("../../assets/paris.png"),
+    currentPrice: 848000,
+    previousPrice: 910000,
+  },
+  {
+    cityKo: "뉴욕",
+    cityEn: "New York",
+    image: require("../../assets/ny.png"),
+    currentPrice: 769000,
+    previousPrice: 769000,
+  },
 ];
 
 const formatKRW = (n: number) =>
-  new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 }).format(n);
+  new Intl.NumberFormat("ko-KR", {
+    style: "currency",
+    currency: "KRW",
+    maximumFractionDigits: 0,
+  }).format(n);
 
 const diffText = (cur: number, prev: number) => {
   if (prev <= 0) return "";
@@ -53,7 +81,8 @@ const diffText = (cur: number, prev: number) => {
 
 export default function PopularScreen() {
   const data = mock;
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 60 }).current;
@@ -63,7 +92,8 @@ export default function PopularScreen() {
     }
   }).current;
 
-  const keyExtractor = (item: PopularDestination) => `${item.cityKo}-${item.cityEn}`;
+  const keyExtractor = (item: PopularDestination) =>
+    `${item.cityKo}-${item.cityEn}`;
 
   // ✅ 도시 카드 탭 → CityFlightList로 이동 (title/results 필요 없음)
   const onPressCity = (item: PopularDestination) => {
@@ -72,20 +102,37 @@ export default function PopularScreen() {
     });
   };
 
-  const renderItem = ({ item, index }: { item: PopularDestination; index: number }) => {
+  const renderItem = ({
+    item,
+    index,
+  }: {
+    item: PopularDestination;
+    index: number;
+  }) => {
     const upDown = item.currentPrice - item.previousPrice;
     const isUp = upDown > 0;
     const isDown = upDown < 0;
-    const arrowName = isUp ? "arrow-upward" : isDown ? "arrow-downward" : "arrow-forward";
+    const arrowName = isUp
+      ? "arrow-upward"
+      : isDown
+      ? "arrow-downward"
+      : "arrow-forward";
     const arrowColor = isUp ? "#e24a4a" : isDown ? "#0aa35b" : "#888";
 
     return (
       <Pressable
         onPress={() => onPressCity(item)}
-        style={{ width: CARD_WIDTH, marginRight: index === data.length - 1 ? 0 : ITEM_GAP }}
+        style={{
+          width: CARD_WIDTH,
+          marginRight: index === data.length - 1 ? 0 : ITEM_GAP,
+        }}
         android_ripple={{ borderless: false }}
       >
-        <ImageBackground source={item.image} style={styles.hero} imageStyle={styles.heroImage}>
+        <ImageBackground
+          source={item.image}
+          style={styles.hero}
+          imageStyle={styles.heroImage}
+        >
           <View style={styles.overlay} />
           <View style={styles.headerTextWrap}>
             <Text style={styles.cityKo}>{item.cityKo}</Text>
@@ -93,9 +140,15 @@ export default function PopularScreen() {
           </View>
           <View style={styles.priceBadgeWrap}>
             <View style={styles.priceRow}>
-              <Text style={styles.priceText}>{formatKRW(item.currentPrice)}</Text>
+              <Text style={styles.priceText}>
+                {formatKRW(item.currentPrice)}
+              </Text>
               <View style={styles.trendWrap}>
-                <MaterialIcons name={arrowName as any} size={16} color={arrowColor} />
+                <MaterialIcons
+                  name={arrowName as any}
+                  size={16}
+                  color={arrowColor}
+                />
                 <Text style={[styles.diffText, { color: arrowColor }]}>
                   {diffText(item.currentPrice, item.previousPrice)}
                 </Text>
@@ -111,7 +164,10 @@ export default function PopularScreen() {
     () => (
       <View style={styles.dotsRow}>
         {data.map((_, i) => (
-          <View key={i} style={[styles.dot, i === activeIndex ? styles.dotActive : null]} />
+          <View
+            key={i}
+            style={[styles.dot, i === activeIndex ? styles.dotActive : null]}
+          />
         ))}
       </View>
     ),
@@ -168,7 +224,10 @@ export default function PopularScreen() {
         initialNumToRender={3}
         windowSize={5}
         removeClippedSubviews
-        contentContainerStyle={{ paddingLeft: 0, paddingHorizontal: SIDE_INSET }}
+        contentContainerStyle={{
+          paddingLeft: 0,
+          paddingHorizontal: SIDE_INSET,
+        }}
       />
 
       {dots}
@@ -187,10 +246,18 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   heroImage: { resizeMode: "cover" },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.18)" },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.18)",
+  },
   headerTextWrap: { paddingHorizontal: 16, paddingTop: 14 },
   cityKo: { fontSize: 22, fontWeight: "800", color: "white" },
-  cityEn: { marginTop: 2, fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.9)" },
+  cityEn: {
+    marginTop: 2,
+    fontSize: 14,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.9)",
+  },
   priceBadgeWrap: { alignItems: "flex-end", padding: 12 },
   priceRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   priceText: {
@@ -201,7 +268,12 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
   },
-  trendWrap: { marginTop: 1, flexDirection: "row", alignItems: "center", gap: 4 },
+  trendWrap: {
+    marginTop: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   diffText: {
     fontSize: 12,
     fontWeight: "800",
@@ -209,7 +281,12 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
-  dotsRow: { flexDirection: "row", justifyContent: "center", marginTop: 10, gap: 6 },
+  dotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: 10,
+    gap: 6,
+  },
   dot: { width: 6, height: 6, borderRadius: 999, backgroundColor: "#ddd" },
   dotActive: { width: 16, backgroundColor: THEME_COLOR },
 });

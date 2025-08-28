@@ -111,7 +111,7 @@ const mockFlights: Flight[] = [
     previousPrice: 295000,
     isRefundable: true,
     isChangeable: true,
-    nonStop: true,
+    nonStop: false,
   },
   {
     airlineCode: "OZ",

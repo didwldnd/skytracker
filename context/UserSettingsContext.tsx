@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useCallback,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type UserSettings = {
@@ -52,7 +59,11 @@ export const UserSettingsProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UserSettingsContext.Provider
-      value={{ preferredDepartureAirport, setPreferredDepartureAirport, loading }}
+      value={{
+        preferredDepartureAirport,
+        setPreferredDepartureAirport,
+        loading,
+      }}
     >
       {children}
     </UserSettingsContext.Provider>
@@ -61,6 +72,7 @@ export const UserSettingsProvider = ({ children }: { children: ReactNode }) => {
 
 export const useUserSettings = () => {
   const ctx = useContext(UserSettingsContext);
-  if (!ctx) throw new Error("useUserSettings must be used within UserSettingsProvider");
+  if (!ctx)
+    throw new Error("useUserSettings must be used within UserSettingsProvider");
   return ctx;
 };

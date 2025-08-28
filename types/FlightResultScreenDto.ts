@@ -22,4 +22,7 @@ export interface FlightSearchResponseDto {
   returnDepartureTime: string;
   returnArrivalTime: string;
   returnDuration: string;
+
+  // 추가
+  nonStop?: boolean | "true" | "false" | 1 | 0;
 }
