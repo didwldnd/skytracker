@@ -2,7 +2,7 @@
 export interface FlightSearchResponseDto {
   airlineCode: string;
   airlineName: string;
-  flightNumber: string | number;
+  flightNumber: string | number; // Union 타입, 문자열일수도 숫자일수도 "623" or 623
   departureAirport: string;
   departureTime: string;
   arrivalAirport: string;

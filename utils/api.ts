@@ -1,11 +1,10 @@
 import axios from "axios";
 import type { FlightSearchRequestDto } from "../types/FlightSearchRequestDto";
 import type { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
-// import { normalizeFlightData } from "../utils/normalize"; // ← 쓰고 있으면 주석 해제
 
 // Wi-Fi 바뀔 때 바꿔야 하는 기존 베이스
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://192.168.219.10:8080/api";
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://10.200.98.137:8080/api";
 
 // 인기도시 → 항공편 DTO 배열 엔드포인트(오버라이드 가능)
 const POPULAR_BASE =
