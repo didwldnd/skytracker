@@ -9,3 +9,6 @@ export interface FlightSearchRequestDto {
   adults: number;                     // UI 값 그대로 전달
   max: number;                        // 호출당 최대 결과 수 (기본 10)
 }
+
+
+// 백엔드가 준 dto에 맞게 타입 만들어서 api 데이터 주고받음

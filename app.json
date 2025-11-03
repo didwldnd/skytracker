@@ -6,6 +6,10 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "entryPoint": "./App.tsx",
+    "icon": "./assets/icon.png",
+    "backgroundColor": "#ffffff",
+    "scheme": "skytracker",
     "splash": {
       "backgroundColor": "#000000"
     },
@@ -25,7 +29,17 @@
       "softwareKeyboardLayoutMode": "resize"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/favicon.png",
+      "themeColor": "#0be5ecd7",
+      "output": "single"
+    },
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "plugins": [
+      
+    ]
   }
 }

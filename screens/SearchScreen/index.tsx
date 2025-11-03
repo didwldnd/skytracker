@@ -106,6 +106,8 @@ const SearchScreen = () => {
     [passengerCounts]
   );
 
+
+  // 동일 공항 선택시 useMemo로 계산 -> 경고라벨 + Alert로 즉각 피드백, 검색 버튼도 disabled
   const sameAirports = useMemo(
     () => !!departure && !!destination && departure === destination,
     [departure, destination]
@@ -119,6 +121,7 @@ const SearchScreen = () => {
     setShowSearchModal(false);
   };
 
+  // 승객 수 제한
   const increment = (type: keyof typeof passengerCounts) => {
     if (totalPassengers >= 9) {
       setShowWarning(true);
@@ -189,6 +192,8 @@ const SearchScreen = () => {
     setMarkedDates({});
   };
 
+  // useRef - 값을 기억하지만, 그 값이 바뀌어도 리렌더링을 일으키지 않는 저장소
+  // state 사용 시 리렌더 발생, 타이밍 꼬일 수 있음 -> ref는 리렌더 없이 값 유지 가능 -> 더블탭 동작 방지
   const isSearchingRef = useRef(false);
 
   return (
@@ -321,8 +326,6 @@ const SearchScreen = () => {
           onSearch={async () => {
             if (isSearchingRef.current) return; // 더블탭 가드
             isSearchingRef.current = true;
-            // 경유 옵션 → nonStop 매핑  🔁 교체
-            // const nonStop = stopover === "직항만";
             const nonStopParam = stopover === "직항만" ? true : undefined;
 
             if (sameAirports) {
@@ -352,7 +355,7 @@ const SearchScreen = () => {
                   tripType === "왕복"
                     ? returnDate.toISOString().split("T")[0]
                     : undefined,
-                nonStop: nonStopParam, // ✅ '직항만'일 때만 보냄, 그 외엔 undefined
+                nonStop: nonStopParam, // '직항만'일 때만 보냄, 그 외엔 undefined
                 travelClass,
                 adults: Math.max(1, passengerCounts.adult),
                 max: 10,
@@ -376,18 +379,7 @@ const SearchScreen = () => {
                 adults: passengerCounts.adult,
                 travelClass: seatClass,
                 stopover,
-                results: filtered, // ✅ 필터된 결과 사용
-              });
-
-              navigation.navigate("FlightResult", {
-                originLocationCode: departure,
-                destinationLocationCode: destination,
-                departureDate: departureDate.toISOString(),
-                returnDate: tripType === "왕복" ? returnDate.toISOString() : "",
-                adults: passengerCounts.adult,
-                travelClass: seatClass,
-                stopover,
-                results: uniq,
+                results: filtered, 
               });
             } catch (err: any) {
               if (axios.isAxiosError(err)) {
@@ -400,7 +392,6 @@ const SearchScreen = () => {
                   baseURL: err.config?.baseURL,
                   url: err.config?.url,
                   method: err.config?.method,
-                  headers: err.config?.headers,
                 });
               } else {
                 console.log("🔴 [UNKNOWN ERROR]", err);

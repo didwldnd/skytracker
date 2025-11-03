@@ -4,33 +4,31 @@ import type { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 
 // Wi-Fi 바뀔 때 바꿔야 하는 기존 베이스
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://10.200.98.137:8080/api";
+  process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://192.168.219.8:8080/api";
 
-// 인기도시 → 항공편 DTO 배열 엔드포인트(오버라이드 가능)
 const POPULAR_BASE =
   process.env.EXPO_PUBLIC_POPULAR_FLIGHTS_URL ??
-  `${API_BASE_URL}/flights/popular`; // 예: GET /api/flights/popular?city=Tokyo
+  `${API_BASE_URL}/flights/popular`; // 연결 실패 (미완) - 우선 가짜 데이터 사용
 
 // 공용 axios 인스턴스(타임아웃/기본 헤더)
 const http = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 15_000,
-  headers: { "Content-Type": "application/json" },
+  baseURL: API_BASE_URL, // 모든 요청 앞에 자동으로 붙는 주소
+  timeout: 15_000, // 요청 15초동안 응답없으면 실패처리
+  headers: { "Content-Type": "application/json" }, // 모든 요청은 JSON으로 처리
 });
 
 // ===== 기존 검색 =====
 export async function searchFlights(request: FlightSearchRequestDto) {
   // POST /api/flights/search
   const { data } = await http.post<FlightSearchResponseDto[]>(
-    "/flights/search",
-    request
+    "/flights/search", // baseURL/flights/search
+    request // 요청 바디로 서버에 전달
   );
-  // return data.map(normalizeFlightData); // 정규화 쓰면 이 라인으로
   return data;
 }
 
 // ===== 인기도시 → 항공편 DTO[] (카드 탭 시 호출) =====
-// 백엔드가 “도시 기준으로 가격 추적 결과 DTO[] 반환”이라고 했으니 그대로 받아서 Result 화면으로 넘기면 됨.
+// 연동 실패, 네트워크 이슈 mock 데이터 사용
 export async function getTrackedFlightsByCity(
   cityEn: string
 ): Promise<FlightSearchResponseDto[]> {

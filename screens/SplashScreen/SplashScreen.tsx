@@ -15,6 +15,7 @@ export default function SplashScreenCustom() {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const navigation = useNavigation<SplashScreenNavigationProp>();
 
+  // Animated 사용, 애니메이션 끝나면 replace 호출 -> 스플래시 사라지고 HomeScreen 전환
   useEffect(() => {
     Animated.sequence([
       Animated.delay(500),
@@ -28,6 +29,7 @@ export default function SplashScreenCustom() {
     });
   }, []);
 
+  // 글자 하나씩 잘라서 배열로 전환함 -> ['S','K','Y' ...]
   return (
     <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
       <View style={styles.textRow}>

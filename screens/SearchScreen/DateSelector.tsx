@@ -114,7 +114,6 @@ const DateSelector = ({
   }, [isOneWay, labelOpacity]);
 
   const dividerOpacity = progress;
-  const returnOpacity = progress;
 
   const onDayPress = (day: { dateString: string }) => {
     const today = new Date(formatDate(new Date()));

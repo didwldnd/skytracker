@@ -24,5 +24,5 @@ export interface FlightSearchResponseDto {
   returnDuration: string;
 
   // 추가
-  nonStop?: boolean | "true" | "false" | 1 | 0;
+  nonStop?: boolean | "true" | "false" | 1 | 0; // api 받을때 안전하게 다 받기 위해
 }

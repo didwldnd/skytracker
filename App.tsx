@@ -15,8 +15,9 @@ import { PriceAlertProvider } from "./context/PriceAlertContext";
 import { UserSettingsProvider } from "./context/UserSettingsContext";
 import CityFlightListScreen from "./screens/SearchScreen/CityFlightListScreen";
 
+// 타입 오류나 잘못된 값 전달 방지위한 타입 정의
 export type RootStackParamList = {
-  Splash: undefined; // 추가
+  Splash: undefined;
   Search: undefined;
   LoginScreen: undefined;
   HomeScreen: undefined;
@@ -39,8 +40,13 @@ export type RootStackParamList = {
   };
 };
 
+// 앱 전체화면 전환을 담당하는 StackNavigator이고 제네릭으로 위에 정의한 RootStackParamList 연결
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// 앱 시작점이자 전체 Provider/네비게이션 구조 감싸는 루트 컴포넌트
+// 전역상태 관리 (UserSettings, PriceAlert, Favorite)
+// SafeAreaView, GestureHandlerRootView로 레이아웃 안정성 확보 (제스처 충돌 방지용)
+// NavigationContainer, Stack.Navigator로 화면 전환 구조 설정
 export default function App() {
   return (
     <UserSettingsProvider>
@@ -50,7 +56,7 @@ export default function App() {
             <GestureHandlerRootView style={{ flex: 1 }}>
               <NavigationContainer>
                 <Stack.Navigator
-                  initialRouteName="Splash" // 스플래시로 변경
+                  initialRouteName="Splash" // 앱 최초 실행시 Splash 화면 노출
                   screenOptions={{
                     headerShown: false,
                   }}

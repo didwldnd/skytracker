@@ -1,4 +1,5 @@
 // screens/CityFlightListScreen.tsx
+// mock 데이터
 import React, { useMemo, useState } from "react";
 import {
   View,
@@ -365,7 +366,7 @@ export default function CityFlightListScreen({ route }: Props) {
           <Text style={styles.title}>
             {city.cityKo} ({city.cityEn})행 항공편
           </Text>
-          <Text style={styles.subtitle}>한국 출발 · 최저가순 고정</Text>
+          <Text style={styles.subtitle}>한국 출발 · 최저가순 고정 // 모두 가짜 데이터 사용</Text>
         </View>
         <View style={styles.fixedBadge}>
           <Text style={styles.fixedBadgeTxt}>최저가 정렬 고정</Text>
