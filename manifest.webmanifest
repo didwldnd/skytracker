@@ -1,0 +1,16 @@
+{
+  "name": "skytracker",
+  "short_name": "skytracker",
+  "start_url": "/skytracker/",
+  "scope": "/skytracker/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0be5ecd7",
+  "icons": [
+    {
+      "src": "/skytracker/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
