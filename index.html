@@ -34,7 +34,7 @@
     </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/_expo/static/js/web/index-701cf571d37ff393919e70f05088ad2c.js" defer></script>
+  <script src="/skytracker/_expo/static/js/web/index-701cf571d37ff393919e70f05088ad2c.js" defer></script>
 
 <script>
 (function() {
@@ -42,11 +42,10 @@
     window.addEventListener('load', function() {
       var basePath = "/skytracker/";
       navigator.serviceWorker.register(basePath + 'sw.js', { scope: basePath })
-        .catch(function(err){ console.error('SW registration failed:', err); });
+        .catch(function(e){ console.error('SW registration failed:', e); });
     });
   }
 })();
 </script>
-
 </body>
 </html>
