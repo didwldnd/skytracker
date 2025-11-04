@@ -26,6 +26,11 @@
       "sizes": "1080x1920",
       "type": "image/png",
       "form_factor": "wide"
+    },
+    {
+      "src": "screen-mobile.png",
+      "sizes": "1080x1920",
+      "type": "image/png"
     }
   ]
 }
