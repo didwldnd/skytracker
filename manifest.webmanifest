@@ -26,6 +26,11 @@
       "src": "/skytracker/mobile.png",
       "sizes": "1080x1920",
       "type": "image/png"
+    },
+    {
+      "src": "/skytracker/wide.png",
+      "sizes": "1280x720",
+      "type": "image/png"
     }
   ]
 }
