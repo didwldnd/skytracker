@@ -3,18 +3,19 @@
   "short_name": "skytracker",
   "id": "/skytracker/",
   "start_url": "/skytracker/",
+  "scope": "/skytracker/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0be5ecd7",
   "icons": [
     {
-      "src": "pwa-192.png",
+      "src": "/skytracker/pwa-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "pwa-512.png",
+      "src": "/skytracker/pwa-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
