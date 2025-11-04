@@ -5,7 +5,7 @@ const PRECACHE = [
   SCOPE,
   SCOPE + "index.html",
   SCOPE + "manifest.webmanifest",
-  SCOPE + "favicon.ico"
+  SCOPE + "favicon.icon"
 ];
 
 self.addEventListener("install", (e) => {
