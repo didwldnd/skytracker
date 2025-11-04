@@ -1,81 +1,207 @@
-/* scripts/postexport.cjs */
+// scripts/postexport.cjs  (CommonJS)
 const fs = require("fs");
 const path = require("path");
 
-// dist 경로 확인
-const dist = path.join(__dirname, "..", "dist");
-if (!fs.existsSync(dist)) {
-  console.error("❌ postexport: dist/ 폴더가 없습니다. 먼저 `npx expo export -p web`을 실행하세요.");
+const dist = path.join(process.cwd(), "dist");
+const indexHtml = path.join(dist, "index.html");
+
+if (!fs.existsSync(indexHtml)) {
+  console.error("❌ dist/index.html not found. Run `npx expo export -p web` first.");
   process.exit(1);
 }
 
-const htmlFile = path.join(dist, "index.html");
-if (!fs.existsSync(htmlFile)) {
-  console.error("❌ postexport: dist/index.html이 없습니다.");
-  process.exit(1);
-}
+// 0) .nojekyll 생성 (언더스코어 폴더 이슈 회피)
+fs.writeFileSync(path.join(dist, ".nojekyll"), "", "utf8");
 
-// package.json의 homepage에서 basePath 추출 (예: https://user.github.io/skytracker/ -> /skytracker/)
-let basePath = "/";
-try {
-  const pkg = require(path.join(__dirname, "..", "package.json"));
-  if (pkg.homepage) {
-    const u = new URL(pkg.homepage);
-    // pathname이 "/"로 끝나면 그대로 사용, 아니면 끝에 "/" 추가
-    basePath = u.pathname.endsWith("/") ? u.pathname : `${u.pathname}/`;
-  }
-} catch (e) {
-  // homepage 없으면 root로 처리
-}
+// 1) index.html 읽기
+let html = fs.readFileSync(indexHtml, "utf8");
 
-// pwa 폴더 복사 (manifest, sw 등)
-const pwaSrc = path.join(__dirname, "..", "pwa");
-if (fs.existsSync(pwaSrc)) {
-  fs.cpSync(pwaSrc, dist, { recursive: true });
-  console.log("📦 PWA assets copied to dist/");
-} else {
-  console.warn("⚠️ pwa 폴더가 없어 복사를 건너뜀 (필수는 아님)");
-}
+// 2) 프리픽스 보정 (/ → /skytracker/). 이미 붙은 건 건드리지 않음
+html = html.replace(/src="\/(?!skytracker\/)/g, 'src="/skytracker/');
+html = html.replace(/href="\/(?!skytracker\/)/g, 'href="/skytracker/');
 
-// index.html 로드
-let html = fs.readFileSync(htmlFile, "utf8");
-
-// <head> 닫히기 전에 manifest 링크 삽입 (이미 있으면 건너뜀)
+// 3) manifest 링크 없으면 추가
 if (!html.includes('rel="manifest"')) {
-  const manifestTag = `  <link rel="manifest" href="${basePath}manifest.webmanifest">\n`;
-  html = html.replace("</head>", `${manifestTag}</head>`);
+  html = html.replace(
+    "</head>",
+    '  <link rel="manifest" href="/skytracker/manifest.webmanifest">\n</head>'
+  );
 }
 
-// Service Worker 등록 스니펫 (이미 있으면 건너뜀)
-// - scope를 basePath로 설정하여 /skytracker/ 하위에서만 동작하도록
-if (!html.includes("navigator.serviceWorker.register(")) {
-  const swSnippet = `
-<script>
-(function() {
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      var basePath = ${JSON.stringify(basePath)};
-      navigator.serviceWorker.register(basePath + 'sw.js', { scope: basePath })
-        .catch(function(err){ console.error('SW registration failed:', err); });
-    });
+// 4) 메인 번들 파일명 추출해서 dist 루트로 복사(언더스코어 이슈 회피)
+const match = html.match(/src="\/skytracker\/_expo\/static\/js\/web\/([^"]+\.js)"/);
+if (match) {
+  const bundleFileName = match[1];
+  const bundleSrcPath = path.join(dist, "_expo", "static", "js", "web", bundleFileName);
+  const bundleDstPath = path.join(dist, bundleFileName);
+  if (fs.existsSync(bundleSrcPath)) {
+    fs.copyFileSync(bundleSrcPath, bundleDstPath);
+    const mapSrc = bundleSrcPath + ".map";
+    const mapDst = bundleDstPath + ".map";
+    if (fs.existsSync(mapSrc)) fs.copyFileSync(mapSrc, mapDst);
+    // index.html에서 참조 변경
+    html = html.replace(
+      /src="\/skytracker\/_expo\/static\/js\/web\/[^"]+\.js"/,
+      `src="/skytracker/${bundleFileName}"`
+    );
   }
-})();
+}
+
+// 5) 404.html → index.html SPA 리다이렉트(깃헙페이지 라우팅용)
+const spa404 = `
+<!doctype html><html><head><meta http-equiv="refresh" content="0; url=/skytracker/">
+<script>sessionStorage.redirect=location.href;</script></head><body></body></html>`;
+fs.writeFileSync(path.join(dist, "404.html"), spa404, "utf8");
+
+// 6) Service Worker 등록 스니펫 주입(중복 방지)
+if (!html.includes("navigator.serviceWorker.register")) {
+  html = html.replace(
+    "</body>",
+    `
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function() {
+    navigator.serviceWorker.register("/skytracker/sw.js", { scope: "/skytracker/" })
+      .catch(e => console.log("SW reg failed", e));
+  });
+}
 </script>
+</body>`
+  );
+}
+// --- add: copy helper & copy public files to dist root ---
+const copyToDist = (filename) => {
+  const src = path.join(process.cwd(), "public", filename);
+  const dst = path.join(dist, filename);
+  if (fs.existsSync(src)) {
+    fs.copyFileSync(src, dst);
+    console.log("copied:", filename);
+    return true;
+  } else {
+    console.warn("missing in public/:", filename);
+    return false;
+  }
+};
+
+// 복사 실행 (dist 루트로!)
+const COPIES = [
+  "pwa-192.png",
+  "pwa-512.png",
+  "mobile.png", // 모바일 스크린샷
+  "wide.png",          
+  "manifest.webmanifest",        // public에 따로 있으면 dist로 강제 복사
+  "favicon.icon"                  // 있으면 캐시 프리캐시용
+];
+COPIES.forEach(copyToDist);
+// 7) manifest 생성/보강
+const manifestPath = path.join(dist, "manifest.webmanifest");
+let manifest = {
+  name: "skytracker",
+  short_name: "skytracker",
+  start_url: "/skytracker/",
+  scope: "/skytracker/",
+  display: "standalone",
+  background_color: "#ffffff",
+  theme_color: "#0be5ecd7",
+  icons: []
+};
+
+if (fs.existsSync(manifestPath)) {
+  try { manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")); } catch {}
+}
+
+const icons = manifest.icons || [];
+const need192 = !icons.some(i => (i.sizes||"") === "192x192");
+const need512 = !icons.some(i => (i.sizes||"") === "512x512");
+
+// dist 루트 기준으로 존재 확인
+if (fs.existsSync(path.join(dist, "pwa-192.png")) && need192) {
+  icons.push({ src: "/skytracker/pwa-192.png", sizes: "192x192", type: "image/png", purpose: "any" });
+}
+if (fs.existsSync(path.join(dist, "pwa-512.png")) && need512) {
+  icons.push({ src: "/skytracker/pwa-512.png", sizes: "512x512", type: "image/png", purpose: "any" });
+}
+manifest.icons = icons;
+
+// --- add: screenshots 등록 (모바일 1장은 필수) ---
+const screenshots = manifest.screenshots || [];
+const hasMobileShot = screenshots.some(s => s.src?.endsWith("mobile.png"));
+if (fs.existsSync(path.join(dist, "mobile.png")) && !hasMobileShot) {
+  screenshots.push({
+    src: "/skytracker/mobile.png",
+    sizes: "1080x1920",
+    type: "image/png"
+    // form_factor 생략 → 모바일로 인정
+  });
+}
+// wide가 있으면 선택적으로 추가
+if (fs.existsSync(path.join(dist, "screen-wide.png")) &&
+    !screenshots.some(s => s.src?.endsWith("screen-wide.png"))) {
+  screenshots.push({
+    src: "/skytracker/screen-wide.png",
+    sizes: "1280x720",
+    type: "image/png",
+    form_factor: "wide"
+  });
+}
+
+manifest.screenshots = screenshots;
+
+fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2), "utf8");
+
+
+// 8) sw.js 생성(네트워크 우선 + 정적 프리캐시 + SPA fallback)
+const swJs = `
+const CACHE_NAME = "skytracker-cache-v1";
+const SCOPE = "/skytracker/";
+const PRECACHE = [
+  SCOPE,
+  SCOPE + "index.html",
+  SCOPE + "manifest.webmanifest",
+  SCOPE + "favicon.icon"
+];
+
+self.addEventListener("install", (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE))
+  );
+});
+self.addEventListener("activate", (e) => {
+  e.waitUntil(
+    caches.keys().then(keys => Promise.all(
+      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+    ))
+  );
+});
+self.addEventListener("fetch", (e) => {
+  const req = e.request;
+  const url = new URL(req.url);
+
+  // 스코프 바깥은 무시
+  if (!url.pathname.startsWith(SCOPE)) return;
+
+  // HTML은 네트워크 우선(오프라인 시 캐시 fallback)
+  if (req.mode === "navigate") {
+    e.respondWith(
+      fetch(req).catch(() => caches.match(SCOPE + "index.html"))
+    );
+    return;
+  }
+
+  // 나머지는 캐시 우선(없으면 네트워크)
+  e.respondWith(
+    caches.match(req).then(c => c || fetch(req).then(res => {
+      const resClone = res.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(req, resClone));
+      return res;
+    }))
+  );
+});
 `;
-  html = html.replace("</body>", `${swSnippet}\n</body>`);
-}
+fs.writeFileSync(path.join(dist, "sw.js"), swJs, "utf8");
 
-// 변경 저장
-fs.writeFileSync(htmlFile, html, "utf8");
-console.log("✅ Manifest + Service Worker injected into index.html");
+// 9) index.html 저장
+fs.writeFileSync(indexHtml, html, "utf8");
 
-// SPA 라우팅용 404.html 생성 (GitHub Pages)
-const notFound = path.join(dist, "404.html");
-try {
-  fs.copyFileSync(htmlFile, notFound);
-  console.log("✅ 404.html created for SPA routing on GitHub Pages");
-} catch (e) {
-  console.warn("⚠️ 404.html 생성 실패:", e?.message || e);
-}
-
-console.log("🎉 postexport 완료!");
+console.log("✅ PWA assets injected (manifest, sw.js, 404.html, registration)");
+console.log("🎉 postexport done");

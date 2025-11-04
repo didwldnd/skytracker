@@ -31,15 +31,9 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "themeColor": "#0be5ecd7",
-      "output": "single"
+      "basePath": "/skytracker"
     },
-    "platforms": [
-      "ios",
-      "android",
-      "web"
-    ],
-    "plugins": [
-      
-    ]
+    "platforms": ["ios", "android", "web"],
+    "plugins": []
   }
 }
