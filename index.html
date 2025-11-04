@@ -35,5 +35,14 @@
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
   <script src="/skytracker/index-10a635624013a7777d607ad554a4ee9c.js" defer></script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function() {
+    navigator.serviceWorker.register("/skytracker/sw.js", { scope: "/skytracker/" })
+      .catch(e => console.log("SW reg failed", e));
+  });
+}
+</script>
 </body>
 </html>
