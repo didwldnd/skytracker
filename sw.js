@@ -4,8 +4,8 @@ const SCOPE = "/skytracker/";
 const PRECACHE = [
   SCOPE,
   SCOPE + "index.html",
-  SCOPE + "manifest.webmanifest",
-  SCOPE + "favicon.icon"
+  SCOPE + "manifest.webmanifest"
+  SCOPE + "favicon.ico"
 ];
 
 self.addEventListener("install", (e) => {
