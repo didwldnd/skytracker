@@ -48,7 +48,7 @@ export default function App() {
             <PriceAlertProvider>
               <FavoriteProvider>
                 <NavigationContainer>
-                  <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+                  <Stack.Navigator initialRouteName="LoginScreen" screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="Splash" component={SplashScreen} />
                     <Stack.Screen name="HomeScreen" component={HomeScreen} />
                     <Stack.Screen name="LoginScreen" component={LoginScreen} />
