@@ -1,5 +1,5 @@
 // screens/LoginScreen.tsx
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,8 @@ import { FontAwesome } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
-import * as Google from "expo-auth-session/providers/google"
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Linking from "expo-linking";
+import * as SecureStore from "expo-secure-store";
 
 WebBrowser.maybeCompleteAuthSession(); // 브라우저 세션 마무리 (앱 시작 시 1회)
 
@@ -26,96 +26,107 @@ const redirectUri = AuthSession.makeRedirectUri({
   path: "redirect", // => skytracker://redirect
 });
 
-const API_BASE = "https://sherril-palaeanthropic-nonavoidably.ngrok-free.dev";
+const API_BASE = "https://vogie-perfunctorily-jayleen.ngrok-free.dev";
 
-/** 쿼리 파라미터 파싱 유틸 */
+/** 쿼리 파라미터 파싱 (RN 호환) */
 function parseParams(url: string) {
-  const u = new URL(url);
-  const qp = u.searchParams;
+  const parsed = (Linking.parse(url) as any) || {};
+  const qp = parsed.queryParams || {};
   return {
-    code: qp.get("code"),
-    state: qp.get("state"),
-    session: qp.get("session"),
-    token: qp.get("token"),
-    error: qp.get("error"),
-    provider: qp.get("provider") as Provider | null,
+    code: (qp.code as string) ?? null,
+    state: (qp.state as string) ?? null,
+    session: (qp.session as string) ?? null,
+    token: (qp.token as string) ?? null,
+    error: (qp.error as string) ?? null,
+    provider: (qp.provider as Provider) ?? null,
   };
 }
 
-/** 인가 시작 URL 생성 (백엔드 라우트에 맞춰 필요시 수정) */
-function buildAuthorizeUrl(provider: Provider, state: string) {
-  const url = new URL(`${API_BASE}/oauth2/authorization/${provider}`);
-  url.searchParams.set("state", state);
-  return url.toString();
+/** 인가 시작 URL (백엔드 라우트 기준) */
+function buildAuthorizeUrl(provider: Provider) {
+  return `${API_BASE}/oauth2/authorization/${provider}`;
 }
 
-/** 로그인 공통 함수: 버튼 → 브라우저 → 딥링크 → 백엔드 POST */
+/** 로그인 공통 함수: 버튼 → 브라우저 → 딥링크 → (옵션) 서버 교환 */
 async function loginWithProvider(provider: Provider) {
-  const state = Math.random().toString(36).slice(2);
+  const authorizeUrl = buildAuthorizeUrl(provider);
 
-  const authorizeUrl = buildAuthorizeUrl(provider, state);
+  // 세션 방식: 브라우저 열고, 복귀는 딥링크 리스너에서 처리
   const result = await WebBrowser.openAuthSessionAsync(authorizeUrl, redirectUri);
 
-  if (result.type !== "success" || !result.url) return;
+  // 일부 기기는 result.url이 비어 있고, 딥링크 리스너에서만 토큰을 받음
+  if (result.type !== "success") return;
 
-  const { code, session, token, error, state: returnedState } = parseParams(result.url);
-  if (error) throw new Error(error);
-  if (returnedState && returnedState !== state) throw new Error("State mismatch");
+  if (result.url) {
+    const { token, error, code, session } = parseParams(result.url);
+    if (error) throw new Error(String(error));
 
-  // ✅ 백엔드 설계에 맞춰 한 가지 패턴만 쓰면 됨.
-  // [A] code를 서버로 넘겨서 최종 토큰 교환:
-  if (code) {
-    const res = await fetch(`${API_BASE}/oauth2/mobile/callback`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", // refresh_token 쿠키 수신
-      body: JSON.stringify({ provider, code, state, redirectUri }),
-    });
-    if (!res.ok) throw new Error("Token exchange failed");
-    const data = await res.json(); // { jwt, user, ... } 형식 가정
+    // [A] code 교환 방식 (백엔드가 요구 시 사용)
+    if (code) {
+      const res = await fetch(`${API_BASE}/oauth2/mobile/callback`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, code, redirectUri }),
+      });
+      if (!res.ok) throw new Error("Token exchange failed");
+      const data = await res.json();
+      const accessToken = data.accessToken ?? data.jwt ?? data.token;
+      if (!accessToken) throw new Error("No access token from server");
+      await SecureStore.setItemAsync("accessToken", String(accessToken));
+      return data;
+    }
 
-    const accessToken = data.accessToken ?? data.jwt ?? data.token;
-    if (!accessToken) throw new Error("No access token from server");
-    await AsyncStorage.setItem("accessToken", data.accessToken);
+    // [B] 토큰이 직접 넘어오는 경우
+    if (token) {
+      await SecureStore.setItemAsync("accessToken", String(token));
+      return { token };
+    }
 
-    return data;
+    // [C] 세션 식별자 방식 (백엔드가 지원 시)
+    if (session) {
+      const res = await fetch(`${API_BASE}/oauth2/mobile/finalize`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, session }),
+      });
+      if (!res.ok) throw new Error("Finalize failed");
+      const data = await res.json();
+      const accessToken = data.accessToken ?? data.jwt ?? data.token;
+      if (accessToken) await SecureStore.setItemAsync("accessToken", String(accessToken));
+      return data;
+    }
   }
-
-  // [B] 서버가 이미 session 또는 token을 딥링크에 실어주는 경우:
-  if (session) {
-    const res = await fetch(`${API_BASE}/oauth2/mobile/finalize`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include", // 쿠키 유지
-      body: JSON.stringify({ provider, session }),
-    });
-    if (!res.ok) throw new Error("Finalize failed");
-    const data = await res.json();
-
-    const accessToken = data.accesstoKen ?? data.jwt ?? data.token;
-    if (accessToken) await AsyncStorage.setItem("accessToken", accessToken);
-
-    return data;
-  }
-
-  if (token) {
-    // 토큰이 직접 넘어오는 경우 바로 사용
-    await AsyncStorage.setItem("accessToken", token);
-    return { jwt: token };
-  }
-
-  throw new Error("Missing code/session/token");
 }
 
 export default function LoginScreen() {
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null);
 
+  // 🔔 딥링크 리스너: 백엔드가 skytracker://redirect?token=... 으로 보낼 때 토큰 저장
+  useEffect(() => {
+    const sub = Linking.addEventListener("url", async ({ url }) => {
+      const { token, error } = parseParams(url);
+      if (error) {
+        Alert.alert("로그인 실패", String(error));
+        setLoadingProvider(null);
+        return;
+      }
+      if (token) {
+        await SecureStore.setItemAsync("accessToken", String(token));
+        setLoadingProvider(null);
+        Alert.alert("로그인 완료", "토큰 저장 완료");
+        // TODO: 홈 화면 이동 or /api/me 호출
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const handle = (provider: Provider) => async () => {
     try {
       setLoadingProvider(provider);
       const result = await loginWithProvider(provider);
-      // TODO: result.jwt 등을 SecureStore/AsyncStorage에 저장하고 내 앱 세션 처리
-      Alert.alert("로그인 완료", `${provider} 로그인 성공`);
+      if (result?.token || result?.accessToken || result?.jwt) {
+        Alert.alert("로그인 완료", `${provider} 로그인 성공`);
+      }
     } catch (e: any) {
       Alert.alert(`${provider} 로그인 오류`, e?.message ?? "Unknown error");
     } finally {
