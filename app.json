@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "skytracker",
-    "owner": "your-expo-username",
+    "owner": "wldnd4949",
     "slug": "skytracker",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,14 +11,16 @@
     "icon": "./assets/icon.png",
     "backgroundColor": "#ffffff",
     "scheme": "skytracker",
-    "splash": { "backgroundColor": "#000000" },
-
-    "ios": { "bundleIdentifier": "com.yourname.skytracker" },
-
+    "splash": {
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "bundleIdentifier": "com.yourname.skytracker"
+    },
     "android": {
       "package": "com.yourname.skytracker",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/favicon.png",
         "backgroundColor": "#000000"
       },
       "statusBar": {
@@ -30,20 +32,33 @@
       "intentFilters": [
         {
           "action": "VIEW",
-          "category": ["BROWSABLE", "DEFAULT"],
-          "data": [{ "scheme": "skytracker", "host": "redirect" }]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
+          "data": [
+            {
+              "scheme": "skytracker",
+              "host": "redirect"
+            }
+          ]
         }
       ]
     },
-
     "web": {
       "favicon": "./assets/favicon.png",
       "themeColor": "#0be5ecd7",
       "basePath": "/skytracker"
     },
-
-    "platforms": ["ios", "android", "web"]
-
-    
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b85c5e2d-8c02-4122-8579-703e37e1da67"
+      }
+    }
   }
 }
