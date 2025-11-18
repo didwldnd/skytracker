@@ -48,13 +48,29 @@ export default function App() {
             <PriceAlertProvider>
               <FavoriteProvider>
                 <NavigationContainer>
-                  <Stack.Navigator initialRouteName="Splash" screenOptions={{ headerShown: false }}>
+                  <Stack.Navigator
+                    initialRouteName="Splash"
+                    screenOptions={{
+                      headerShown: false,
+                      gestureEnabled: true,
+                      gestureDirection: "horizontal",
+                    }}
+                  >
                     <Stack.Screen name="Splash" component={SplashScreen} />
                     <Stack.Screen name="HomeScreen" component={HomeScreen} />
                     <Stack.Screen name="LoginScreen" component={LoginScreen} />
-                    <Stack.Screen name="FlightResult" component={FlightResult} />
-                    <Stack.Screen name="FlightDetail" component={FlightDetailScreen} />
-                    <Stack.Screen name="FavoriteList" component={FavoriteListScreen} />
+                    <Stack.Screen
+                      name="FlightResult"
+                      component={FlightResult}
+                    />
+                    <Stack.Screen
+                      name="FlightDetail"
+                      component={FlightDetailScreen}
+                    />
+                    <Stack.Screen
+                      name="FavoriteList"
+                      component={FavoriteListScreen}
+                    />
                     <Stack.Screen
                       name="CityFlightList"
                       component={CityFlightListScreen}

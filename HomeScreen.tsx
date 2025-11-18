@@ -10,27 +10,29 @@ import PriceAlertScreen from "./screens/PriceAlertScreen/PriceAlertScreen";
 const Tab = createBottomTabNavigator()
 
 const HomeScreen = () => {
-
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarIcon: ({ color, size }) => {
-          
           const iconMap = {
-            검색: 'search',
-            알리미: 'alarm',
-            J플랜: 'chatbubbles',
-            프로필: 'person-outline',
+            검색: "search",
+            알리미: "alarm",
+            J플랜: "chatbubbles",
+            프로필: "person-outline",
           } as const;
 
           const iconName = iconMap[route.name as keyof typeof iconMap];
-
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#0be5ecd7',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: "#0be5ecd7",
+        tabBarInactiveTintColor: "gray",
+        tabBarStyle: {
+          height: 60,
+        },
       })}
+
+      safeAreaInsets={{ bottom: 0 }}
     >
       <Tab.Screen name="검색" component={index} />
       <Tab.Screen name="알리미" component={PriceAlertScreen} />
@@ -39,5 +41,6 @@ const HomeScreen = () => {
     </Tab.Navigator>
   );
 };
+
 
 export default HomeScreen

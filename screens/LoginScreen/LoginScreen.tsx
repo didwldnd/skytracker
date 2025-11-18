@@ -15,8 +15,31 @@ import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
 import * as Linking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
+import { API_BASE } from "../../config/env";
 
 WebBrowser.maybeCompleteAuthSession(); // 브라우저 세션 마무리 (앱 시작 시 1회)
+
+async function handleLoginSuccess(data: any) {
+  console.log("🔥 [handleLoginSuccess] 서버에서 받은 데이터:", data);
+
+  const accessToken = data?.accessToken;
+  const refreshToken = data?.refreshToken ?? null;
+
+  console.log("👉 accessToken:", accessToken);
+  console.log("👉 refreshToken:", refreshToken);
+
+  if (!accessToken) {
+    throw new Error("accessToken이 없습니다.");
+  }
+
+  await SecureStore.setItemAsync("accessToken", String(accessToken));
+  if (refreshToken) {
+    await SecureStore.setItemAsync("refreshToken", String(refreshToken));
+  }
+
+  console.log("💾 SecureStore 저장 완료!");
+}
+
 
 type Provider = "google" | "kakao" | "naver";
 
@@ -26,7 +49,7 @@ const redirectUri = AuthSession.makeRedirectUri({
   path: "redirect", // => skytracker://redirect
 });
 
-const API_BASE = "https://vogie-perfunctorily-jayleen.ngrok-free.dev";
+const baseAPI = API_BASE;
 
 /** 쿼리 파라미터 파싱 (RN 호환) */
 function parseParams(url: string) {
@@ -44,7 +67,7 @@ function parseParams(url: string) {
 
 /** 인가 시작 URL (백엔드 라우트 기준) */
 function buildAuthorizeUrl(provider: Provider) {
-  return `${API_BASE}/oauth2/authorization/${provider}`;
+  return `${baseAPI}/oauth2/authorization/${provider}`;
 }
 
 /** 로그인 공통 함수: 버튼 → 브라우저 → 딥링크 → (옵션) 서버 교환 */
@@ -65,20 +88,21 @@ async function loginWithProvider(provider: Provider) {
     if (code) {
       const res = await fetch(`${API_BASE}/oauth2/mobile/callback`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Context-Type": "application/json" },
         body: JSON.stringify({ provider, code, redirectUri }),
       });
       if (!res.ok) throw new Error("Token exchange failed");
+
       const data = await res.json();
-      const accessToken = data.accessToken ?? data.jwt ?? data.token;
-      if (!accessToken) throw new Error("No access token from server");
-      await SecureStore.setItemAsync("accessToken", String(accessToken));
+      await handleLoginSuccess(data); // 여기서 둘다 저장
+      
       return data;
     }
 
     // [B] 토큰이 직접 넘어오는 경우
     if (token) {
-      await SecureStore.setItemAsync("accessToken", String(token));
+      // await handleLoginSuccess({ accessToken: token, refreshToken }); // 서버 포맷에 맞게
+      await handleLoginSuccess({ accessToken: token }); 
       return { token };
     }
 
@@ -90,9 +114,9 @@ async function loginWithProvider(provider: Provider) {
         body: JSON.stringify({ provider, session }),
       });
       if (!res.ok) throw new Error("Finalize failed");
+
       const data = await res.json();
-      const accessToken = data.accessToken ?? data.jwt ?? data.token;
-      if (accessToken) await SecureStore.setItemAsync("accessToken", String(accessToken));
+      await handleLoginSuccess(data); // 저장 위치 통합
       return data;
     }
   }
@@ -102,23 +126,32 @@ export default function LoginScreen() {
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null);
 
   // 🔔 딥링크 리스너: 백엔드가 skytracker://redirect?token=... 으로 보낼 때 토큰 저장
-  useEffect(() => {
-    const sub = Linking.addEventListener("url", async ({ url }) => {
-      const { token, error } = parseParams(url);
-      if (error) {
-        Alert.alert("로그인 실패", String(error));
-        setLoadingProvider(null);
-        return;
-      }
-      if (token) {
-        await SecureStore.setItemAsync("accessToken", String(token));
-        setLoadingProvider(null);
-        Alert.alert("로그인 완료", "토큰 저장 완료");
-        // TODO: 홈 화면 이동 or /api/me 호출
-      }
-    });
-    return () => sub.remove();
-  }, []);
+ useEffect(() => {
+  const sub = Linking.addEventListener("url", async ({ url }) => {
+    console.log("🔗 [딥링크 URL 수신]:", url);
+    const parsed = parseParams(url);
+    console.log("🔍 [딥링크 파싱 결과]:", parsed);
+
+    const { token, error } = parsed;
+
+    if (error) {
+      console.log("❌ 딥링크 오류:", error);
+      setLoadingProvider(null);
+      return;
+    }
+
+    if (token) {
+      console.log("🎉 딥링크 토큰 받음:", token);
+
+      await handleLoginSuccess({ accessToken: token });
+      setLoadingProvider(null);
+      Alert.alert("로그인 완료", "로그인 성공");
+    }
+  });
+
+  return () => sub.remove();
+}, []);
+
 
   const handle = (provider: Provider) => async () => {
     try {
@@ -172,6 +205,7 @@ export default function LoginScreen() {
             <Image source={require("../../assets/google.png")} style={styles.icon} />
             <Text style={styles.buttonText}>Google로 계속하기</Text>
           </>
+          
         )}
       </TouchableOpacity>
 
@@ -198,6 +232,7 @@ export default function LoginScreen() {
           </>
         )}
       </TouchableOpacity>
+      
 
       {/* Naver */}
       <TouchableOpacity

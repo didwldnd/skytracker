@@ -7,8 +7,9 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
-  Pressable, // ★ 카드 전체 탭을 위해 사용
+  Pressable,
   GestureResponderEvent,
+  ActivityIndicator,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -19,6 +20,7 @@ import { generateAlertKey } from "../../utils/generateAlertKey";
 import { Buffer } from "buffer";
 import { formatPrice } from "../../utils/formatters";
 import { Ionicons, FontAwesome } from "@expo/vector-icons";
+import * as SecureStore from "expo-secure-store";
 
 global.Buffer = Buffer;
 
@@ -97,7 +99,6 @@ export const airportMap: Record<string, string> = {
   NBO: "나이로비",
 };
 
-
 const formatDate = (isoDate: string) => {
   if (!isoDate) return "-";
   const date = new Date(isoDate);
@@ -129,6 +130,28 @@ export default function PriceAlertScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { alerts, removeAlert } = usePriceAlert();
+
+  // 🔐 로그인 여부 상태
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [loginChecked, setLoginChecked] = useState(false);
+
+  // 화면에 들어올 때마다 토큰 확인
+  useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const token = await SecureStore.getItemAsync("accessToken");
+        setIsLoggedIn(!!token);
+      } catch (e) {
+        console.log("checkLogin error", e);
+        setIsLoggedIn(false);
+      } finally {
+        setLoginChecked(true);
+      }
+    };
+
+    const unsubscribe = navigation.addListener("focus", checkLogin);
+    return unsubscribe;
+  }, [navigation]);
 
   const alertList: FlightSearchResponseDto[] = Array.isArray(alerts)
     ? alerts
@@ -168,12 +191,10 @@ export default function PriceAlertScreen() {
     setSwitchStates(updatedStates);
   };
 
-  // ★ 카드 탭(여백 포함) 시 상세 이동
   const goDetail = (flight: FlightSearchResponseDto) => {
     navigation.navigate("FlightDetail", { flight });
   };
 
-  // ★ 자식 버튼에서 카드 onPress가 실행되지 않도록 전파 방지 헬퍼
   const stop = (e: GestureResponderEvent) => e.stopPropagation();
 
   const renderItem = ({ item }: { item: FlightSearchResponseDto }) => {
@@ -205,7 +226,6 @@ export default function PriceAlertScreen() {
     const price = priceText(item.price, item.currency ?? "KRW");
 
     return (
-      // ★ Pressable로 카드 전체를 클릭 영역으로
       <Pressable
         style={styles.card}
         onPress={() => goDetail(item)}
@@ -228,7 +248,6 @@ export default function PriceAlertScreen() {
             </Text>
           </View>
 
-          {/* 우측 가격 & 보기 */}
           <View style={styles.right}>
             <Text style={styles.price}>{price}</Text>
             <TouchableOpacity
@@ -243,9 +262,7 @@ export default function PriceAlertScreen() {
           </View>
         </View>
 
-        {/* ★ 아이콘 행 (오른쪽 하단) */}
         <View style={styles.iconRow}>
-          {/* 알림 토글 */}
           <TouchableOpacity
             onPress={(e) => {
               stop(e);
@@ -261,7 +278,6 @@ export default function PriceAlertScreen() {
             />
           </TouchableOpacity>
 
-          {/* 삭제 버튼 */}
           <TouchableOpacity
             onPress={(e) => {
               stop(e);
@@ -276,6 +292,38 @@ export default function PriceAlertScreen() {
     );
   };
 
+  // 1) 아직 로그인 여부 체크 중이면 로딩
+  if (!loginChecked) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator />
+        <Text style={styles.loadingText}>로그인 상태 확인 중...</Text>
+      </View>
+    );
+  }
+
+  // 2) 비로그인 상태: 안내 + 로그인 버튼
+  if (!isLoggedIn) {
+    return (
+      <View style={styles.lockContainer}>
+        <Text style={styles.lockTitle}>로그인 후 이용 가능한 서비스에요</Text>
+        <Text style={styles.lockDesc}>
+          관심 있는 항공편의 가격이 변동되면{`\n`}
+          자동으로 알려주는 가격 알림 서비스를 이용하려면{`\n`}
+          먼저 로그인 해주세요.
+        </Text>
+
+        <TouchableOpacity
+          style={styles.lockButton}
+          onPress={() => navigation.navigate("LoginScreen")}
+        >
+          <Text style={styles.lockButtonText}>로그인 하러 가기</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // 3) 로그인 상태: 기존 PriceAlert 화면 그대로
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <View style={styles.globalToggle}>
@@ -337,6 +385,48 @@ export default function PriceAlertScreen() {
 const MIN_TOUCH = 33;
 
 const styles = StyleSheet.create({
+  // 🔐 비로그인/로딩 레이아웃
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  loadingText: {
+    marginTop: 8,
+    color: "#555",
+  },
+  lockContainer: {
+    flex: 1,
+    padding: 24,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
+  },
+  lockTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  lockDesc: {
+    fontSize: 14,
+    color: "#64748b",
+    textAlign: "center",
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  lockButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: "#0be5ecd7",
+  },
+  lockButtonText: {
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 15,
+  },
+
   globalToggle: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -350,7 +440,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: "#fff",
-    borderRadius: 14, // 살짝 더 둥글게
+    borderRadius: 14,
     padding: 16,
     marginBottom: 16,
     elevation: 2,
@@ -395,8 +485,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-
-  // ★ 기존 '삭제' 텍스트 대신 큼직한 버튼
   deleteBig: {
     backgroundColor: "#E53935",
     paddingHorizontal: 16,
