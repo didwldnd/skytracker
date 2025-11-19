@@ -12,12 +12,17 @@ import {
 import { FontAwesome } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as SecureStore from "expo-secure-store";
-import WebView from "react-native-webview"; // ✅ 새로 추가
+import * as WebBrowser from "expo-web-browser";
+import * as AuthSession from "expo-auth-session";
+import * as Linking from "expo-linking";
 import { API_BASE } from "../../config/env";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
 
+WebBrowser.maybeCompleteAuthSession();
+
+// refreshToken까지 처리하는 공통 함수
 async function handleLoginSuccess(accessToken: string) {
   console.log("🔥 [handleLoginSuccess] accessToken:", accessToken);
 
@@ -53,7 +58,7 @@ async function handleLoginSuccess(accessToken: string) {
       console.log("⚠️ refreshToken이 응답에 없습니다.");
     }
 
-    // 확인용 (원하면 삭제)
+    // 확인용 (테스트 후 지워도 됨)
     const savedAccess = await SecureStore.getItemAsync("accessToken");
     const savedRefresh = await SecureStore.getItemAsync("refreshToken");
     console.log("🔍 최종 저장된 accessToken:", savedAccess);
@@ -70,62 +75,103 @@ const baseAPI = API_BASE;
 
 /** 인가 시작 URL (백엔드 라우트 기준) */
 function buildAuthorizeUrl(provider: Provider) {
-  return `${baseAPI}/oauth2/authorization/${provider}`;
+  const encodedRedirect = encodeURIComponent(redirectUri);
+
+  return `${baseAPI}/oauth2/authorization/${provider}?redirect_uri=${encodedRedirect}`;
+}
+
+
+/** 앱이 받는 리디렉션 URI: skytracker://redirect */
+const redirectUri = AuthSession.makeRedirectUri({
+  path: "redirect",
+});
+
+type ParsedParams = {
+  accessToken: string | null;
+  error: string | null;
+};
+
+function parseParams(url: string): ParsedParams {
+  const parsed = (Linking.parse(url) as any) || {};
+  const qp = parsed.queryParams || {};
+
+  const accessToken = (qp.accessToken as string) ?? null;
+
+  return {
+    accessToken,
+    error: (qp.error as string) ?? null,
+  };
 }
 
 export default function LoginScreen() {
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null);
-  const [currentProvider, setCurrentProvider] = useState<Provider | null>(null);
-  const [webViewVisible, setWebViewVisible] = useState(false);
-  const [webViewLoading, setWebViewLoading] = useState(false);
-
-  const isDisabled = loadingProvider !== null;
-
-  const openWebView = (provider: Provider) => {
-    setLoadingProvider(provider);
-    setCurrentProvider(provider);
-    setWebViewVisible(true);
-  };
-
-  const closeWebView = () => {
-    setWebViewVisible(false);
-    setCurrentProvider(null);
-    setLoadingProvider(null);
-  };
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const handleWebViewMessage = async (event: any) => {
-    const raw = event.nativeEvent.data;
-    console.log("🌐 WebView로부터 받은 데이터:", raw);
+  const isDisabled = loadingProvider !== null;
 
+  const handleProvider = (provider: Provider) => async () => {
     try {
-      const data = JSON.parse(raw); // 최종 JSON 페이지라고 가정
-      if (!data.accessToken) {
-        console.log("⚠️ accessToken 없는 데이터, 무시:", data);
+      console.log(`🚀 [handleProvider] ${provider} 로그인 시작`);
+
+      setLoadingProvider(provider);
+
+      const authorizeUrl = buildAuthorizeUrl(provider);
+      console.log("🔗 authorizeUrl:", authorizeUrl);
+      console.log("🔁 redirectUri:", redirectUri);
+
+      const result = await WebBrowser.openAuthSessionAsync(
+        authorizeUrl,
+        redirectUri
+      );
+
+      console.log(`📥 [${provider}] AuthSession result:`, result);
+
+      if (result.type !== "success") {
+        console.log(`⚠️ [${provider}] AuthSession type:`, result.type);
+        // 사용자가 취소하거나 에러 난 경우
         return;
       }
 
-      await handleLoginSuccess(data.accessToken);
+      if (!result.url) {
+        throw new Error("리디렉션 URL이 없습니다.");
+      }
+
+      const { accessToken, error } = parseParams(result.url);
+      console.log(`🔍 [${provider}] 파싱 결과:`, { accessToken, error });
+
+      if (error) {
+        throw new Error(String(error));
+      }
+
+      if (!accessToken) {
+        throw new Error("accessToken을 리디렉션에서 찾을 수 없습니다.");
+      }
+
+      // 🔥 토큰 저장 + refreshToken 발급
+      await handleLoginSuccess(accessToken);
+      console.log(`✅ [${provider}] handleLoginSuccess 완료`);
+
       Alert.alert("로그인 완료", "로그인 성공", [
         {
           text: "확인",
           onPress: () => {
-            closeWebView();
-
+            console.log("🏠 HomeScreen으로 이동");
             navigation.reset({
               index: 0,
-                routes: [{ name: "HomeScreen" as keyof RootStackParamList }],
-
+              routes: [{ name: "HomeScreen" as keyof RootStackParamList }],
             });
           },
         },
       ]);
-
-      closeWebView();
-    } catch (e) {
-      // 중간 카카오/구글 HTML 페이지들도 여기로 들어오지만 JSON.parse 실패 → 무시
-      console.log("JSON 파싱 실패 (중간 페이지일 가능성):", e);
+    } catch (e: any) {
+      console.log(`❌ [${provider}] 로그인 중 오류:`, e);
+      Alert.alert(
+        `${provider} 로그인 오류`,
+        e?.message ?? "알 수 없는 오류가 발생했습니다."
+      );
+    } finally {
+      setLoadingProvider(null);
     }
   };
 
@@ -151,7 +197,7 @@ export default function LoginScreen() {
           styles.google,
           isDisabled && loadingProvider !== "google" && styles.disabledButton,
         ]}
-        onPress={() => openWebView("google")}
+        onPress={handleProvider("google")}
         disabled={isDisabled}
         activeOpacity={0.7}
       >
@@ -182,7 +228,7 @@ export default function LoginScreen() {
           styles.kakao,
           isDisabled && loadingProvider !== "kakao" && styles.disabledButton,
         ]}
-        onPress={() => openWebView("kakao")}
+        onPress={handleProvider("kakao")}
         disabled={isDisabled}
         activeOpacity={0.7}
       >
@@ -213,7 +259,7 @@ export default function LoginScreen() {
           styles.naver,
           isDisabled && loadingProvider !== "naver" && styles.disabledButton,
         ]}
-        onPress={() => openWebView("naver")}
+        onPress={handleProvider("naver")}
         disabled={isDisabled}
         activeOpacity={0.7}
       >
@@ -245,58 +291,6 @@ export default function LoginScreen() {
         로그인하면 SkyTracker의 <Text style={styles.link}>서비스 약관</Text>과{" "}
         <Text style={styles.link}>개인정보 처리방침</Text>에 동의하게 됩니다.
       </Text>
-
-      {/* ✅ WebView 오버레이 */}
-      {webViewVisible && currentProvider && (
-        <View style={styles.webviewOverlay}>
-          {/* 상단 닫기 버튼 */}
-          <View style={styles.webviewHeader}>
-            <TouchableOpacity onPress={closeWebView} style={styles.closeButton}>
-              <Text style={{ color: "#fff", fontSize: 16 }}>닫기</Text>
-            </TouchableOpacity>
-            <Text style={styles.webviewTitle}>
-              {currentProvider.toUpperCase()} 로그인
-            </Text>
-            <View style={{ width: 60 }} />
-          </View>
-
-          {webViewLoading && (
-            <View style={styles.webviewLoading}>
-              <ActivityIndicator size="large" />
-            </View>
-          )}
-
-          <WebView
-            style={{ flex: 1 }}
-            source={{ uri: buildAuthorizeUrl(currentProvider) }}
-            onLoadStart={() => setWebViewLoading(true)}
-            onLoadEnd={() => setWebViewLoading(false)}
-            onMessage={handleWebViewMessage}
-            injectedJavaScript={`
-              (function() {
-                function trySend() {
-                  try {
-                    var text = document.body && document.body.innerText;
-                    if (!text) return;
-                    // 최종 JSON 페이지일 경우에만 보내기 시도
-                    try {
-                      var obj = JSON.parse(text);
-                      if (obj && obj.accessToken) {
-                        window.ReactNativeWebView.postMessage(JSON.stringify(obj));
-                      }
-                    } catch (e) {
-                      // JSON 아니면 무시
-                    }
-                  } catch (e) {}
-                }
-                // 페이지 렌더링 후 한 번 시도
-                setTimeout(trySend, 500);
-              })();
-              true;
-            `}
-          />
-        </View>
-      )}
     </LinearGradient>
   );
 }
@@ -353,37 +347,4 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   link: { textDecorationLine: "underline" },
-
-  // ✅ WebView 오버레이 스타일
-  webviewOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#000000aa",
-  },
-  webviewHeader: {
-    height: 56,
-    backgroundColor: "#0be5ecd7",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-  },
-  closeButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 8,
-  },
-  webviewTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  webviewLoading: {
-    position: "absolute",
-    top: 56,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
 });
