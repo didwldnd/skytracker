@@ -62,3 +62,29 @@ export async function fetchProfile(): Promise<UserProfile | null> {
   const data = (await response.json()) as UserProfile;
   return data;
 }
+
+// 회원 정보 수정
+export async function updateUser(data: { username: string; email: string }) {
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    throw new Error("로그인이 필요합니다.");
+  }
+
+  const response = await fetch(`${API_BASE}/api/user`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    console.log("❌ updateUser 실패 응답:", text);
+    throw new Error("유저 정보 수정 실패");
+  }
+
+  const result = await response.json(); // 백엔드에서 return ResponseEntity.ok(updateUser);
+  return result; // { username, email, ... }
+}

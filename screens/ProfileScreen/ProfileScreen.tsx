@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   Switch,
+  TextInput,
 } from "react-native";
 import { Avatar } from "react-native-paper";
 import { Feather } from "@expo/vector-icons";
@@ -26,12 +27,12 @@ import {
   getRefreshToken,
 } from "../../utils/tokenStorage";
 import { logout } from "../../api/auth";
-import { deleteAccount } from "../../api/user";
-import { fetchProfile } from "../../api/user";
+import { deleteAccount, fetchProfile, updateUser } from "../../api/user";
 
 const themeColor = "white";
 const HEADER_BG = "#0be5ecd7";
 
+// ------------------ Reusable Pretty Info Sheet ------------------
 // ------------------ Reusable Pretty Info Sheet ------------------
 function InfoSheet({
   visible,
@@ -128,32 +129,37 @@ const ProfileScreen = () => {
   } | null>(null);
   const [userLoading, setUserLoading] = useState(true);
 
+  // ✅ 내 정보 수정 모달용 상태
+  const [editVisible, setEditVisible] = useState(false);
+  const [editUsername, setEditUsername] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [saving, setSaving] = useState(false);
+
   // ✅ 프로필 조회
-useEffect(() => {
-  const loadProfile = async () => {
-    try {
-      const profile = await fetchProfile();
-      console.log("🔥 profile from backend:", profile); // 👈 추가
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const profile = await fetchProfile();
+        console.log("🔥 profile from backend:", profile); // 👈 추가
 
-      if (profile) {
-        setUser({
-          username: profile.username,
-          email: profile.email,
-        });
-      } else {
+        if (profile) {
+          setUser({
+            username: profile.username,
+            email: profile.email,
+          });
+        } else {
+          setUser(null);
+        }
+      } catch (e) {
+        console.error("프로필 조회 에러:", e);
         setUser(null);
+      } finally {
+        setUserLoading(false);
       }
-    } catch (e) {
-      console.error("프로필 조회 에러:", e);
-      setUser(null);
-    } finally {
-      setUserLoading(false);
-    }
-  };
+    };
 
-  loadProfile();
-}, []);
-
+    loadProfile();
+  }, []);
 
   const handleLogoutPress = async () => {
     try {
@@ -203,6 +209,54 @@ useEffect(() => {
       index: 0,
       routes: [{ name: "LoginScreen" }],
     });
+  };
+
+  // ✅ 내 정보 수정 모달 열기
+  const openEditModal = () => {
+    if (!user) {
+      Alert.alert("알림", "로그인이 필요합니다.");
+      return;
+    }
+    setEditUsername(user.username);
+    setEditEmail(user.email);
+    setEditVisible(true);
+  };
+
+  // ✅ 내 정보 수정 저장 (이제 username만 수정, email은 그대로 유지)
+  const handleSaveEdit = async () => {
+    // 기존 이메일까지 같이 체크하던 로직 주석 처리
+    // if (!editUsername.trim() || !editEmail.trim()) {
+    //   Alert.alert("알림", "이름과 이메일을 모두 입력해주세요.");
+    //   return;
+    // }
+
+    if (!editUsername.trim()) {
+      Alert.alert("알림", "이름을 입력해주세요.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const updated = await updateUser({
+        username: editUsername.trim(),
+        // ✅ 이메일은 변경하지 않고, 기존 값 그대로 전송
+        email: editEmail,
+      });
+
+      // 서버에서 준 최신 정보로 화면 상태 갱신
+      setUser({
+        username: updated.username,
+        email: updated.email,
+      });
+
+      Alert.alert("완료", "내 정보가 수정되었습니다.");
+      setEditVisible(false);
+    } catch (e) {
+      console.error("내 정보 수정 에러:", e);
+      Alert.alert("에러", "정보 수정에 실패했습니다. 다시 시도해주세요.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -263,6 +317,7 @@ useEffect(() => {
           items: [
             { label: "알림 설정", icon: "bell" },
             { label: "언어 및 통화", icon: "globe" },
+            { label: "내 정보 수정", icon: "key" },
           ],
         },
         {
@@ -295,6 +350,8 @@ useEffect(() => {
               onPress={() => {
                 if (item.label === "즐겨찾기") {
                   navigation.navigate("FavoriteList");
+                } else if (item.label === "내 정보 수정") {
+                  openEditModal();
                 } else {
                   openSheet(item.label as Exclude<SheetKind, null>);
                 }
@@ -520,6 +577,58 @@ useEffect(() => {
         <Divider />
         <Text style={styles.caption}>※ 실제 동작하지 않는 미리보기입니다.</Text>
       </InfoSheet>
+      <Modal
+        visible={editVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setEditVisible(false)}
+      >
+        <View style={styles.editBackdrop}>
+          <View style={styles.editCard}>
+            <Text style={styles.editTitle}>내 정보 수정</Text>
+
+            <Text style={styles.editLabel}>이름</Text>
+            <TextInput
+              style={styles.editInput}
+              value={editUsername}
+              onChangeText={setEditUsername}
+              placeholder="이름을 입력하세요"
+              placeholderTextColor="#94a3b8"
+            />
+
+            <Text style={styles.editLabel}>이메일 (변경 불가)</Text>
+            <TextInput
+              style={[styles.editInput, styles.editInputDisabled]}
+              value={editEmail}
+              editable={false}
+              selectTextOnFocus={false}
+              placeholderTextColor="#94a3b8"
+            />
+
+            <View style={styles.editButtonRow}>
+              <TouchableOpacity
+                style={[styles.editButton, { backgroundColor: "#e2e8f0" }]}
+                onPress={() => setEditVisible(false)}
+                disabled={saving}
+              >
+                <Text style={{ fontWeight: "600", color: "#0f172a" }}>
+                  취소
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.editButton, { backgroundColor: HEADER_BG }]}
+                onPress={handleSaveEdit}
+                disabled={saving}
+              >
+                <Text style={{ fontWeight: "600", color: "white" }}>
+                  {saving ? "저장 중..." : "저장"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -530,11 +639,11 @@ const FAQ = () => {
   const items = [
     {
       q: "가격 알림은 어떻게 동작하나요?",
-      a: "원하는 노선의 가격 변동을 추적해 알려드립니다. (데모 화면)",
+      a: "원하는 노선의 가격 변동을 추적해 알려드립니다.",
     },
     {
       q: "예약은 어디서 확인하나요?",
-      a: "프로필 > 예약 내역에서 확인할 수 있어요. (데모 화면)",
+      a: "프로필 > 예약 내역에서 확인할 수 있어요.",
     },
     {
       q: "지원되는 결제 수단은?",
@@ -762,6 +871,57 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   disabledBtnText: { color: "white", fontWeight: "600" },
+  // ✅ 내 정보 수정 모달
+  editBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  editCard: {
+    width: "88%",
+    backgroundColor: "white",
+    borderRadius: 16,
+    padding: 20,
+  },
+  editTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 16,
+    color: "#0f172a",
+  },
+  editLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 10,
+    marginBottom: 4,
+    color: "#475569",
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: "#cbd5e1",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    color: "#0f172a",
+  },
+  editInputDisabled: {
+    backgroundColor: "#e2e8f0",
+    color: "#64748b",
+  },
+
+  editButtonRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 20,
+    gap: 8,
+  },
+  editButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
 });
 
 export default ProfileScreen;
