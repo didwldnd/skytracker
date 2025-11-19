@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import {
 } from "../../utils/tokenStorage";
 import { logout } from "../../api/auth";
 import { deleteAccount } from "../../api/user";
+import { fetchProfile } from "../../api/user";
 
 const themeColor = "white";
 const HEADER_BG = "#0be5ecd7";
@@ -114,20 +115,49 @@ const Divider = () => <View style={styles.divider} />;
 
 // ------------------ Main Screen ------------------
 const ProfileScreen = () => {
-  const user = {
-    name: "양지웅",
-    email: "wldnd4949@naver.com",
-    profileImage: "",
-  };
-  const { favorites } = useFavorite(); // 필요시 사용
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { favorites } = useFavorite(); // 필요시 사용
   const { preferredDepartureAirport, setPreferredDepartureAirport, loading } =
     useUserSettings();
 
+  // ✅ 백엔드 유저 정보 상태
+  const [user, setUser] = useState<{
+    username: string;
+    email: string;
+  } | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  // ✅ 프로필 조회
+useEffect(() => {
+  const loadProfile = async () => {
+    try {
+      const profile = await fetchProfile();
+      console.log("🔥 profile from backend:", profile); // 👈 추가
+
+      if (profile) {
+        setUser({
+          username: profile.username,
+          email: profile.email,
+        });
+      } else {
+        setUser(null);
+      }
+    } catch (e) {
+      console.error("프로필 조회 에러:", e);
+      setUser(null);
+    } finally {
+      setUserLoading(false);
+    }
+  };
+
+  loadProfile();
+}, []);
+
+
   const handleLogoutPress = async () => {
     try {
-      await logout(); // 🔥 여기서 서버 + 로컬 모두 처리
+      await logout(); // 🔥 서버 + 로컬 모두 처리
 
       navigation.reset({
         index: 0,
@@ -168,35 +198,61 @@ const ProfileScreen = () => {
     return found ? `${found.city} (${found.code})` : preferredDepartureAirport;
   }, [preferredDepartureAirport]);
 
+  const handleGoLogin = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "LoginScreen" }],
+    });
+  };
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>프로필</Text>
 
       {/* 프로필 헤더 */}
       <View style={styles.profileHeader}>
-        <View style={styles.profileRow}>
-          <Avatar.Text
-            size={80}
-            label={user.name.charAt(0)}
-            style={styles.avatar}
-            labelStyle={{ fontSize: 32 }}
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{user.name}</Text>
-            <Text style={styles.email}>{user.email}</Text>
+        {userLoading ? (
+          <Text style={styles.loginRequiredText}>로딩 중...</Text>
+        ) : user ? (
+          // ✅ 로그인 된 상태
+          <View style={styles.profileRow}>
+            <Avatar.Text
+              size={80}
+              label={user?.username?.charAt(0) ?? "?"}
+              style={styles.avatar}
+              labelStyle={{ fontSize: 32 }}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name}>{user.username}</Text>
+              <Text style={styles.email}>{user.email}</Text>
 
-            {/* 나의 출발 공항 행 */}
-            <View style={styles.infoRow}>
-              <Feather name="send" size={14} color="black" />
-              <Text style={styles.infoText}>
-                나의 출발 공항: {loading ? "로딩중..." : airportLabel}
-              </Text>
-              <TouchableOpacity onPress={openPicker} style={styles.miniBtn}>
-                <Text style={{ fontSize: 12 }}>변경</Text>
-              </TouchableOpacity>
+              {/* 나의 출발 공항 행 */}
+              <View style={styles.infoRow}>
+                <Feather name="send" size={14} color="black" />
+                <Text style={styles.infoText}>
+                  나의 출발 공항: {loading ? "로딩중..." : airportLabel}
+                </Text>
+                <TouchableOpacity onPress={openPicker} style={styles.miniBtn}>
+                  <Text style={{ fontSize: 12 }}>변경</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
+        ) : (
+          // ❌ 로그아웃 상태
+          <TouchableOpacity
+            style={styles.loginRequiredBox}
+            onPress={handleGoLogin}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.loginRequiredText}>
+              로그인이 필요한 서비스입니다
+            </Text>
+            <Text style={styles.loginRequiredSub}>
+              로그인하고 나의 출발 공항, 즐겨찾기 등을 관리해 보세요.
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 메뉴 섹션 */}
@@ -256,44 +312,30 @@ const ProfileScreen = () => {
         </View>
       ))}
 
-      {/* 로그아웃 / 탈퇴 */}
-      <View style={styles.logoutRow}>
-        <TouchableOpacity onPress={handleLogoutPress}>
-          <Text style={styles.logoutText}>로그아웃</Text>
-        </TouchableOpacity>
+      {/* 로그아웃 / 탈퇴 → 로그인 상태에서만 표시 */}
+      {user && (
+        <View style={styles.logoutRow}>
+          <TouchableOpacity onPress={handleLogoutPress}>
+            <Text style={styles.logoutText}>로그아웃</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() =>
-            Alert.alert("계정 탈퇴", "정말로 탈퇴하시겠습니까?", [
-              { text: "취소", style: "cancel" },
-              {
-                text: "탈퇴",
-                style: "destructive",
-                onPress: async () => {
-                  try {
-                    await deleteAccount();
-
-                    Alert.alert("탈퇴 완료", "계정이 삭제되었습니다.", [
-                      {
-                        text: "확인",
-                        onPress: () =>
-                          navigation.reset({
-                            index: 0,
-                            routes: [{ name: "LoginScreen" }],
-                          }),
-                      },
-                    ]);
-                  } catch (err: any) {
-                    Alert.alert("탈퇴 실패", err.message ?? "오류 발생");
-                  }
+          <TouchableOpacity
+            onPress={() =>
+              Alert.alert("계정 탈퇴", "정말로 탈퇴하시겠습니까?", [
+                { text: "취소", style: "cancel" },
+                {
+                  text: "탈퇴",
+                  style: "destructive",
+                  onPress: () =>
+                    Alert.alert("탈퇴 완료", "계정이 삭제되었습니다."),
                 },
-              },
-            ])
-          }
-        >
-          <Text style={[styles.logoutText, { color: "red" }]}>계정 탈퇴</Text>
-        </TouchableOpacity>
-      </View>
+              ])
+            }
+          >
+            <Text style={[styles.logoutText, { color: "red" }]}>계정 탈퇴</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ✅ SearchModal 재사용 */}
       <SearchModal
@@ -470,7 +512,7 @@ const ProfileScreen = () => {
           left={
             <>
               <Feather name="wifi" size={16} />
-              <Text>Wi‑Fi에서만 이미지 로드</Text>
+              <Text>Wi-Fi에서만 이미지 로드</Text>
             </>
           }
           right={<Switch value={true} disabled />}
@@ -539,6 +581,25 @@ const styles = StyleSheet.create({
   email: { color: "black", marginBottom: 4 },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
   infoText: { color: "black", fontSize: 12 },
+
+  // ✅ 로그아웃 상태 문구용
+  loginRequiredBox: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 24,
+  },
+  loginRequiredText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0f172a",
+  },
+  loginRequiredSub: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#64748b",
+    textAlign: "center",
+  },
+
   sheetBackdropTouch: {
     flex: 1,
   },
