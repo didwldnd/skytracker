@@ -20,8 +20,13 @@ import { useUserSettings } from "../../context/UserSettingsContext";
 import SearchModal from "../../components/SearchModal";
 import { airportData } from "../../data/airportData";
 import * as SecureStore from "expo-secure-store";
-import { clearTokens, getAccessToken, getRefreshToken } from "../../utils/tokenStorage";
+import {
+  clearTokens,
+  getAccessToken,
+  getRefreshToken,
+} from "../../utils/tokenStorage";
 import { logout } from "../../api/auth";
+import { deleteAccount } from "../../api/user";
 
 const themeColor = "white";
 const HEADER_BG = "#0be5ecd7";
@@ -120,19 +125,18 @@ const ProfileScreen = () => {
   const { preferredDepartureAirport, setPreferredDepartureAirport, loading } =
     useUserSettings();
 
-const handleLogoutPress = async () => {
-  try {
-    await logout(); // 🔥 여기서 서버 + 로컬 모두 처리
+  const handleLogoutPress = async () => {
+    try {
+      await logout(); // 🔥 여기서 서버 + 로컬 모두 처리
 
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "LoginScreen" }],
-    });
-  } catch (e) {
-    console.error("로그아웃 에러:", e);
-  }
-};
-
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "LoginScreen" }],
+      });
+    } catch (e) {
+      console.error("로그아웃 에러:", e);
+    }
+  };
 
   // SearchModal 제어
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -265,8 +269,24 @@ const handleLogoutPress = async () => {
               {
                 text: "탈퇴",
                 style: "destructive",
-                onPress: () =>
-                  Alert.alert("탈퇴 완료", "계정이 삭제되었습니다."),
+                onPress: async () => {
+                  try {
+                    await deleteAccount();
+
+                    Alert.alert("탈퇴 완료", "계정이 삭제되었습니다.", [
+                      {
+                        text: "확인",
+                        onPress: () =>
+                          navigation.reset({
+                            index: 0,
+                            routes: [{ name: "LoginScreen" }],
+                          }),
+                      },
+                    ]);
+                  } catch (err: any) {
+                    Alert.alert("탈퇴 실패", err.message ?? "오류 발생");
+                  }
+                },
               },
             ])
           }
