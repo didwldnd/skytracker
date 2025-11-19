@@ -20,6 +20,8 @@ import { useUserSettings } from "../../context/UserSettingsContext";
 import SearchModal from "../../components/SearchModal";
 import { airportData } from "../../data/airportData";
 import * as SecureStore from "expo-secure-store";
+import { clearTokens, getAccessToken, getRefreshToken } from "../../utils/tokenStorage";
+import { logout } from "../../api/auth";
 
 const themeColor = "white";
 const HEADER_BG = "#0be5ecd7";
@@ -118,34 +120,19 @@ const ProfileScreen = () => {
   const { preferredDepartureAirport, setPreferredDepartureAirport, loading } =
     useUserSettings();
 
-  const handleLogout = async () => {
-    try {
-      await SecureStore.deleteItemAsync("accessToken");
-      await SecureStore.deleteItemAsync("refreshToken");
+const handleLogoutPress = async () => {
+  try {
+    await logout(); // 🔥 여기서 서버 + 로컬 모두 처리
 
-      // 확인용 로그 (선택)
-      const access = await SecureStore.getItemAsync("accessToken");
-      const refresh = await SecureStore.getItemAsync("refreshToken");
-      console.log("🔐 로그아웃 이후 accessToken:", access);
-      console.log("🔐 로그아웃 이후 refreshToken:", refresh);
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "LoginScreen" }],
+    });
+  } catch (e) {
+    console.error("로그아웃 에러:", e);
+  }
+};
 
-      Alert.alert("로그아웃", "로그아웃 되었습니다.", [
-        {
-          text: "확인",
-          onPress: () => {
-            // 🔁 스택 리셋해서 로그인 화면으로 보내기
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "LoginScreen" as keyof RootStackParamList }],
-            });
-          },
-        },
-      ]);
-    } catch (e) {
-      console.log("로그아웃 중 오류:", e);
-      Alert.alert("오류", "로그아웃 중 문제가 발생했습니다.");
-    }
-  };
 
   // SearchModal 제어
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -267,7 +254,7 @@ const ProfileScreen = () => {
 
       {/* 로그아웃 / 탈퇴 */}
       <View style={styles.logoutRow}>
-        <TouchableOpacity onPress={handleLogout}>
+        <TouchableOpacity onPress={handleLogoutPress}>
           <Text style={styles.logoutText}>로그아웃</Text>
         </TouchableOpacity>
 

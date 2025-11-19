@@ -24,6 +24,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 // refreshToken까지 처리하는 공통 함수
 async function handleLoginSuccess(accessToken: string) {
+  console.log("refresh URL:", `${API_BASE}/api/user/new-refresh-token`);
   console.log("🔥 [handleLoginSuccess] accessToken:", accessToken);
 
   if (!accessToken) {
@@ -36,7 +37,7 @@ async function handleLoginSuccess(accessToken: string) {
 
   // 2️⃣ 방금 받은 accessToken으로 refreshToken 발급 요청
   try {
-    const res = await fetch(`${API_BASE}/new-refresh-token`, {
+    const res = await fetch(`${API_BASE}/api/user/new-refresh-token`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
