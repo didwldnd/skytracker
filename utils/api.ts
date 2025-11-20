@@ -1,14 +1,15 @@
 import axios from "axios";
 import type { FlightSearchRequestDto } from "../types/FlightSearchRequestDto";
 import type { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
+import { API_BASE } from "../config/env";
 
 // Wi-Fi 바뀔 때 바꿔야 하는 기존 베이스
 const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://192.168.219.8:8080/api";
+  API_BASE;
 
-const POPULAR_BASE =
-  process.env.EXPO_PUBLIC_POPULAR_FLIGHTS_URL ??
-  `${API_BASE_URL}/flights/popular`; // 연결 실패 (미완) - 우선 가짜 데이터 사용
+// const POPULAR_BASE =
+//   process.env.EXPO_PUBLIC_POPULAR_FLIGHTS_URL ??
+//   `${API_BASE_URL}/flights/popular`; // 연결 실패 (미완) - 우선 가짜 데이터 사용
 
 // 공용 axios 인스턴스(타임아웃/기본 헤더)
 const http = axios.create({
@@ -19,24 +20,26 @@ const http = axios.create({
 
 // ===== 기존 검색 =====
 export async function searchFlights(request: FlightSearchRequestDto) {
-  // POST /api/flights/search
+  console.log("[searchFlights] POST /api/flights/search");
+
   const { data } = await http.post<FlightSearchResponseDto[]>(
-    "/flights/search", // baseURL/flights/search
-    request // 요청 바디로 서버에 전달
+    "/api/flights/search",   // 백엔드 컨트롤러 경로 그대로
+    request
   );
+
   return data;
 }
 
-// ===== 인기도시 → 항공편 DTO[] (카드 탭 시 호출) =====
-// 연동 실패, 네트워크 이슈 mock 데이터 사용
-export async function getTrackedFlightsByCity(
-  cityEn: string
-): Promise<FlightSearchResponseDto[]> {
-  // GET {POPULAR_BASE}?city=Tokyo
-  const url = `${POPULAR_BASE}?city=${encodeURIComponent(cityEn)}`;
-  const { data } = await axios.get<FlightSearchResponseDto[]>(url, {
-    timeout: 15_000,
-  });
-  // return data.map(normalizeFlightData); // 정규화 쓰면 이 라인으로
-  return data;
-}
+// // ===== 인기도시 → 항공편 DTO[] (카드 탭 시 호출) =====
+// // 연동 실패, 네트워크 이슈 mock 데이터 사용
+// export async function getTrackedFlightsByCity(
+//   cityEn: string
+// ): Promise<FlightSearchResponseDto[]> {
+//   // GET {POPULAR_BASE}?city=Tokyo
+//   const url = `${POPULAR_BASE}?city=${encodeURIComponent(cityEn)}`;
+//   const { data } = await axios.get<FlightSearchResponseDto[]>(url, {
+//     timeout: 15_000,
+//   });
+//   // return data.map(normalizeFlightData); // 정규화 쓰면 이 라인으로
+//   return data;
+// }

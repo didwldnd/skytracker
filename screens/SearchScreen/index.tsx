@@ -166,11 +166,12 @@ const SearchScreen = () => {
     useUserSettings();
 
   useEffect(() => {
-    // 화면 최초 진입(또는 앱 리로드) 때 departure가 비어 있으면 한 번만 세팅
-    if (!settingsLoading && !departure && preferredDepartureAirport) {
-      setDeparture(preferredDepartureAirport);
-    }
-  }, [settingsLoading, preferredDepartureAirport, departure]);
+  if (settingsLoading) return;
+  if (!preferredDepartureAirport) return;
+
+  // 컨텍스트 값이 바뀔 때마다 departure도 맞춰준다
+  setDeparture(preferredDepartureAirport);
+}, [settingsLoading, preferredDepartureAirport]);
 
   const resetForm = () => {
     setDeparture(preferredDepartureAirport ?? "");

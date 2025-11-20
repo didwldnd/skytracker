@@ -288,6 +288,17 @@ export default function LoginScreen() {
         )}
       </TouchableOpacity>
 
+{/* Guest Login */}
+<TouchableOpacity
+  style={[styles.button, styles.guest]}
+  onPress={() => navigation.navigate("HomeScreen")}
+  activeOpacity={0.7}
+>
+  <Text>비회원으로 계속하기</Text>
+</TouchableOpacity>
+
+
+
       <Text style={styles.footer}>
         로그인하면 SkyTracker의 <Text style={styles.link}>서비스 약관</Text>과{" "}
         <Text style={styles.link}>개인정보 처리방침</Text>에 동의하게 됩니다.
@@ -348,4 +359,11 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   link: { textDecorationLine: "underline" },
+guest: {
+  backgroundColor: "#b7a1f1c2",
+  borderRadius: 8,
+  paddingVertical: 14,
+  alignItems: "center",
+  justifyContent: "center",
+},
 });

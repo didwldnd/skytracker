@@ -161,29 +161,34 @@ const ProfileScreen = () => {
     loadProfile();
   }, []);
 
-  const handleConfirmLogout = async () => {
-    try {
-      await logout();
+  // 로그아웃 실행 함수
+const handleConfirmLogout = async () => {
+  try {
+    await logout(); // 서버 + 토큰 삭제 등
 
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "ProfileScreen" }],
-      });
-    } catch (e) {
-      console.error("로그아웃 에러", e);
-    }
+    // 프론트 상태에서 로그인 유저를 없앰
+    setUser(null);
+
+    Alert.alert("로그아웃", "정상적으로 로그아웃되었습니다.");
+  } catch (e) {
+    console.error("로그아웃 에러:", e);
+    Alert.alert("에러", "로그아웃에 실패했습니다. 다시 시도해주세요.");
   }
+};
 
-  const handleLogoutPress = () => {
-    Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
-      { text: "취소", style: "cancel" },
-      {
-        text: "로그아웃",
-        style: "destructive",
-        onPress: handleConfirmLogout,
-      },
-    ]);
-  };
+
+  // 로그아웃 버튼 눌렀을 때: 확인창 띄우기
+const handleLogoutPress = () => {
+  Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
+    { text: "취소", style: "cancel" },
+    {
+      text: "로그아웃",
+      style: "destructive",
+      onPress: handleConfirmLogout,
+    },
+  ]);
+};
+
 
   // SearchModal 제어
   const [pickerOpen, setPickerOpen] = useState(false);
