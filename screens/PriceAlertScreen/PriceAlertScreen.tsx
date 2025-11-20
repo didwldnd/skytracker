@@ -25,6 +25,8 @@ import {
   FlightAlertItem,
 } from "../../utils/priceAlertApi";
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
+import { usePriceAlert } from "../../context/PriceAlertContext";
+import axios from "axios";
 
 global.Buffer = Buffer;
 
@@ -114,8 +116,18 @@ const formatDate = (dateStr: string | null | undefined) => {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
-const priceText = (price?: number, currency: string = "KRW") =>
-  formatPrice(price, currency, "ko-KR");
+const priceText = (
+  price: number | null | undefined,
+  currency: string = "KRW"
+) => {
+  // 목표가가 null/undefined면 표시만 바꿔주자
+  if (price == null) {
+    return "-";
+    // 또는 "미설정" 이런 식으로 해도 됨
+    // return "미설정";
+  }
+  return formatPrice(price, currency, "ko-KR");
+};
 
 const formatSeatClass = (cls: string) => {
   switch (cls) {
@@ -131,15 +143,42 @@ const formatSeatClass = (cls: string) => {
       return cls;
   }
 };
+const findFlightFromLocalAlerts = (
+  alertsMap: Record<string, FlightSearchResponseDto>,
+  alert: FlightAlertItem
+): FlightSearchResponseDto | undefined => {
+  const list = Object.values(alertsMap);
+  const depDate = alert.departureDate ?? "";
+  const retDate = alert.arrivalDate ?? ""; // ✅ arrivalDate 사용
 
-const getTripType = (depart?: string | null, ret?: string | null) =>
-  depart && ret && depart !== ret ? "왕복" : "편도";
+  return list.find((f) => {
+    const depIso = f.outboundDepartureTime ?? (f as any).departureTime ?? "";
+    const retIso =
+      f.returnDepartureTime ?? (f as any).returnDepartureTime ?? "";
+
+    const depPart = depIso.split("T")[0];
+    const retPart = retIso.split("T")[0];
+
+    return (
+      f.airlineCode === alert.airlineCode &&
+      String(f.flightNumber) === String(alert.flightNumber) &&
+      f.departureAirport === alert.departureAirport && // ✅ origin → departureAirport
+      f.arrivalAirport === alert.arrivalAirport && // ✅ destination → arrivalAirport
+      f.travelClass === alert.travelClass &&
+      !!depDate &&
+      depPart === depDate &&
+      (!retDate || retPart === retDate)
+    );
+  });
+};
 
 const MIN_TOUCH = 33;
 
 export default function PriceAlertScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { alerts: localAlerts, removeAlert: removeLocalAlert } =
+    usePriceAlert();
 
   // 🔐 로그인 여부
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -214,31 +253,40 @@ export default function PriceAlertScreen() {
   );
 
   const goDetail = (alert: FlightAlertItem) => {
+    const matched = findFlightFromLocalAlerts(localAlerts, alert);
+
+    if (matched) {
+      navigation.navigate("FlightDetail", { flight: matched });
+      return;
+    }
+
     const fakeFlight: FlightSearchResponseDto = {
       airlineCode: alert.airlineCode,
-      airlineName: alert.airlineCode, // 항공사 이름 없으므로 코드로 대체
+      airlineName: alert.airlineCode,
       flightNumber: alert.flightNumber,
 
-      departureAirport: alert.origin,
-      // departureTime: alert.departureDate + "T00:00:00",
-      arrivalAirport: alert.destination,
-      // arrivalTime: alert.departureDate + "T00:00:00",
-      // duration: "",
+      departureAirport: alert.departureAirport, // ✅ origin → departureAirport
+      arrivalAirport: alert.arrivalAirport, // ✅ destination → arrivalAirport
 
-      // 날짜만 있으므로 시간은 임의 00:00 처리
-      outboundDepartureTime: alert.departureDate + "T00:00:00",
-      outboundArrivalTime: alert.departureDate + "T00:00:00",
+      outboundDepartureTime: alert.departureDate
+        ? alert.departureDate + "T00:00:00"
+        : "",
+      outboundArrivalTime: alert.departureDate
+        ? alert.departureDate + "T00:00:00"
+        : "",
       outboundDuration: "",
 
-      returnDepartureTime: alert.returnDate
-        ? alert.returnDate + "T00:00:00"
+      returnDepartureTime: alert.arrivalDate // ✅ returnDate → arrivalDate
+        ? alert.arrivalDate + "T00:00:00"
         : "",
-      returnArrivalTime: alert.returnDate ? alert.returnDate + "T00:00:00" : "",
+      returnArrivalTime: alert.arrivalDate
+        ? alert.arrivalDate + "T00:00:00"
+        : "",
       returnDuration: "",
 
       travelClass: alert.travelClass,
-      numberOfBookableSeats: 0, // 정보 없음 → 기본값
-      hasCheckedBags: false, // 정보 없음 → 기본값
+      numberOfBookableSeats: 0,
+      hasCheckedBags: false,
       currency: alert.currency,
       price: alert.lastCheckedPrice || 0,
 
@@ -303,18 +351,18 @@ export default function PriceAlertScreen() {
   const renderItem = ({ item }: { item: FlightAlertItem }) => {
     const id = String(item.alertId);
 
-    const from = `${airportMap[item.origin] ?? item.origin} (${item.origin})`;
-    const to = `${airportMap[item.destination] ?? item.destination} (${
-      item.destination
+    const from = `${
+      airportMap[item.departureAirport] ?? item.departureAirport
+    } (${item.departureAirport})`;
+    const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${
+      item.arrivalAirport
     })`;
 
     const departDate = formatDate(item.departureDate);
-    const returnDate = item.returnDate ? formatDate(item.returnDate) : null;
+    const returnDate = item.arrivalDate ? formatDate(item.arrivalDate) : null;
 
-    const seatInfo = `${getTripType(
-      item.departureDate,
-      item.returnDate
-    )}, ${formatSeatClass(item.travelClass)}`;
+    const tripTypeLabel = item.arrivalDate ? "왕복" : "편도";
+    const seatInfo = `${tripTypeLabel}, ${formatSeatClass(item.travelClass)}`;
 
     const mainPrice = priceText(item.lastCheckedPrice, item.currency ?? "KRW");
     const targetPriceText = priceText(item.targetPrice, item.currency ?? "KRW");
@@ -465,18 +513,44 @@ export default function PriceAlertScreen() {
                     setConfirmVisible(false);
                     return;
                   }
+
+                  const targetId = pendingDeleteAlertId;
+                  const targetAlert =
+                    alertList.find((a) => a.alertId === targetId) || null;
+
                   try {
-                    setDeletingId(pendingDeleteAlertId);
-                    await deleteFlightAlert(pendingDeleteAlertId);
-                    setAlertList((prev) =>
-                      prev.filter(
-                        (item) => item.alertId !== pendingDeleteAlertId
-                      )
-                    );
-                  } catch (e) {
+                    setDeletingId(targetId);
+                    await deleteFlightAlert(targetId);
+                  } catch (e: any) {
                     console.log("delete alert error", e);
-                    Alert.alert("오류", "알림 삭제에 실패했어요.");
+
+                    // 🔸 404면 "이미 서버에 없는 알림" → 로컬에서만 삭제
+                    if (
+                      !(axios.isAxiosError(e) && e.response?.status === 404)
+                    ) {
+                      Alert.alert("오류", "알림 삭제에 실패했어요.");
+                      setConfirmVisible(false);
+                      setPendingDeleteAlertId(null);
+                      setDeletingId(null);
+                      return;
+                    }
                   } finally {
+                    // ✅ 서버에 있든 없든, 여기까지 왔으면 로컬에선 무조건 제거
+                    setAlertList((prev) =>
+                      prev.filter((item) => item.alertId !== targetId)
+                    );
+
+                    // 🔁 로컬 PriceAlertContext에서도 대응되는 flight 있으면 같이 제거
+                    if (targetAlert) {
+                      const localFlight = findFlightFromLocalAlerts(
+                        localAlerts,
+                        targetAlert
+                      );
+                      if (localFlight) {
+                        removeLocalAlert(localFlight);
+                      }
+                    }
+
                     setConfirmVisible(false);
                     setPendingDeleteAlertId(null);
                     setDeletingId(null);

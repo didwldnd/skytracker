@@ -25,12 +25,45 @@ const THEME = "#0be5ecd7";
 const { width } = Dimensions.get("window");
 
 /* ----- 기존 포맷/헬퍼 (로직 유지) ----- */
+
+const parseDurationMinutes = (iso?: string) => {
+  if (!iso) return 0;
+  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!m) return 0;
+  const h = Number(m[1] || 0);
+  const min = Number(m[2] || 0);
+  return h * 60 + min;
+};
+
+const formatMinutesKo = (minutes: number) => {
+  if (!minutes || minutes <= 0) return "정보 없음";
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h && m) return `${h}시간 ${m}분`;
+  if (h) return `${h}시간`;
+  return `${m}분`;
+};
+
 const formatTime = (iso?: string) => {
   if (!iso) return "--:--";
   const d = new Date(iso);
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
   return `${hh}:${mm}`;
+};
+
+const isIso = (s?: string) => !!s && !Number.isNaN(Date.parse(s));
+const makeDurationISO = (start?: string, end?: string, fallback?: string) => {
+  if (isIso(start) && isIso(end)) {
+    const diffMs = new Date(end!).getTime() - new Date(start!).getTime();
+    if (diffMs > 0) {
+      const mins = Math.round(diffMs / 60000);
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return `PT${h ? `${h}H` : ""}${m ? `${m}M` : ""}` || "PT0M";
+    }
+  }
+  return fallback ?? "";
 };
 
 const formatDuration = (iso?: string) => {
@@ -83,12 +116,31 @@ const FlightCard = ({
 
   const [alertLoading, setAlertLoading] = useState(false);
 
-  // ✅ 필드 우선순위 유지 (outbound* 우선)
   const departureTime =
     flight.outboundDepartureTime ?? (flight as any).departureTime;
-  const arrivalTime =
-    flight.outboundArrivalTime ?? (flight as any).arrivalTime;
-  const duration = flight.outboundDuration ?? (flight as any).duration;
+  const arrivalTime = flight.outboundArrivalTime ?? (flight as any).arrivalTime;
+
+  const rawOutboundDuration =
+    flight.outboundDuration ?? (flight as any).duration ?? "";
+
+  // 서버 duration이 이상하면 출발/도착 시각으로 다시 계산
+  const outboundDurationIso = makeDurationISO(
+    departureTime,
+    arrivalTime,
+    flight.outboundDuration ?? (flight as any).duration ?? ""
+  );
+
+  const returnDurationIso: string | undefined =
+    (flight.returnDuration as string | null | undefined) ?? undefined;
+
+  const isRoundTrip =
+    !!flight.returnDepartureTime && !!flight.returnArrivalTime;
+
+  const totalMinutes =
+    parseDurationMinutes(outboundDurationIso) +
+    (isRoundTrip ? parseDurationMinutes(returnDurationIso) : 0);
+
+  const displayDuration = formatDuration(outboundDurationIso);
 
   const cls = seatLabel(flight.travelClass);
   const diff = diffPct(flight.price, flight.previousPrice);
@@ -108,9 +160,11 @@ const FlightCard = ({
       // 🔔 기존 로직: 컨텍스트에 먼저 추가 → UI에서 즉시 노란 종 표시
       addAlert(flight);
 
-      // 🔥 백엔드 알림 등록
       const departIso =
         flight.outboundDepartureTime ?? (flight as any).departureTime;
+
+      const returnIso =
+        flight.returnDepartureTime ?? (flight as any).returnDepartureTime;
 
       if (!departIso) {
         console.log("❌ [FlightCard] departIso 없음, 알림 생성 불가");
@@ -123,7 +177,7 @@ const FlightCard = ({
         return;
       }
 
-      const departureDate = departIso.toString().split("T")[0];
+      const departureDate = departIso?.split("T")[0] ?? "";
 
       const dto: FlightAlertRequestDto = {
         airlineCode: flight.airlineCode,
@@ -131,6 +185,9 @@ const FlightCard = ({
         departureAirport: flight.departureAirport,
         arrivalAirport: flight.arrivalAirport,
         departureDate,
+        arrivalDate: flight.returnDepartureTime // ✅ 왕복이면 오는 편 날짜 넣기
+          ? flight.returnDepartureTime.split("T")[0]
+          : null,
         travelClass: flight.travelClass,
         currency: flight.currency ?? "KRW",
         adults: 1,
@@ -205,7 +262,7 @@ const FlightCard = ({
             <View style={styles.line} />
             <View style={{ alignItems: "center" }}>
               <Ionicons name="time-outline" size={14} color="#9ca3af" />
-              <Text style={styles.duration}>{formatDuration(duration)}</Text>
+              <Text style={styles.duration}>{displayDuration}</Text>
               {flight.nonStop && <Text style={styles.nonStop}>직항</Text>}
             </View>
             <View style={styles.line} />
@@ -293,7 +350,10 @@ const FlightCard = ({
               disabled={alertLoading}
             >
               {alertLoading ? (
-                <ActivityIndicator size="small" color={alerted ? "gold" : "#6b7280"} />
+                <ActivityIndicator
+                  size="small"
+                  color={alerted ? "gold" : "#6b7280"}
+                />
               ) : (
                 <Ionicons
                   name={alerted ? "notifications" : "notifications-outline"}

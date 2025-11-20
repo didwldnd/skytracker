@@ -26,35 +26,72 @@ const FlightDetailScreen: React.FC = () => {
 
   console.log("✅ 상세 flight 데이터:", flight);
 
-  // 수상한 패턴 감지
   if (["ECONOMY", "BUSINESS"].includes(flight.travelClass)) {
     if (!flight.price || flight.price <= 0) {
       console.warn("[RED FLAG] 가격 정보 없음/0원 → 서버 응답 이상 가능성");
     }
   }
 
+  // 🔸 간단한 ISO 체크 + duration 재계산 헬퍼
+  const isIso = (s?: string) => !!s && !Number.isNaN(Date.parse(s));
+  const makeDurationISO = (
+    start?: string,
+    end?: string,
+    fallback?: string
+  ): string => {
+    if (isIso(start) && isIso(end)) {
+      const diffMs = new Date(end!).getTime() - new Date(start!).getTime();
+      if (diffMs > 0) {
+        const mins = Math.round(diffMs / 60000);
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
+        return `PT${h ? `${h}H` : ""}${m ? `${m}M` : ""}` || "PT0M";
+      }
+    }
+    return fallback ?? "";
+  };
+
   // ✅ 왕복/편도 판별: return* 존재 여부로
   const isRoundTrip = !!(
     flight.returnDepartureTime && flight.returnArrivalTime
   );
 
-  // ✅ 가는 편 세트
-  const oDep = flight.outboundDepartureTime;
-  const oArr = flight.outboundArrivalTime;
-  const oDur = flight.outboundDuration;
+  // ✅ 가는 편 세트 (편도 fallback 포함)
+  const oDep: string =
+    flight.outboundDepartureTime ??
+    (flight as any).departureTime ??
+    "";
+  const oArr: string =
+    flight.outboundArrivalTime ??
+    (flight as any).arrivalTime ??
+    "";
+  const rawOutboundDur: string =
+    flight.outboundDuration ??
+    (flight as any).duration ??
+    "";
+
+  // 👉 출발/도착 시각이 있으면 그걸로 소요시간 재계산, 아니면 서버값 사용
+  const oDur: string = makeDurationISO(oDep, oArr, rawOutboundDur);
+
   const oShift = formatDayShiftBadge(dayShiftByDuration(oDur));
   const oArrText = oShift
     ? `${formatFlightTime(oArr, flight.arrivalAirport)}  ${oShift}`
     : formatFlightTime(oArr, flight.arrivalAirport);
 
-  // ✅ 오는 편 세트(있을 때만)
-  const rDep = flight.returnDepartureTime;
-  const rArr = flight.returnArrivalTime;
-  const rDur = flight.returnDuration;
+  // ✅ 오는 편 세트(왕복일 때만 사용) – null 제거해서 TS 에러 방지
+  const rDep: string =
+    (flight.returnDepartureTime as string | null | undefined) ?? "";
+  const rArr: string =
+    (flight.returnArrivalTime as string | null | undefined) ?? "";
+  const rawReturnDur: string =
+    (flight.returnDuration as string | null | undefined) ?? "";
+  const rDur: string = makeDurationISO(rDep, rArr, rawReturnDur);
+
   const rShift = formatDayShiftBadge(dayShiftByDuration(rDur));
   const rArrText = rShift
     ? `${formatFlightTime(rArr, flight.departureAirport)}  ${rShift}`
     : formatFlightTime(rArr, flight.departureAirport);
+
 
   return (
     <ScrollView style={styles.container}>

@@ -11,7 +11,8 @@ export interface FlightAlertRequestDto {
   flightNumber: string;
   departureAirport: string;
   arrivalAirport: string;
-  departureDate: string;
+  departureDate: string;   // Java: departureDate
+  arrivalDate?: string | null;    // Java: arrivalDate (왕복일 때만)
   travelClass: string;
   currency: string;
   adults: number;
@@ -21,18 +22,21 @@ export interface FlightAlertRequestDto {
 
 export interface FlightAlertItem {
   alertId: number;
-  origin: string;
-  destination: string;
-  departureDate: string;
-  returnDate: string | null;
   airlineCode: string;
   flightNumber: string;
+  departureAirport: string;   // ✅ origin 대신
+  arrivalAirport: string;     // ✅ destination 대신
+  departureDate: string;
+  arrivalDate: string | null; // ✅ returnDate 대신
   travelClass: string;
   currency: string;
-  targetPrice: number;
+  adults: number;
   lastCheckedPrice: number;
+  newPrice: number | null;
+  targetPrice: number | null;
   active: boolean;
 }
+
 
 /**
  * 내 알림 목록 조회
@@ -53,26 +57,28 @@ export async function fetchFlightAlerts(): Promise<FlightAlertItem[]> {
     const active =
       typeof item.active === "boolean"
         ? item.active
-        : typeof item.active === "boolean"
-        ? item.active
         : true;
 
     return {
       alertId: item.alertId,
-      origin: item.origin,
-      destination: item.destination,
-      departureDate: item.departureDate,
-      returnDate: item.returnDate,
       airlineCode: item.airlineCode,
       flightNumber: item.flightNumber,
+      departureAirport: item.departureAirport,
+      arrivalAirport: item.arrivalAirport,
+      departureDate: item.departureDate,
+      arrivalDate: item.arrivalDate ?? null,
       travelClass: item.travelClass,
       currency: item.currency,
-      targetPrice: item.targetPrice,
+      adults: item.adults,
       lastCheckedPrice: item.lastCheckedPrice,
+      newPrice: item.newPrice ?? null,
+      targetPrice: item.targetPrice ?? null,
       active,
     };
   });
 }
+
+
 
 /**
  * 알림 등록

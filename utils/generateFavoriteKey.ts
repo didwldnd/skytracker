@@ -1,23 +1,27 @@
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 
-export const generateFavoriteKey = (flight: FlightSearchResponseDto): string => {
+export const generateFavoriteKey = (f: FlightSearchResponseDto): string => {
   const parts = [
-    flight.airlineCode,
-    String(flight.flightNumber),
-    flight.departureAirport,
-    flight.arrivalAirport,
-    flight.outboundDepartureTime,
-    flight.returnDepartureTime,
+    f.airlineCode,
+    String(f.flightNumber),
+
+    f.departureAirport,
+    f.arrivalAirport,
+
+    f.outboundDepartureTime,
+    f.returnDepartureTime ?? "",
 
     // 운임 조건
-    flight.travelClass,
-    String(flight.hasCheckedBags),
-    String(flight.isRefundable),
-    String(flight.isChangeable),
-    flight.currency,
-    String(flight.price),
-    String(flight.numberOfBookableSeats),
+    f.travelClass,
+    String(f.hasCheckedBags),
+    String(f.isRefundable),
+    String(f.isChangeable),
+
+    // 가격 정보 포함 (favorite는 가격 포함)
+    f.currency,
+    String(f.price),
+    String(f.numberOfBookableSeats),
   ];
 
-    return Buffer.from(parts.join("|")).toString("base64");
+  return Buffer.from(parts.join("|")).toString("base64");
 };
