@@ -194,32 +194,6 @@ export default function PriceAlertScreen() {
   );
   const [globalSwitch, setGlobalSwitch] = useState(true);
 
-  // 삭제 모달
-  const [confirmVisible, setConfirmVisible] = useState(false);
-  const [pendingDeleteAlertId, setPendingDeleteAlertId] = useState<
-    number | null
-  >(null);
-
-  // 토글/삭제 중 상태
-  const [togglingId, setTogglingId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
-
-  // 로그인 상태 확인
-  useEffect(() => {
-    const checkLogin = async () => {
-      try {
-        const token = await SecureStore.getItemAsync("accessToken");
-        setIsLoggedIn(!!token);
-      } catch (e) {
-        console.log("checkLogin error", e);
-        setIsLoggedIn(false);
-      } finally {
-        setLoginChecked(true);
-      }
-    };
-    checkLogin();
-  }, []);
-
   // 알림 목록 불러오기
   const loadAlerts = useCallback(async () => {
     if (!isLoggedIn) return;
@@ -244,6 +218,70 @@ export default function PriceAlertScreen() {
       setLoading(false);
     }
   }, [isLoggedIn]);
+
+  // 삭제 모달
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [pendingDeleteAlertId, setPendingDeleteAlertId] = useState<
+    number | null
+  >(null);
+
+  // 토글/삭제 중 상태
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  const handleToggleAlert = async (item: FlightAlertItem) => {
+    const { alertId } = item;
+    if (!alertId || togglingId !== null) return;
+
+    const id = String(alertId);
+    const prev = switchStates[id] ?? item.active; // 현재 상태
+
+    try {
+      // 1) UI 먼저 토글
+      setTogglingId(alertId);
+      setSwitchStates((prevStates) => ({
+        ...prevStates,
+        [id]: !prev,
+      }));
+
+      // 2) 서버 토글 호출
+      await toggleFlightAlert(alertId);
+
+      // 3) 서버 응답 기준으로 alertList도 반영
+      setAlertList((prevList) =>
+        prevList.map((a) =>
+          a.alertId === alertId ? { ...a, active: !prev } : a
+        )
+      );
+    } catch (e) {
+      console.log("handleToggleAlert error", e);
+      Alert.alert("오류", "알림 설정 변경에 실패했어요.");
+
+      // 4) 실패하면 UI 되돌리기
+      setSwitchStates((prevStates) => ({
+        ...prevStates,
+        [id]: prev,
+      }));
+    } finally {
+      setTogglingId(null);
+    }
+  };
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // 로그인 상태 확인
+  useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const token = await SecureStore.getItemAsync("accessToken");
+        setIsLoggedIn(!!token);
+      } catch (e) {
+        console.log("checkLogin error", e);
+        setIsLoggedIn(false);
+      } finally {
+        setLoginChecked(true);
+      }
+    };
+    checkLogin();
+  }, []);
 
   // 화면 포커스될 때마다 새로 로드
   useFocusEffect(
@@ -299,40 +337,6 @@ export default function PriceAlertScreen() {
 
   const stop = (e: GestureResponderEvent) => e.stopPropagation();
 
-  // 개별 알림 토글
-  const handleToggleAlert = async (item: FlightAlertItem) => {
-    const { alertId } = item;
-    if (!alertId || togglingId !== null) return;
-
-    const id = String(alertId);
-    const prev = switchStates[id] ?? item.active;
-
-    try {
-      setTogglingId(alertId);
-      setSwitchStates((prevStates) => ({
-        ...prevStates,
-        [id]: !prev,
-      }));
-
-      await toggleFlightAlert(alertId);
-
-      setAlertList((prevList) =>
-        prevList.map((a) =>
-          a.alertId === alertId ? { ...a, active: !prev } : a
-        )
-      );
-    } catch (e) {
-      console.log("handleToggleAlert error", e);
-      Alert.alert("오류", "알림 설정 변경에 실패했어요.");
-      setSwitchStates((prevStates) => ({
-        ...prevStates,
-        [id]: prev,
-      }));
-    } finally {
-      setTogglingId(null);
-    }
-  };
-
   // 전체 알림 토글 (UI 전용)
   const toggleGlobalSwitch = () => {
     const newVal = !globalSwitch;
@@ -368,6 +372,34 @@ export default function PriceAlertScreen() {
     const targetPriceText = priceText(item.targetPrice, item.currency ?? "KRW");
 
     const isOn = switchStates[id] ?? item.active;
+
+    <View style={styles.iconRow}>
+      <TouchableOpacity
+        onPress={(e) => {
+          stop(e);
+          handleToggleAlert(item);
+        }}
+        disabled={togglingId === item.alertId}
+      >
+        <Ionicons
+          name={isOn ? "notifications" : "notifications-outline"}
+          size={22}
+          color={isOn ? "gold" : "gray"}
+        />
+      </TouchableOpacity>
+
+      {/* 휴지통 버튼은 그대로 */}
+      <TouchableOpacity
+        onPress={(e) => {
+          stop(e);
+          setPendingDeleteAlertId(item.alertId);
+          setConfirmVisible(true);
+        }}
+        disabled={deletingId === item.alertId}
+      >
+        <FontAwesome name="trash" size={25} color="#E53935" />
+      </TouchableOpacity>
+    </View>;
 
     return (
       <Pressable
