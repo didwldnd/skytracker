@@ -1,26 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
   FlatList,
-  Switch,
   TouchableOpacity,
   StyleSheet,
   Modal,
   Pressable,
   GestureResponderEvent,
   ActivityIndicator,
+  Alert,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
-import { usePriceAlert } from "../../context/PriceAlertContext";
-import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
-import { generateAlertKey } from "../../utils/generateAlertKey";
 import { Buffer } from "buffer";
 import { formatPrice } from "../../utils/formatters";
 import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
+import {
+  fetchFlightAlerts,
+  toggleFlightAlert,
+  deleteFlightAlert,
+  FlightAlertItem,
+} from "../../utils/priceAlertApi";
+import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 
 global.Buffer = Buffer;
 
@@ -99,9 +103,14 @@ export const airportMap: Record<string, string> = {
   NBO: "나이로비",
 };
 
-const formatDate = (isoDate: string) => {
-  if (!isoDate) return "-";
-  const date = new Date(isoDate);
+const formatDate = (dateStr: string | null | undefined) => {
+  if (!dateStr) return "-";
+  // "yyyy-MM-dd" 형식이라고 가정
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) {
+    // 혹시 이상한 포맷이면 그냥 원문
+    return dateStr;
+  }
   return `${date.getMonth() + 1}/${date.getDate()}`;
 };
 
@@ -123,19 +132,40 @@ const formatSeatClass = (cls: string) => {
   }
 };
 
-const getTripType = (depart?: string, ret?: string) =>
-  depart && ret && depart.split("T")[0] !== ret.split("T")[0] ? "왕복" : "편도";
+const getTripType = (depart?: string | null, ret?: string | null) =>
+  depart && ret && depart !== ret ? "왕복" : "편도";
+
+const MIN_TOUCH = 33;
 
 export default function PriceAlertScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { alerts, removeAlert } = usePriceAlert();
 
-  // 🔐 로그인 여부 상태
+  // 🔐 로그인 여부
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginChecked, setLoginChecked] = useState(false);
 
-  // 화면에 들어올 때마다 토큰 확인
+  // 📡 서버에서 가져온 알림 목록
+  const [alertList, setAlertList] = useState<FlightAlertItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // 개별/전체 토글 상태
+  const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
+    {}
+  );
+  const [globalSwitch, setGlobalSwitch] = useState(true);
+
+  // 삭제 모달
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [pendingDeleteAlertId, setPendingDeleteAlertId] = useState<
+    number | null
+  >(null);
+
+  // 토글/삭제 중 상태
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // 로그인 상태 확인
   useEffect(() => {
     const checkLogin = async () => {
       try {
@@ -148,82 +178,148 @@ export default function PriceAlertScreen() {
         setLoginChecked(true);
       }
     };
+    checkLogin();
+  }, []);
 
-    const unsubscribe = navigation.addListener("focus", checkLogin);
-    return unsubscribe;
-  }, [navigation]);
+  // 알림 목록 불러오기
+  const loadAlerts = useCallback(async () => {
+    if (!isLoggedIn) return;
+    try {
+      setLoading(true);
+      const data = await fetchFlightAlerts();
+      setAlertList(data);
 
-  const alertList: FlightSearchResponseDto[] = Array.isArray(alerts)
-    ? alerts
-    : Object.values(alerts || {});
+      const initialStates: { [key: string]: boolean } = {};
+      data.forEach((item) => {
+        initialStates[String(item.alertId)] =
+          typeof item.active === "boolean" ? item.active : true;
+      });
+      setSwitchStates(initialStates);
 
-  const [switchStates, setSwitchStates] = useState<{ [key: string]: boolean }>(
-    {}
+      const allOn = data.length > 0 && data.every((a) => a.active);
+      setGlobalSwitch(allOn);
+    } catch (e) {
+      console.log("loadAlerts error", e);
+      Alert.alert("오류", "알림 목록을 불러오지 못했어요.");
+    } finally {
+      setLoading(false);
+    }
+  }, [isLoggedIn]);
+
+  // 화면 포커스될 때마다 새로 로드
+  useFocusEffect(
+    useCallback(() => {
+      if (isLoggedIn) loadAlerts();
+    }, [isLoggedIn, loadAlerts])
   );
-  const [globalSwitch, setGlobalSwitch] = useState(true);
-  const [confirmVisible, setConfirmVisible] = useState(false);
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const initialStates: { [key: string]: boolean } = {};
-    alertList.forEach((item) => {
-      const key = generateAlertKey(item);
-      initialStates[key] = true;
-    });
-    setSwitchStates(initialStates);
-  }, [alertList.length]);
+  const goDetail = (alert: FlightAlertItem) => {
+    const fakeFlight: FlightSearchResponseDto = {
+      airlineCode: alert.airlineCode,
+      airlineName: alert.airlineCode, // 항공사 이름 없으므로 코드로 대체
+      flightNumber: alert.flightNumber,
 
-  const toggleSwitch = (id: string) => {
-    setSwitchStates((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
+      departureAirport: alert.origin,
+      // departureTime: alert.departureDate + "T00:00:00",
+      arrivalAirport: alert.destination,
+      // arrivalTime: alert.departureDate + "T00:00:00",
+      // duration: "",
 
-  const toggleGlobalSwitch = () => {
-    const newVal = !globalSwitch;
-    setGlobalSwitch(newVal);
-    const updatedStates: { [key: string]: boolean } = {};
-    alertList.forEach((item) => {
-      const key = generateAlertKey(item);
-      updatedStates[key] = newVal;
-    });
-    setSwitchStates(updatedStates);
-  };
+      // 날짜만 있으므로 시간은 임의 00:00 처리
+      outboundDepartureTime: alert.departureDate + "T00:00:00",
+      outboundArrivalTime: alert.departureDate + "T00:00:00",
+      outboundDuration: "",
 
-  const goDetail = (flight: FlightSearchResponseDto) => {
-    navigation.navigate("FlightDetail", { flight });
+      returnDepartureTime: alert.returnDate
+        ? alert.returnDate + "T00:00:00"
+        : "",
+      returnArrivalTime: alert.returnDate ? alert.returnDate + "T00:00:00" : "",
+      returnDuration: "",
+
+      travelClass: alert.travelClass,
+      numberOfBookableSeats: 0, // 정보 없음 → 기본값
+      hasCheckedBags: false, // 정보 없음 → 기본값
+      currency: alert.currency,
+      price: alert.lastCheckedPrice || 0,
+
+      isRefundable: false,
+      isChangeable: false,
+    };
+
+    navigation.navigate("FlightDetail", { flight: fakeFlight });
   };
 
   const stop = (e: GestureResponderEvent) => e.stopPropagation();
 
-  const renderItem = ({ item }: { item: FlightSearchResponseDto }) => {
-    const id = generateAlertKey(item);
+  // 개별 알림 토글
+  const handleToggleAlert = async (item: FlightAlertItem) => {
+    const { alertId } = item;
+    if (!alertId || togglingId !== null) return;
 
-    const from = `${
-      airportMap[item.departureAirport] ?? item.departureAirport
-    } (${item.departureAirport})`;
-    const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${
-      item.arrivalAirport
+    const id = String(alertId);
+    const prev = switchStates[id] ?? item.active;
+
+    try {
+      setTogglingId(alertId);
+      setSwitchStates((prevStates) => ({
+        ...prevStates,
+        [id]: !prev,
+      }));
+
+      await toggleFlightAlert(alertId);
+
+      setAlertList((prevList) =>
+        prevList.map((a) =>
+          a.alertId === alertId ? { ...a, active: !prev } : a
+        )
+      );
+    } catch (e) {
+      console.log("handleToggleAlert error", e);
+      Alert.alert("오류", "알림 설정 변경에 실패했어요.");
+      setSwitchStates((prevStates) => ({
+        ...prevStates,
+        [id]: prev,
+      }));
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  // 전체 알림 토글 (UI 전용)
+  const toggleGlobalSwitch = () => {
+    const newVal = !globalSwitch;
+    setGlobalSwitch(newVal);
+
+    const updated: { [key: string]: boolean } = {};
+    alertList.forEach((item) => {
+      updated[String(item.alertId)] = newVal;
+    });
+    setSwitchStates(updated);
+
+    // 실제 서버 전체 off 기능 필요하면
+    // 여기에서 각 alertId에 대해 toggleFlightAlert 돌리는 로직 추가 가능
+  };
+
+  const renderItem = ({ item }: { item: FlightAlertItem }) => {
+    const id = String(item.alertId);
+
+    const from = `${airportMap[item.origin] ?? item.origin} (${item.origin})`;
+    const to = `${airportMap[item.destination] ?? item.destination} (${
+      item.destination
     })`;
 
-    const departDate =
-      item.outboundDepartureTime || item.departureTime
-        ? formatDate(item.outboundDepartureTime || item.departureTime!)
-        : "-";
+    const departDate = formatDate(item.departureDate);
+    const returnDate = item.returnDate ? formatDate(item.returnDate) : null;
 
-    const returnDate =
-      item.returnArrivalTime &&
-      item.returnArrivalTime !== item.outboundDepartureTime
-        ? formatDate(item.returnArrivalTime)
-        : null;
-
-    const seat = `${getTripType(
-      item.outboundDepartureTime,
-      item.returnArrivalTime
+    const seatInfo = `${getTripType(
+      item.departureDate,
+      item.returnDate
     )}, ${formatSeatClass(item.travelClass)}`;
-    const passenger = `잔여 ${item.numberOfBookableSeats}석`;
-    const price = priceText(item.price, item.currency ?? "KRW");
+
+    const mainPrice = priceText(item.lastCheckedPrice, item.currency ?? "KRW");
+    const targetPriceText = priceText(item.targetPrice, item.currency ?? "KRW");
+
+    const isOn = switchStates[id] ?? item.active;
 
     return (
       <Pressable
@@ -240,16 +336,16 @@ export default function PriceAlertScreen() {
               {from} - {to}
             </Text>
             <Text style={styles.info}>
-              {departDate} 출발 · {seat}
+              {departDate}
+              {returnDate ? ` ~ ${returnDate}` : ""} · {seatInfo}
             </Text>
             <Text style={styles.info}>
-              {returnDate ? `${returnDate} 도착 · ` : ""}
-              {passenger}
+              목표가 {targetPriceText} · 최근 가격 {mainPrice}
             </Text>
           </View>
 
           <View style={styles.right}>
-            <Text style={styles.price}>{price}</Text>
+            <Text style={styles.price}>{mainPrice}</Text>
             <TouchableOpacity
               onPress={(e) => {
                 stop(e);
@@ -266,24 +362,24 @@ export default function PriceAlertScreen() {
           <TouchableOpacity
             onPress={(e) => {
               stop(e);
-              toggleSwitch(id);
+              handleToggleAlert(item);
             }}
+            disabled={togglingId === item.alertId}
           >
             <Ionicons
-              name={
-                switchStates[id] ? "notifications" : "notifications-outline"
-              }
+              name={isOn ? "notifications" : "notifications-outline"}
               size={22}
-              color={switchStates[id] ? "gold" : "gray"}
+              color={isOn ? "gold" : "gray"}
             />
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={(e) => {
               stop(e);
-              setPendingDeleteId(id);
+              setPendingDeleteAlertId(item.alertId);
               setConfirmVisible(true);
             }}
+            disabled={deletingId === item.alertId}
           >
             <FontAwesome name="trash" size={25} color="#E53935" />
           </TouchableOpacity>
@@ -292,7 +388,7 @@ export default function PriceAlertScreen() {
     );
   };
 
-  // 1) 아직 로그인 여부 체크 중이면 로딩
+  // 1) 로그인 여부 체크 중이면 로딩
   if (!loginChecked) {
     return (
       <View style={styles.loadingContainer}>
@@ -302,7 +398,7 @@ export default function PriceAlertScreen() {
     );
   }
 
-  // 2) 비로그인 상태: 안내 + 로그인 버튼
+  // 2) 비로그인 상태
   if (!isLoggedIn) {
     return (
       <View style={styles.lockContainer}>
@@ -323,7 +419,7 @@ export default function PriceAlertScreen() {
     );
   }
 
-  // 3) 로그인 상태: 기존 PriceAlert 화면 그대로
+  // 3) 로그인 상태: 알림 화면
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <View style={styles.globalToggle}>
@@ -337,16 +433,23 @@ export default function PriceAlertScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={alertList}
-        keyExtractor={(item) => generateAlertKey(item)}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <Text style={{ textAlign: "center", marginTop: 30, color: "#888" }}>
-            등록된 항공 알림이 없습니다.
-          </Text>
-        }
-      />
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator />
+          <Text style={styles.loadingText}>알림 목록을 불러오는 중...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={alertList}
+          keyExtractor={(item) => String(item.alertId)}
+          renderItem={renderItem}
+          ListEmptyComponent={
+            <Text style={{ textAlign: "center", marginTop: 30, color: "#888" }}>
+              등록된 항공 알림이 없습니다.
+            </Text>
+          }
+        />
+      )}
 
       <Modal visible={confirmVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
@@ -357,13 +460,27 @@ export default function PriceAlertScreen() {
             <View style={styles.confirmButtons}>
               <TouchableOpacity
                 style={styles.confirmDelete}
-                onPress={() => {
-                  const flight = alertList.find(
-                    (f) => generateAlertKey(f) === pendingDeleteId
-                  );
-                  if (flight) removeAlert(flight);
-                  setConfirmVisible(false);
-                  setPendingDeleteId(null);
+                onPress={async () => {
+                  if (!pendingDeleteAlertId) {
+                    setConfirmVisible(false);
+                    return;
+                  }
+                  try {
+                    setDeletingId(pendingDeleteAlertId);
+                    await deleteFlightAlert(pendingDeleteAlertId);
+                    setAlertList((prev) =>
+                      prev.filter(
+                        (item) => item.alertId !== pendingDeleteAlertId
+                      )
+                    );
+                  } catch (e) {
+                    console.log("delete alert error", e);
+                    Alert.alert("오류", "알림 삭제에 실패했어요.");
+                  } finally {
+                    setConfirmVisible(false);
+                    setPendingDeleteAlertId(null);
+                    setDeletingId(null);
+                  }
                 }}
               >
                 <Text style={{ color: "#fff", fontWeight: "600" }}>삭제</Text>
@@ -382,10 +499,7 @@ export default function PriceAlertScreen() {
   );
 }
 
-const MIN_TOUCH = 33;
-
 const styles = StyleSheet.create({
-  // 🔐 비로그인/로딩 레이아웃
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -479,29 +593,6 @@ const styles = StyleSheet.create({
   },
   viewBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
 
-  footer: {
-    marginTop: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  deleteBig: {
-    backgroundColor: "#E53935",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minHeight: MIN_TOUCH,
-    minWidth: 50,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  deleteBigText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "700",
-    letterSpacing: 0.2,
-  },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -533,16 +624,6 @@ const styles = StyleSheet.create({
     minWidth: 90,
     alignItems: "center",
   },
-
-  footerRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-  },
-  footerLabel: { fontSize: 13, color: "#333" },
   iconRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

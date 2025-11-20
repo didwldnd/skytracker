@@ -20,13 +20,6 @@ async function saveAccessToken(token: string): Promise<void> {
 
 /**
  * ✅ 인증 필요한 모든 요청은 이 함수만 사용하면 됨
- *  - 자동으로 accessToken을 헤더에 붙이고
- *  - 401 나오면 /api/user/refresh-token 호출해서 accessToken 재발급 후
- *  - 같은 요청을 새 토큰으로 한 번 더 보냄
- *
- *  실패 시:
- *   - refreshToken 없음 → Error("NO_REFRESH_TOKEN")
- *   - refresh 실패 → Error("REFRESH_FAILED")
  */
 export async function apiFetch(
   path: string,
@@ -45,11 +38,20 @@ export async function apiFetch(
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
   };
 
+  // 🟢 1차 요청 나가기 전에 로그
+  console.log("🌐 [apiFetch] 1차 Request:", `${API_BASE}${path}`, {
+    ...options,
+    headers: headersWithAccess,
+  });
+
   // 🟢 1차 요청
   let response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers: headersWithAccess,
   });
+
+  // 1차 응답 상태 로그
+  console.log("📥 [apiFetch] 1차 Response status:", response.status);
 
   // 🔴 accessToken 만료 (401) → refresh-token 로직 진입
   if (response.status === 401) {
@@ -63,11 +65,22 @@ export async function apiFetch(
     }
 
     // 🟡 refresh-token API 호출
+    console.log(
+      "🌐 [apiFetch] refresh-token Request:",
+      `${API_BASE}/api/user/refresh-token`,
+      { refreshToken }
+    );
+
     const refreshRes = await fetch(`${API_BASE}/api/user/refresh-token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
     });
+
+    console.log(
+      "📥 [apiFetch] refresh-token Response status:",
+      refreshRes.status
+    );
 
     if (!refreshRes.ok) {
       console.log(
@@ -97,12 +110,19 @@ export async function apiFetch(
       Authorization: `Bearer ${newAccessToken}`,
     };
 
+    console.log("🌐 [apiFetch] 재요청 Request:", `${API_BASE}${path}`, {
+      ...options,
+      headers: retryHeaders,
+    });
+
     response = await fetch(`${API_BASE}${path}`, {
       ...options,
       headers: retryHeaders,
     });
+
+    console.log("📥 [apiFetch] 재요청 Response status:", response.status);
   }
 
-  // 최종 Response 반환 (성공이든, 401 이후 재시도든)
+  // 최종 Response 반환
   return response;
 }

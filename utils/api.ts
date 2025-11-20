@@ -20,14 +20,35 @@ const http = axios.create({
 
 // ===== 기존 검색 =====
 export async function searchFlights(request: FlightSearchRequestDto) {
-  console.log("[searchFlights] POST /api/flights/search");
+  try {
+    const res = await http.post<FlightSearchResponseDto[]>(
+      "/api/flights/search",
+      request
+    );
 
-  const { data } = await http.post<FlightSearchResponseDto[]>(
-    "/api/flights/search",   // 백엔드 컨트롤러 경로 그대로
-    request
-  );
+    return res.data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const cfg = err.config;
 
-  return data;
+      // 🔵 최종 URL 로그 찍기
+      console.log(
+        "🔵 FINAL URL:",
+        `${cfg?.baseURL || ""}${cfg?.url || ""}`
+      );
+
+      console.log("🔴 AXIOS ERROR:", {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        data: err.response?.data,
+      });
+    } else {
+      console.log("🔴 UNKNOWN ERROR:", err);
+    }
+
+    throw err;
+  }
 }
 
 // // ===== 인기도시 → 항공편 DTO[] (카드 탭 시 호출) =====

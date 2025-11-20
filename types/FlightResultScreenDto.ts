@@ -1,28 +1,26 @@
-// API에서 받은 항공편 검색 결과 데이터 형식
 export interface FlightSearchResponseDto {
   airlineCode: string;
   airlineName: string;
-  flightNumber: string | number; // Union 타입, 문자열일수도 숫자일수도 "623" or 623
-  departureAirport: string;
-  departureTime: string;
-  arrivalAirport: string;
-  arrivalTime: string;
-  duration: string;
-  travelClass: string;
-  numberOfBookableSeats: number;
-  hasCheckedBags: boolean;
-  isRefundable: boolean;
-  isChangeable: boolean;
-  currency: string;
-  price: number;
+  flightNumber: string | number;
 
+  departureAirport: string;
+  arrivalAirport: string;
+
+  // 편도/왕복 공통: "가는 편"
   outboundDepartureTime: string;
   outboundArrivalTime: string;
   outboundDuration: string;
-  returnDepartureTime: string;
-  returnArrivalTime: string;
-  returnDuration: string;
 
-  // 추가
-  nonStop?: boolean | "true" | "false" | 1 | 0; // api 받을때 안전하게 다 받기 위해
+  // 왕복일 때만 채워지는 "오는 편"
+  returnDepartureTime?: string | null;
+  returnArrivalTime?: string | null;
+  returnDuration?: string | null;
+
+  travelClass: string;
+  numberOfBookableSeats: number;
+  hasCheckedBags: boolean;
+  isRefundable: boolean;   // or refundable
+  isChangeable: boolean;   // or changeable
+  currency: string;
+  price: number;           // ✅ 왕복이면 왕복 전체 가격, 편도면 편도 가격
 }

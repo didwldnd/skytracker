@@ -1,6 +1,14 @@
 // components/FlightCard.tsx
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from "react-native";
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
+} from "react-native";
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import { FontAwesome } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -8,6 +16,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { usePriceAlert } from "../context/PriceAlertContext";
 import { useFavorite } from "../context/FavoriteContext";
 import { formatPrice } from "../utils/formatters";
+import {
+  registerFlightAlert,
+  FlightAlertRequestDto,
+} from "../utils/priceAlertApi";
 
 const THEME = "#0be5ecd7";
 const { width } = Dimensions.get("window");
@@ -63,21 +75,80 @@ const FlightCard = ({
   };
   onPress?: () => void;
 }) => {
-  // ✅ 기존 컨텍스트/핸들러 로직 유지
   const { toggleFavorite, isFavorite } = useFavorite();
   const favorite = isFavorite(flight);
 
   const { addAlert, removeAlert, isAlerted } = usePriceAlert();
   const alerted = isAlerted(flight);
-  
+
+  const [alertLoading, setAlertLoading] = useState(false);
 
   // ✅ 필드 우선순위 유지 (outbound* 우선)
-  const departureTime = flight.outboundDepartureTime ?? (flight as any).departureTime;
-  const arrivalTime = flight.outboundArrivalTime ?? (flight as any).arrivalTime;
+  const departureTime =
+    flight.outboundDepartureTime ?? (flight as any).departureTime;
+  const arrivalTime =
+    flight.outboundArrivalTime ?? (flight as any).arrivalTime;
   const duration = flight.outboundDuration ?? (flight as any).duration;
 
   const cls = seatLabel(flight.travelClass);
   const diff = diffPct(flight.price, flight.previousPrice);
+
+  const handleAlertPress = async () => {
+    if (alertLoading) return;
+
+    // 이미 알림 켜져 있으면 → 기존처럼 컨텍스트에서만 제거
+    if (alerted) {
+      removeAlert(flight);
+      return;
+    }
+
+    try {
+      setAlertLoading(true);
+
+      // 🔔 기존 로직: 컨텍스트에 먼저 추가 → UI에서 즉시 노란 종 표시
+      addAlert(flight);
+
+      // 🔥 백엔드 알림 등록
+      const departIso =
+        flight.outboundDepartureTime ?? (flight as any).departureTime;
+
+      if (!departIso) {
+        console.log("❌ [FlightCard] departIso 없음, 알림 생성 불가");
+        Alert.alert(
+          "알림 생성 불가",
+          "출발 일자 정보를 찾을 수 없어요. 다시 시도해 주세요."
+        );
+        // 컨텍스트 롤백
+        removeAlert(flight);
+        return;
+      }
+
+      const departureDate = departIso.toString().split("T")[0];
+
+      const dto: FlightAlertRequestDto = {
+        airlineCode: flight.airlineCode,
+        flightNumber: String(flight.flightNumber),
+        departureAirport: flight.departureAirport,
+        arrivalAirport: flight.arrivalAirport,
+        departureDate,
+        travelClass: flight.travelClass,
+        currency: flight.currency ?? "KRW",
+        adults: 1,
+        lastCheckedPrice: Math.round(flight.price),
+      };
+
+      console.log("🚀 [FlightCard] register alert payload:", dto);
+      await registerFlightAlert(dto);
+      console.log("✅ [FlightCard] registerFlightAlert 성공");
+    } catch (e) {
+      console.log("❌ [FlightCard] registerFlightAlert error:", e);
+      Alert.alert("오류", "알림 등록에 실패했어요. 잠시 후 다시 시도해주세요.");
+      // 실패 시 로컬 알림 롤백
+      removeAlert(flight);
+    } finally {
+      setAlertLoading(false);
+    }
+  };
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
@@ -90,19 +161,30 @@ const FlightCard = ({
             </View>
             <View>
               <Text style={styles.airlineName}>{flight.airlineName}</Text>
-              <Text style={styles.flightNo}>{formatFlightNo(flight.airlineCode, flight.flightNumber)}</Text>
+              <Text style={styles.flightNo}>
+                {formatFlightNo(flight.airlineCode, flight.flightNumber)}
+              </Text>
               {cls && <Text style={styles.seatText}>{cls}</Text>}
             </View>
           </View>
 
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={styles.price}>{formatPrice(flight.price, flight.currency ?? "KRW")}</Text>
+            <Text style={styles.price}>
+              {formatPrice(flight.price, flight.currency ?? "KRW")}
+            </Text>
             {!!diff.text && (
-              <View style={[styles.diffBadge, diff.trend === "up" ? styles.diffUp : styles.diffDown]}>
+              <View
+                style={[
+                  styles.diffBadge,
+                  diff.trend === "up" ? styles.diffUp : styles.diffDown,
+                ]}
+              >
                 <Text
                   style={[
                     styles.diffText,
-                    diff.trend === "up" ? { color: "#b91c1c" } : { color: "#065f46" },
+                    diff.trend === "up"
+                      ? { color: "#b91c1c" }
+                      : { color: "#065f46" },
                   ]}
                 >
                   {diff.text}
@@ -112,7 +194,7 @@ const FlightCard = ({
           </View>
         </View>
 
-        {/* 경로/소요시간 (CityFlightList 스타일) */}
+        {/* 경로/소요시간 */}
         <View style={styles.routeRow}>
           <View style={styles.timeCol}>
             <Text style={styles.timeBig}>{formatTime(departureTime)}</Text>
@@ -135,7 +217,7 @@ const FlightCard = ({
           </View>
         </View>
 
-        {/* 서비스/정책 배지 + 액션 아이콘(기존 로직 유지) */}
+        {/* 서비스/정책 배지 + 액션 아이콘 */}
         <View style={styles.bottomRow}>
           <View style={styles.badgesRow}>
             {/* 위탁수하물 */}
@@ -204,16 +286,21 @@ const FlightCard = ({
             </View>
           </View>
 
-          {/* 기존 아이콘 로직 그대로 */}
+          {/* 🔔 종 아이콘: 기존 alerted 로직 그대로 + 로딩 처리만 추가 */}
           <View style={styles.iconRow}>
             <TouchableOpacity
-              onPress={() => (alerted ? removeAlert(flight) : addAlert(flight))}
+              onPress={handleAlertPress}
+              disabled={alertLoading}
             >
-              <Ionicons
-                name={alerted ? "notifications" : "notifications-outline"}
-                size={22}
-                color={alerted ? "gold" : "#6b7280"}
-              />
+              {alertLoading ? (
+                <ActivityIndicator size="small" color={alerted ? "gold" : "#6b7280"} />
+              ) : (
+                <Ionicons
+                  name={alerted ? "notifications" : "notifications-outline"}
+                  size={22}
+                  color={alerted ? "gold" : "#6b7280"}
+                />
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity onPress={() => toggleFavorite(flight)}>
