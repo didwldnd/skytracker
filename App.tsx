@@ -22,6 +22,7 @@ export type RootStackParamList = {
   Search: undefined;
   LoginScreen: undefined;
   HomeScreen: undefined;
+  ProfileScreen: undefined;
   FlightResult: {
     originLocationCode: string;
     destinationLocationCode: string;

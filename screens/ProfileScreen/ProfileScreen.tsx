@@ -161,17 +161,28 @@ const ProfileScreen = () => {
     loadProfile();
   }, []);
 
-  const handleLogoutPress = async () => {
+  const handleConfirmLogout = async () => {
     try {
-      await logout(); // 🔥 서버 + 로컬 모두 처리
+      await logout();
 
       navigation.reset({
         index: 0,
-        routes: [{ name: "LoginScreen" }],
+        routes: [{ name: "ProfileScreen" }],
       });
     } catch (e) {
-      console.error("로그아웃 에러:", e);
+      console.error("로그아웃 에러", e);
     }
+  }
+
+  const handleLogoutPress = () => {
+    Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "로그아웃",
+        style: "destructive",
+        onPress: handleConfirmLogout,
+      },
+    ]);
   };
 
   // SearchModal 제어
