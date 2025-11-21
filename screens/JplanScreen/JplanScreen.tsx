@@ -8,9 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
-  Keyboard,
-  TouchableWithoutFeedback,
   ActivityIndicator,
+  Keyboard,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
@@ -88,16 +87,12 @@ const JplanScreen = () => {
           method: "GET",
         });
 
-        console.log("[Jplan] history status:", res.status);
-
         if (!res.ok) {
-          console.log("[Jplan] history error status:", res.status);
           setMessages([WELCOME_MESSAGE]);
           return;
         }
 
         const data: ChatResponseDto[] = await res.json();
-        console.log("[Jplan] history data:", data);
 
         if (Array.isArray(data) && data.length > 0) {
           const mapped: ChatMessage[] = data.map((m) => ({
@@ -130,6 +125,24 @@ const JplanScreen = () => {
     flatListRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
+  // ✅ 키보드 열릴 때 자동으로 맨 아래로 스크롤
+useEffect(() => {
+  const eventName =
+    Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+
+  const showSub = Keyboard.addListener(eventName, () => {
+    // 살짝 딜레이 주면 레이아웃 변경 후에 스크롤되어 더 안정적
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+  });
+
+  return () => {
+    showSub.remove();
+  };
+}, []);
+
+
   const handleSend = async () => {
     if (!isLoggedIn) {
       goToLogin();
@@ -160,8 +173,6 @@ const JplanScreen = () => {
         body: JSON.stringify({ message: trimmed }),
       });
 
-      console.log("[Jplan] ask status:", res.status);
-
       if (!res.ok) {
         setMessages((prev) => [
           ...prev,
@@ -176,7 +187,6 @@ const JplanScreen = () => {
       }
 
       const data: ChatResponseDto = await res.json();
-      console.log("[Jplan] ask data:", data);
 
       const botReply: ChatMessage = {
         id: String(data.messageId ?? Date.now() + 1),
@@ -238,13 +248,14 @@ const JplanScreen = () => {
   // 3) 로그인 상태 – 기존 챗봇 UI
   return (
     <KeyboardAvoidingView
-      style={styles.wrapper}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={25}
-    >
-      <View style={styles.container}>
-        <Text style={styles.title}>J플랜</Text>
+    style={{ flex: 1 }}
+    behavior="padding"  
+    keyboardVerticalOffset={Platform.OS === "android" ? 25 : 25}
+  >
+    <View style={{ flex: 1, backgroundColor: "white" }}>
+      <Text style={styles.title}>J플랜</Text>
 
+      <View style={{ flex: 1 }}>
         {loadingHistory ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator />
@@ -257,6 +268,9 @@ const JplanScreen = () => {
             ref={flatListRef}
             data={messages}
             keyExtractor={(item) => item.id}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ padding: 10 }}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => {
               if (item.role === "user") {
                 return (
@@ -275,36 +289,34 @@ const JplanScreen = () => {
                 </View>
               );
             }}
-            contentContainerStyle={{ padding: 10 }}
-            keyboardShouldPersistTaps="handled"
           />
         )}
-
-        <View style={styles.inputBox}>
-          <TextInput
-            style={styles.input}
-            value={input}
-            onChangeText={setInput}
-            placeholder="메시지를 입력하세요"
-            returnKeyType="send"
-            onSubmitEditing={handleSend}
-            editable={!sending && !loadingHistory}
-          />
-          <TouchableOpacity
-            onPress={handleSend}
-            style={styles.sendBtn}
-            disabled={sending || loadingHistory}
-            activeOpacity={0.7}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={{ color: "white" }}>전송</Text>
-            )}
-          </TouchableOpacity>
-        </View>
       </View>
-    </KeyboardAvoidingView>
+
+      {/* 입력창 */}
+      <View style={styles.inputBox}>
+        <TextInput
+          style={styles.input}
+          value={input}
+          onChangeText={setInput}
+          placeholder="메시지를 입력하세요"
+          returnKeyType="send"
+          onSubmitEditing={handleSend}
+        />
+        <TouchableOpacity
+          onPress={handleSend}
+          style={styles.sendBtn}
+          activeOpacity={0.7}
+        >
+          {sending ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Text style={{ color: "white" }}>전송</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </View>
+  </KeyboardAvoidingView>
   );
 };
 
