@@ -2,11 +2,12 @@
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 
 // 안전 파서
-const toMs = (iso?: string) => {
+const toMs = (iso?: string | null) => {
   if (!iso) return 0;
   const t = Date.parse(iso);
   return Number.isFinite(t) ? t : 0;
 };
+
 
 /**
  * 항공편 고유 키
