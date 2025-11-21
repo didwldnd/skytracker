@@ -35,7 +35,6 @@ export interface FlightAlertItem {
   adults: number;
   lastCheckedPrice: number;
   newPrice: number | null;
-  targetPrice: number | null;
   active: boolean;
 }
 
@@ -100,8 +99,6 @@ export async function fetchFlightAlerts(): Promise<FlightAlertItem[]> {
           : 0,
       newPrice:
         typeof item.newPrice === "number" ? item.newPrice : null,
-      targetPrice:
-        typeof item.targetPrice === "number" ? item.targetPrice : null,
 
       active,
     } as FlightAlertItem;

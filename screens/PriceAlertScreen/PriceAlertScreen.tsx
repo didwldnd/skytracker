@@ -207,7 +207,7 @@ export default function PriceAlertScreen() {
       JSON.stringify(data, null, 2)
     );
 
-    
+
       setAlertList(data);
 
       const initialStates: { [key: string]: boolean } = {};
@@ -377,7 +377,6 @@ export default function PriceAlertScreen() {
   const seatInfo = `${tripTypeLabel}, ${formatSeatClass(item.travelClass)}`;
 
   const mainPrice = priceText(item.lastCheckedPrice, item.currency ?? "KRW");
-  const targetPriceText = priceText(item.targetPrice, item.currency ?? "KRW");
 
   const isOn = switchStates[id] ?? item.active;
 
@@ -431,7 +430,7 @@ export default function PriceAlertScreen() {
           </Text>
 
           <Text style={styles.info}>
-            목표가 {targetPriceText} · 최근 가격 {mainPrice}
+          최근 가격 {mainPrice}
           </Text>
         </View>
 
