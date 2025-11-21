@@ -1,24 +1,35 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useEffect,
+  useCallback,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import { generateAlertKey } from "../utils/generateAlertKey";
 
-// ★ 키 스키마 변경 → 기존 저장본과 구분하기 위해 V2로 버전업
-const ALERT_STORAGE_KEY = "price_alerts_V2";
+const ALERT_STORAGE_KEY = "price_alerts_V3";
 
 interface PriceAlertContextProps {
-  alerts: Record<string, FlightSearchResponseDto>; // 키-값 맵으로 관리 → 조회 O(1)
+  alerts: Record<string, FlightSearchResponseDto>;
   addAlert: (flight: FlightSearchResponseDto) => void;
   removeAlert: (flight: FlightSearchResponseDto) => void;
   isAlerted: (flight: FlightSearchResponseDto) => boolean;
+  resetAlertsFromServer: (flights: FlightSearchResponseDto[]) => void;
 }
 
-const PriceAlertContext = createContext<PriceAlertContextProps | undefined>(undefined);
+const PriceAlertContext = createContext<PriceAlertContextProps | undefined>(
+  undefined
+);
 
 export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
-  const [alerts, setAlerts] = useState<Record<string, FlightSearchResponseDto>>({});
+  const [alerts, setAlerts] = useState<Record<string, FlightSearchResponseDto>>(
+    {}
+  );
 
-  // 초기 로드(중복 있으면 키 기준으로 자동 dedup)
+  // ---------- 초기 로드 ----------
   useEffect(() => {
     (async () => {
       try {
@@ -37,22 +48,31 @@ export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
     })();
   }, []);
 
-  const persist = async (map: Record<string, FlightSearchResponseDto>) => {
-    setAlerts(map);
-    try {
-      await AsyncStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(Object.values(map)));
-    } catch (e) {
-      console.error("알림 저장 실패", e);
-    }
-  };
+  // ---------- persist 함수(★ reset에서 호출됨) ----------
+  const persist = useCallback(
+    async (map: Record<string, FlightSearchResponseDto>) => {
+      setAlerts(map);
+      try {
+        await AsyncStorage.setItem(
+          ALERT_STORAGE_KEY,
+          JSON.stringify(Object.values(map))
+        );
+      } catch (e) {
+        console.error("알림 저장 실패", e);
+      }
+    },
+    []
+  );
 
+  // ---------- 알리미 로컬 추가 ----------
   const addAlert = (flight: FlightSearchResponseDto) => {
     const key = generateAlertKey(flight);
-    if (alerts[key]) return; // 이미 존재
+    if (alerts[key]) return;
     const next = { ...alerts, [key]: flight };
     persist(next);
   };
 
+  // ---------- 알리미 로컬 삭제 ----------
   const removeAlert = (flight: FlightSearchResponseDto) => {
     const key = generateAlertKey(flight);
     if (!alerts[key]) return;
@@ -61,13 +81,33 @@ export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
     persist(next);
   };
 
+  // ---------- 서버 기준으로 전체 동기화 (여기에서 persist 사용 가능) ----------
+  const resetAlertsFromServer = useCallback(
+    (flights: FlightSearchResponseDto[]) => {
+      const map: Record<string, FlightSearchResponseDto> = {};
+      for (const f of flights) {
+        map[generateAlertKey(f)] = f;
+      }
+      persist(map);
+    },
+    [persist]
+  );
+
   const isAlerted = (flight: FlightSearchResponseDto) => {
     const key = generateAlertKey(flight);
     return !!alerts[key];
   };
 
   return (
-    <PriceAlertContext.Provider value={{ alerts, addAlert, removeAlert, isAlerted }}>
+    <PriceAlertContext.Provider
+      value={{
+        alerts,
+        addAlert,
+        removeAlert,
+        isAlerted,
+        resetAlertsFromServer,
+      }}
+    >
       {children}
     </PriceAlertContext.Provider>
   );
@@ -75,6 +115,8 @@ export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
 
 export const usePriceAlert = () => {
   const ctx = useContext(PriceAlertContext);
-  if (!ctx) throw new Error("usePriceAlert must be used within PriceAlertProvider");
+  if (!ctx) {
+    throw new Error("usePriceAlert must be used within PriceAlertProvider");
+  }
   return ctx;
 };
