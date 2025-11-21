@@ -5,6 +5,7 @@ import { apiFetch } from "./apiClient";
  * 백엔드에서 내려오는 원본 응답 타입
  * (isActive / active 둘 다 케이스 대비)
  */
+// 알림 등록 요청
 export interface FlightAlertRequestDto {
   flightId?: number | null;
   airlineCode: string;
@@ -20,6 +21,7 @@ export interface FlightAlertRequestDto {
   newPrice?: number | null;
 }
 
+// 백엔드 응답 기준 Alert 아이템 타입
 export interface FlightAlertItem {
   alertId: number;
   airlineCode: string;
@@ -42,8 +44,11 @@ export interface FlightAlertItem {
  * 내 알림 목록 조회
  * GET /api/flights/alerts
  */
+// utils/priceAlertApi.ts
 export async function fetchFlightAlerts(): Promise<FlightAlertItem[]> {
   const res = await apiFetch("/api/flights/alerts", { method: "GET" });
+
+  console.log("[fetchFlightAlerts] status:", res.status);
 
   if (!res.ok) {
     const text = await res.text();
@@ -51,32 +56,65 @@ export async function fetchFlightAlerts(): Promise<FlightAlertItem[]> {
     throw new Error("알림 목록 조회에 실패했어요.");
   }
 
-  const data: FlightAlertItem[] = await res.json();
+  const raw = await res.json();
+  console.log(
+    "🔵 [DEBUG] RAW ALERT JSON FROM SERVER:",
+    JSON.stringify(raw, null, 2)
+  );
 
-  return data.map((item) => {
+  const list = Array.isArray(raw) ? raw : [];
+
+  const normalized: FlightAlertItem[] = list.map((item: any) => {
+    // ✅ active / isActive 둘 다 대응
     const active =
       typeof item.active === "boolean"
         ? item.active
+        : typeof item.isActive === "boolean"
+        ? item.isActive
         : true;
+
+    // ✅ 서버는 origin / destination 을 주고 있음
+    const departureAirport = item.departureAirport ?? item.origin ?? "";
+    const arrivalAirport = item.arrivalAirport ?? item.destination ?? "";
+
+    // ✅ 왕복이면 arrivalDate 또는 returnDate 로 들어올 수 있음
+    const arrivalDate = item.arrivalDate ?? item.returnDate ?? null;
 
     return {
       alertId: item.alertId,
       airlineCode: item.airlineCode,
-      flightNumber: item.flightNumber,
-      departureAirport: item.departureAirport,
-      arrivalAirport: item.arrivalAirport,
+      flightNumber: String(item.flightNumber),
+
+      departureAirport,
+      arrivalAirport,
       departureDate: item.departureDate,
-      arrivalDate: item.arrivalDate ?? null,
+      arrivalDate,
+
       travelClass: item.travelClass,
-      currency: item.currency,
-      adults: item.adults,
-      lastCheckedPrice: item.lastCheckedPrice,
-      newPrice: item.newPrice ?? null,
-      targetPrice: item.targetPrice ?? null,
+      currency: item.currency ?? "KRW",
+      adults: typeof item.adults === "number" ? item.adults : 1,
+
+      lastCheckedPrice:
+        typeof item.lastCheckedPrice === "number"
+          ? item.lastCheckedPrice
+          : 0,
+      newPrice:
+        typeof item.newPrice === "number" ? item.newPrice : null,
+      targetPrice:
+        typeof item.targetPrice === "number" ? item.targetPrice : null,
+
       active,
-    };
+    } as FlightAlertItem;
   });
+
+  console.log(
+    "🟢 [DEBUG] NORMALIZED ALERTS:",
+    JSON.stringify(normalized, null, 2)
+  );
+
+  return normalized;
 }
+
 
 
 

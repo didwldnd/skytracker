@@ -200,6 +200,14 @@ export default function PriceAlertScreen() {
     try {
       setLoading(true);
       const data = await fetchFlightAlerts();
+
+
+          console.log(
+      "🟣 [DEBUG] alertList in PriceAlertScreen:",
+      JSON.stringify(data, null, 2)
+    );
+
+    
       setAlertList(data);
 
       const initialStates: { [key: string]: boolean } = {};
@@ -353,25 +361,25 @@ export default function PriceAlertScreen() {
   };
 
   const renderItem = ({ item }: { item: FlightAlertItem }) => {
-    const id = String(item.alertId);
+  const id = String(item.alertId);
 
-    const from = `${
-      airportMap[item.departureAirport] ?? item.departureAirport
-    } (${item.departureAirport})`;
-    const to = `${airportMap[item.arrivalAirport] ?? item.arrivalAirport} (${
-      item.arrivalAirport
-    })`;
+  // ✅ departureAirport / arrivalAirport만 사용하며 undefined 보호
+  const depCode = item.departureAirport || "-";
+  const arrCode = item.arrivalAirport || "-";
 
-    const departDate = formatDate(item.departureDate);
-    const returnDate = item.arrivalDate ? formatDate(item.arrivalDate) : null;
+  const from = `${airportMap[depCode] ?? depCode} (${depCode})`;
+  const to = `${airportMap[arrCode] ?? arrCode} (${arrCode})`;
 
-    const tripTypeLabel = item.arrivalDate ? "왕복" : "편도";
-    const seatInfo = `${tripTypeLabel}, ${formatSeatClass(item.travelClass)}`;
+  const departDate = formatDate(item.departureDate);
+  const returnDate = item.arrivalDate ? formatDate(item.arrivalDate) : null;
 
-    const mainPrice = priceText(item.lastCheckedPrice, item.currency ?? "KRW");
-    const targetPriceText = priceText(item.targetPrice, item.currency ?? "KRW");
+  const tripTypeLabel = item.arrivalDate ? "왕복" : "편도";
+  const seatInfo = `${tripTypeLabel}, ${formatSeatClass(item.travelClass)}`;
 
-    const isOn = switchStates[id] ?? item.active;
+  const mainPrice = priceText(item.lastCheckedPrice, item.currency ?? "KRW");
+  const targetPriceText = priceText(item.targetPrice, item.currency ?? "KRW");
+
+  const isOn = switchStates[id] ?? item.active;
 
     <View style={styles.iconRow}>
       <TouchableOpacity
@@ -401,72 +409,77 @@ export default function PriceAlertScreen() {
       </TouchableOpacity>
     </View>;
 
-    return (
-      <Pressable
-        style={styles.card}
-        onPress={() => goDetail(item)}
-        android_ripple={{ color: "rgba(0,0,0,0.05)" }}
-      >
-        <View style={styles.row}>
-          <View style={styles.circle}>
-            <Text style={{ fontSize: 18 }}>✈️</Text>
-          </View>
-          <View style={styles.middle}>
-            <Text style={styles.route}>
-              {from} - {to}
-            </Text>
-            <Text style={styles.info}>
-              {departDate}
-              {returnDate ? ` ~ ${returnDate}` : ""} · {seatInfo}
-            </Text>
-            <Text style={styles.info}>
-              목표가 {targetPriceText} · 최근 가격 {mainPrice}
-            </Text>
-          </View>
-
-          <View style={styles.right}>
-            <Text style={styles.price}>{mainPrice}</Text>
-            <TouchableOpacity
-              onPress={(e) => {
-                stop(e);
-                goDetail(item);
-              }}
-              style={styles.viewBtn}
-            >
-              <Text style={styles.viewBtnText}>보기</Text>
-            </TouchableOpacity>
-          </View>
+     return (
+    <Pressable
+      style={styles.card}
+      onPress={() => goDetail(item)}
+      android_ripple={{ color: "rgba(0,0,0,0.05)" }}
+    >
+      <View style={styles.row}>
+        <View style={styles.circle}>
+          <Text style={{ fontSize: 18 }}>✈️</Text>
         </View>
 
-        <View style={styles.iconRow}>
-          <TouchableOpacity
-            onPress={(e) => {
-              stop(e);
-              handleToggleAlert(item);
-            }}
-            disabled={togglingId === item.alertId}
-          >
-            <Ionicons
-              name={isOn ? "notifications" : "notifications-outline"}
-              size={22}
-              color={isOn ? "gold" : "gray"}
-            />
-          </TouchableOpacity>
+        <View style={styles.middle}>
+          <Text style={styles.route}>
+            {from} - {to}
+          </Text>
+
+          <Text style={styles.info}>
+            {departDate}
+            {returnDate ? ` ~ ${returnDate}` : ""} · {seatInfo}
+          </Text>
+
+          <Text style={styles.info}>
+            목표가 {targetPriceText} · 최근 가격 {mainPrice}
+          </Text>
+        </View>
+
+        <View style={styles.right}>
+          <Text style={styles.price}>{mainPrice}</Text>
 
           <TouchableOpacity
             onPress={(e) => {
               stop(e);
-              setPendingDeleteAlertId(item.alertId);
-              setConfirmVisible(true);
+              goDetail(item);
             }}
-            disabled={deletingId === item.alertId}
+            style={styles.viewBtn}
           >
-            <FontAwesome name="trash" size={25} color="#E53935" />
+            <Text style={styles.viewBtnText}>보기</Text>
           </TouchableOpacity>
         </View>
-      </Pressable>
-    );
-  };
+      </View>
+
+      <View style={styles.iconRow}>
+        <TouchableOpacity
+          onPress={(e) => {
+            stop(e);
+            handleToggleAlert(item);
+          }}
+          disabled={togglingId === item.alertId}
+        >
+          <Ionicons
+            name={isOn ? "notifications" : "notifications-outline"}
+            size={22}
+            color={isOn ? "gold" : "gray"}
+          />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={(e) => {
+            stop(e);
+            setPendingDeleteAlertId(item.alertId);
+            setConfirmVisible(true);
+          }}
+          disabled={deletingId === item.alertId}
+        >
+          <FontAwesome name="trash" size={25} color="#E53935" />
+        </TouchableOpacity>
+      </View>
+    </Pressable>
+  );
+};
+
 
   // 1) 로그인 여부 체크 중이면 로딩
   if (!loginChecked) {

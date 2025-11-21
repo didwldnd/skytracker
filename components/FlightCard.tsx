@@ -179,6 +179,11 @@ const FlightCard = ({
 
       const departureDate = departIso?.split("T")[0] ?? "";
 
+      // price 안전 가드
+      const rawPrice = (flight as any).price;
+      const numPrice = Number(rawPrice);
+      const safeLastCheckedPrice = Number.isFinite(numPrice) ? Math.round(numPrice) : 0;
+
       const dto: FlightAlertRequestDto = {
         airlineCode: flight.airlineCode,
         flightNumber: String(flight.flightNumber),
@@ -191,7 +196,7 @@ const FlightCard = ({
         travelClass: flight.travelClass,
         currency: flight.currency ?? "KRW",
         adults: 1,
-        lastCheckedPrice: Math.round(flight.price),
+        lastCheckedPrice: safeLastCheckedPrice,
       };
 
       console.log("🚀 [FlightCard] register alert payload:", dto);
