@@ -4,7 +4,7 @@ import {
   formatFlightTime,
   formatDuration, // 어댑터에서 formatDurationKo로 연결됨
   formatDayShiftBadge,
-  dayShiftByDuration, // ✅ 새로 사용
+  dayShiftByDuration,
 } from "../../utils/formatFlightTime";
 import {
   FontAwesome,
@@ -32,25 +32,6 @@ const FlightDetailScreen: React.FC = () => {
     }
   }
 
-  // 🔸 간단한 ISO 체크 + duration 재계산 헬퍼
-  const isIso = (s?: string) => !!s && !Number.isNaN(Date.parse(s));
-  const makeDurationISO = (
-    start?: string,
-    end?: string,
-    fallback?: string
-  ): string => {
-    if (isIso(start) && isIso(end)) {
-      const diffMs = new Date(end!).getTime() - new Date(start!).getTime();
-      if (diffMs > 0) {
-        const mins = Math.round(diffMs / 60000);
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return `PT${h ? `${h}H` : ""}${m ? `${m}M` : ""}` || "PT0M";
-      }
-    }
-    return fallback ?? "";
-  };
-
   // ✅ 왕복/편도 판별: return* 존재 여부로
   const isRoundTrip = !!(
     flight.returnDepartureTime && flight.returnArrivalTime
@@ -58,40 +39,31 @@ const FlightDetailScreen: React.FC = () => {
 
   // ✅ 가는 편 세트 (편도 fallback 포함)
   const oDep: string =
-    flight.outboundDepartureTime ??
-    (flight as any).departureTime ??
-    "";
+    flight.outboundDepartureTime ?? (flight as any).departureTime ?? "";
   const oArr: string =
-    flight.outboundArrivalTime ??
-    (flight as any).arrivalTime ??
-    "";
-  const rawOutboundDur: string =
-    flight.outboundDuration ??
-    (flight as any).duration ??
-    "";
+    flight.outboundArrivalTime ?? (flight as any).arrivalTime ?? "";
+  const oDur: string =
+    flight.outboundDuration ?? (flight as any).duration ?? "";
 
-  // 👉 출발/도착 시각이 있으면 그걸로 소요시간 재계산, 아니면 서버값 사용
-  const oDur: string = makeDurationISO(oDep, oArr, rawOutboundDur);
-
+  // 🔥 duration은 출발/도착 시간으로 재계산하지 않고,
+  // 서버에서 준 ISO duration(oDur)만 사용
   const oShift = formatDayShiftBadge(dayShiftByDuration(oDur));
   const oArrText = oShift
     ? `${formatFlightTime(oArr, flight.arrivalAirport)}  ${oShift}`
     : formatFlightTime(oArr, flight.arrivalAirport);
 
-  // ✅ 오는 편 세트(왕복일 때만 사용) – null 제거해서 TS 에러 방지
+  // ✅ 오는 편 세트(왕복일 때만) – null 제거해서 TS 에러 방지
   const rDep: string =
     (flight.returnDepartureTime as string | null | undefined) ?? "";
   const rArr: string =
     (flight.returnArrivalTime as string | null | undefined) ?? "";
-  const rawReturnDur: string =
+  const rDur: string =
     (flight.returnDuration as string | null | undefined) ?? "";
-  const rDur: string = makeDurationISO(rDep, rArr, rawReturnDur);
 
   const rShift = formatDayShiftBadge(dayShiftByDuration(rDur));
   const rArrText = rShift
     ? `${formatFlightTime(rArr, flight.departureAirport)}  ${rShift}`
     : formatFlightTime(rArr, flight.departureAirport);
-
 
   return (
     <ScrollView style={styles.container}>
@@ -179,7 +151,6 @@ const FlightDetailScreen: React.FC = () => {
         icon={<FontAwesome name="suitcase" size={20} color={THEME} />}
       >
         <ToggleRow label="수하물 포함" value={!!flight.hasCheckedBags} />
-        {/* ✅ 필드명 교정: refundable / changeable */}
         <ToggleRow label="환불 가능" value={!!flight.isRefundable} />
         <ToggleRow label="변경 가능" value={!!flight.isChangeable} />
       </SectionCard>
@@ -286,7 +257,9 @@ const LocationBlock = ({
       }}
     >
       <Feather name="clock" size={16} color="#6b7280" />
-      <Text style={{ color: "#6b7280" }}>{time || "시간 없음"} (현지시간)</Text>
+      <Text style={{ color: "#6b7280" }}>
+        {time || "시간 없음"} (현지시간)
+      </Text>
     </View>
   </View>
 );

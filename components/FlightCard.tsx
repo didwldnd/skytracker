@@ -15,7 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 import { usePriceAlert } from "../context/PriceAlertContext";
 import { useFavorite } from "../context/FavoriteContext";
-import { formatPrice } from "../utils/formatters";
+import { formatPrice, formatDurationKo } from "../utils/formatters";
 import {
   registerFlightAlert,
   FlightAlertRequestDto,
@@ -24,57 +24,14 @@ import {
 const THEME = "#0be5ecd7";
 const { width } = Dimensions.get("window");
 
-/* ----- 기존 포맷/헬퍼 (로직 유지) ----- */
+/* ----- 헬퍼 ----- */
 
-const parseDurationMinutes = (iso?: string) => {
-  if (!iso) return 0;
-  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
-  if (!m) return 0;
-  const h = Number(m[1] || 0);
-  const min = Number(m[2] || 0);
-  return h * 60 + min;
-};
-
-const formatMinutesKo = (minutes: number) => {
-  if (!minutes || minutes <= 0) return "정보 없음";
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  if (h && m) return `${h}시간 ${m}분`;
-  if (h) return `${h}시간`;
-  return `${m}분`;
-};
-
+// 출발/도착 시간은 단순 문자열 파싱만 (시차 계산 X)
 const formatTime = (iso?: string) => {
   if (!iso) return "--:--";
-  const d = new Date(iso);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-};
-
-const isIso = (s?: string) => !!s && !Number.isNaN(Date.parse(s));
-const makeDurationISO = (start?: string, end?: string, fallback?: string) => {
-  if (isIso(start) && isIso(end)) {
-    const diffMs = new Date(end!).getTime() - new Date(start!).getTime();
-    if (diffMs > 0) {
-      const mins = Math.round(diffMs / 60000);
-      const h = Math.floor(mins / 60);
-      const m = mins % 60;
-      return `PT${h ? `${h}H` : ""}${m ? `${m}M` : ""}` || "PT0M";
-    }
-  }
-  return fallback ?? "";
-};
-
-const formatDuration = (iso?: string) => {
-  if (!iso) return "정보 없음";
-  const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
-  if (!m) return "정보 없음";
-  const h = Number(m[1] || 0);
-  const min = Number(m[2] || 0);
-  if (h && min) return `${h}시간 ${min}분`;
-  if (h) return `${h}시간`;
-  return `${min}분`;
+  const parts = iso.split("T");
+  if (parts.length < 2) return "--:--";
+  return parts[1].slice(0, 5); // "HH:mm"
 };
 
 const formatFlightNo = (code?: string, num?: string | number) => {
@@ -116,31 +73,18 @@ const FlightCard = ({
 
   const [alertLoading, setAlertLoading] = useState(false);
 
+  // 출발/도착 시간: outbound* 우선, 없으면 구 DTO(departureTime/arrivalTime) 사용
   const departureTime =
     flight.outboundDepartureTime ?? (flight as any).departureTime;
-  const arrivalTime = flight.outboundArrivalTime ?? (flight as any).arrivalTime;
+  const arrivalTime =
+    flight.outboundArrivalTime ?? (flight as any).arrivalTime;
 
-  const rawOutboundDuration =
+  // 🔥 duration은 절대 Date로 계산하지 않고, 서버에서 준 ISO duration만 사용
+  const outboundDurationIso =
     flight.outboundDuration ?? (flight as any).duration ?? "";
 
-  // 서버 duration이 이상하면 출발/도착 시각으로 다시 계산
-  const outboundDurationIso = makeDurationISO(
-    departureTime,
-    arrivalTime,
-    flight.outboundDuration ?? (flight as any).duration ?? ""
-  );
-
-  const returnDurationIso: string | undefined =
-    (flight.returnDuration as string | null | undefined) ?? undefined;
-
-  const isRoundTrip =
-    !!flight.returnDepartureTime && !!flight.returnArrivalTime;
-
-  const totalMinutes =
-    parseDurationMinutes(outboundDurationIso) +
-    (isRoundTrip ? parseDurationMinutes(returnDurationIso) : 0);
-
-  const displayDuration = formatDuration(outboundDurationIso);
+  // 카드에서는 가는 편 duration만 표시 (왕복이어도 요약이라 이렇게 가는 걸로)
+  const displayDuration = formatDurationKo(outboundDurationIso);
 
   const cls = seatLabel(flight.travelClass);
   const diff = diffPct(flight.price, flight.previousPrice);
@@ -182,7 +126,9 @@ const FlightCard = ({
       // price 안전 가드
       const rawPrice = (flight as any).price;
       const numPrice = Number(rawPrice);
-      const safeLastCheckedPrice = Number.isFinite(numPrice) ? Math.round(numPrice) : 0;
+      const safeLastCheckedPrice = Number.isFinite(numPrice)
+        ? Math.round(numPrice)
+        : 0;
 
       const dto: FlightAlertRequestDto = {
         airlineCode: flight.airlineCode,

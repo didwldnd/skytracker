@@ -53,35 +53,24 @@ export const formatPrice = (
   }
 };
 
-/**
- * ISO 날짜 문자열 -> "HH:mm"
- * - 잘못된 값이면 "시간 없음" 반환
- * - 기본: 로컬 시간대. UTC로 강제하려면 useUTC=true
- */
-export const formatTimeHHmm = (iso?: string, useUTC = false): string => {
+// "2025-11-28T12:35:00" → "12:35"
+export const formatTimeHHmm = (iso?: string): string => {
   if (!iso) return "시간 없음";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "시간 없음";
-  const getH = useUTC ? d.getUTCHours.bind(d) : d.getHours.bind(d);
-  const getM = useUTC ? d.getUTCMinutes.bind(d) : d.getMinutes.bind(d);
-  const hh = String(getH()).padStart(2, "0");
-  const mm = String(getM()).padStart(2, "0");
-  return `${hh}:${mm}`;
+  const parts = iso.split("T");
+  if (parts.length < 2) return "시간 없음";
+  // HH:mm만 남기기
+  return parts[1].slice(0, 5);
 };
 
-/**
- * 항공권 표기용 "HH:mm (ICN)" 형태
- * - code 없으면 "(ICN)" 없이 시간만 반환
- * - 잘못된 값이면 "시간 없음" 반환
- */
+// "2025-11-28T12:35:00", "ICN" → "12:35 (ICN)"
 export function formatFlightTime(iso?: string, code?: string): string {
   if (!iso) return "시간 없음";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "시간 없음";
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return code ? `${hh}:${mm} (${code})` : `${hh}:${mm}`;
+  const parts = iso.split("T");
+  if (parts.length < 2) return "시간 없음";
+  const hhmm = parts[1].slice(0, 5);
+  return code ? `${hhmm} (${code})` : hhmm;
 }
+
 
 /**
  * ISO 8601 Duration(PT#H#M[#S]) -> "X시간 Y분"
