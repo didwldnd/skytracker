@@ -9,10 +9,7 @@ import FlightResult from "./screens/FlightResultScreen/FlightResultScreen";
 import LoginScreen from "./screens/LoginScreen/LoginScreen";
 import FlightDetailScreen from "./screens/FlightResultScreen/FlightDetailScreen";
 import SplashScreen from "./screens/SplashScreen/SplashScreen";
-import FavoriteListScreen from "./screens/ProfileScreen/FavoriteListScreen";
 import CityFlightListScreen from "./screens/SearchScreen/CityFlightListScreen";
-
-import { FavoriteProvider } from "./context/FavoriteContext";
 import { PriceAlertProvider } from "./context/PriceAlertContext";
 import { UserSettingsProvider } from "./context/UserSettingsContext";
 import { FlightSearchResponseDto } from "./types/FlightResultScreenDto";
@@ -47,7 +44,6 @@ export default function App() {
         <SafeAreaView style={{ flex: 1 }}>
           <UserSettingsProvider>
             <PriceAlertProvider>
-              <FavoriteProvider>
                 <NavigationContainer>
                   <Stack.Navigator
                     initialRouteName="Splash"
@@ -69,17 +65,12 @@ export default function App() {
                       component={FlightDetailScreen}
                     />
                     <Stack.Screen
-                      name="FavoriteList"
-                      component={FavoriteListScreen}
-                    />
-                    <Stack.Screen
                       name="CityFlightList"
                       component={CityFlightListScreen}
                       options={{ title: "도시별 항공편" }}
                     />
                   </Stack.Navigator>
                 </NavigationContainer>
-              </FavoriteProvider>
             </PriceAlertProvider>
           </UserSettingsProvider>
         </SafeAreaView>

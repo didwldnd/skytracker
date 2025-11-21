@@ -17,6 +17,11 @@ interface PriceAlertContextProps {
   addAlert: (flight: FlightSearchResponseDto) => void;
   removeAlert: (flight: FlightSearchResponseDto) => void;
   isAlerted: (flight: FlightSearchResponseDto) => boolean;
+  /**
+   * 서버에서 가져온 알림 목록을 기준으로
+   * 로컬 스냅샷에 "부족한 것만" 채워 넣는 용도
+   * (이미 있는 알림은 덮어쓰지 않음)
+   */
   resetAlertsFromServer: (flights: FlightSearchResponseDto[]) => void;
 }
 
@@ -48,7 +53,7 @@ export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
     })();
   }, []);
 
-  // ---------- persist 함수(★ reset에서 호출됨) ----------
+  // ---------- persist ----------
   const persist = useCallback(
     async (map: Record<string, FlightSearchResponseDto>) => {
       setAlerts(map);
@@ -64,7 +69,7 @@ export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
     []
   );
 
-  // ---------- 알리미 로컬 추가 ----------
+  // ---------- 알림 로컬 추가(검색 결과에서 알림 켤 때) ----------
   const addAlert = (flight: FlightSearchResponseDto) => {
     const key = generateAlertKey(flight);
     if (alerts[key]) return;
@@ -72,7 +77,7 @@ export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
     persist(next);
   };
 
-  // ---------- 알리미 로컬 삭제 ----------
+  // ---------- 알림 로컬 삭제(알림 끌 때/삭제할 때) ----------
   const removeAlert = (flight: FlightSearchResponseDto) => {
     const key = generateAlertKey(flight);
     if (!alerts[key]) return;
@@ -81,16 +86,27 @@ export const PriceAlertProvider = ({ children }: { children: ReactNode }) => {
     persist(next);
   };
 
-  // ---------- 서버 기준으로 전체 동기화 (여기에서 persist 사용 가능) ----------
+  /**
+   * 🔥 서버 기준으로 전체 동기화
+   *
+   * - 이미 로컬에 있는 알림(snapshots)은 유지
+   * - 서버에서 새로 생긴 알림만 mapAlertToFlightDto 결과로 채워넣기
+   * - 즉 "머지"만 하고, 기존 데이터는 절대 덮어쓰지 않는다
+   */
   const resetAlertsFromServer = useCallback(
     (flights: FlightSearchResponseDto[]) => {
-      const map: Record<string, FlightSearchResponseDto> = {};
+      const next: Record<string, FlightSearchResponseDto> = { ...alerts };
+
       for (const f of flights) {
-        map[generateAlertKey(f)] = f;
+        const key = generateAlertKey(f);
+        if (!next[key]) {
+          next[key] = f; // 로컬에 없을 때만 서버 데이터를 저장
+        }
       }
-      persist(map);
+
+      persist(next);
     },
-    [persist]
+    [alerts, persist]
   );
 
   const isAlerted = (flight: FlightSearchResponseDto) => {

@@ -23,4 +23,6 @@ export interface FlightSearchResponseDto {
   isChangeable: boolean;   // or changeable
   currency: string;
   price: number;           // ✅ 왕복이면 왕복 전체 가격, 편도면 편도 가격
+
+  tripType?:"ONE_WAY" | "ROUND_TRIP";
 }

@@ -10,11 +10,9 @@ import {
   Alert,
 } from "react-native";
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
-import { FontAwesome } from "@expo/vector-icons";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 import { usePriceAlert } from "../context/PriceAlertContext";
-import { useFavorite } from "../context/FavoriteContext";
 import { formatPrice, formatDurationKo } from "../utils/formatters";
 import {
   registerFlightAlert,
@@ -65,9 +63,6 @@ const FlightCard = ({
   };
   onPress?: () => void;
 }) => {
-  const { toggleFavorite, isFavorite } = useFavorite();
-  const favorite = isFavorite(flight);
-
   const { addAlert, removeAlert, isAlerted } = usePriceAlert();
   const alerted = isAlerted(flight);
 
@@ -312,14 +307,6 @@ const FlightCard = ({
                   color={alerted ? "gold" : "#6b7280"}
                 />
               )}
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={() => toggleFavorite(flight)}>
-              <FontAwesome
-                name={favorite ? "heart" : "heart-o"}
-                size={22}
-                color={favorite ? "red" : "#6b7280"}
-              />
             </TouchableOpacity>
           </View>
         </View>

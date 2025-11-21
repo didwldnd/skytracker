@@ -139,7 +139,7 @@ const formatSeatClass = (cls: string) => {
   }
 };
 
-// 🔄 서버 알림 DTO → FlightSearchResponseDto로 매핑
+// 🔄 서버 알림 DTO → FlightSearchResponseDto (fallback용 간이 데이터)
 const mapAlertToFlightDto = (
   alert: FlightAlertItem
 ): FlightSearchResponseDto => {
@@ -152,17 +152,19 @@ const mapAlertToFlightDto = (
     arrivalAirport: alert.arrivalAirport,
 
     outboundDepartureTime: alert.departureDate
-      ? alert.departureDate + "T00:00:00"
+      ? `${alert.departureDate}T00:00:00`
       : "",
     outboundArrivalTime: alert.departureDate
-      ? alert.departureDate + "T00:00:00"
+      ? `${alert.departureDate}T00:00:00`
       : "",
     outboundDuration: "",
 
     returnDepartureTime: alert.arrivalDate
-      ? alert.arrivalDate + "T00:00:00"
+      ? `${alert.arrivalDate}T00:00:00`
       : "",
-    returnArrivalTime: alert.arrivalDate ? alert.arrivalDate + "T00:00:00" : "",
+    returnArrivalTime: alert.arrivalDate
+      ? `${alert.arrivalDate}T00:00:00`
+      : "",
     returnDuration: "",
 
     travelClass: alert.travelClass,
@@ -176,6 +178,7 @@ const mapAlertToFlightDto = (
   };
 };
 
+// 🔎 알림 DTO와 로컬 스냅샷(PriceAlertContext.alerts) 매칭해서 원본 flight 찾기
 const findFlightFromLocalAlerts = (
   alertsMap: Record<string, FlightSearchResponseDto>,
   alert: FlightAlertItem
@@ -221,7 +224,7 @@ export default function PriceAlertScreen() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginChecked, setLoginChecked] = useState(false);
 
-  // 📡 서버에서 가져온 알림 목록
+  // 📡 서버에서 가져온 알림 목록 (UI용)
   const [alertList, setAlertList] = useState<FlightAlertItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -241,8 +244,8 @@ export default function PriceAlertScreen() {
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
-  // 알림 목록 불러오기 (+ 컨텍스트 싹 동기화)
-  const loadAlerts = useCallback(async () => {
+  // 🔁 알림 목록 불러오기 (+ 로컬 스냅샷과 머지)
+  const loadAlerts = async () => {
     if (!isLoggedIn) return;
     try {
       setLoading(true);
@@ -256,7 +259,7 @@ export default function PriceAlertScreen() {
       // 1) 화면용 리스트 상태
       setAlertList(data);
 
-      // 2) 스위치 기본값들
+      // 2) 개별 스위치 상태 초기화
       const initialStates: { [key: string]: boolean } = {};
       data.forEach((item) => {
         initialStates[String(item.alertId)] =
@@ -267,11 +270,10 @@ export default function PriceAlertScreen() {
       const allOn = data.length > 0 && data.every((a) => a.active);
       setGlobalSwitch(allOn);
 
-      // 3) PriceAlertContext + AsyncStorage를 "서버 기준"으로 싹 동기화
+      // 3) 컨텍스트에 서버 알림 목록을 "추가만" 한다 (이미 있는 스냅샷은 유지)
       const activeAlerts = data.filter((a) => a.active);
       const flightsForContext: FlightSearchResponseDto[] =
         activeAlerts.map(mapAlertToFlightDto);
-
       resetAlertsFromServer(flightsForContext);
     } catch (e) {
       console.log("loadAlerts error", e);
@@ -279,7 +281,7 @@ export default function PriceAlertScreen() {
     } finally {
       setLoading(false);
     }
-  }, [isLoggedIn, resetAlertsFromServer]);
+  };
 
   // 로그인 상태 확인
   useEffect(() => {
@@ -297,15 +299,18 @@ export default function PriceAlertScreen() {
     checkLogin();
   }, []);
 
-  // 화면 포커스될 때마다 새로 로드
+  // 화면 포커스될 때마다 서버에서 새로 로드
   useFocusEffect(
     useCallback(() => {
-      if (isLoggedIn) loadAlerts();
-    }, [isLoggedIn, loadAlerts])
+      if (isLoggedIn) {
+        loadAlerts();
+      }
+    }, [isLoggedIn])
   );
 
   const stop = (e: GestureResponderEvent) => e.stopPropagation();
 
+  // 🔔 개별 알림 토글
   const handleToggleAlert = async (item: FlightAlertItem) => {
     const { alertId } = item;
     if (!alertId || togglingId !== null) return;
@@ -321,17 +326,18 @@ export default function PriceAlertScreen() {
         [id]: !prev,
       }));
 
-      // 2) 서버 토글 호출
+      // 2) 서버 토글
       await toggleFlightAlert(alertId);
 
       const nextActive = !prev;
 
-      // 3) alertList 상태 업데이트 + 컨텍스트 동기화
+      // 3) alertList 상태 업데이트
       const updatedList = alertList.map((a) =>
         a.alertId === alertId ? { ...a, active: nextActive } : a
       );
       setAlertList(updatedList);
 
+      // 4) 컨텍스트에 active=true인 것만 머지
       const activeAlerts = updatedList.filter((a) => a.active);
       const flightsForContext = activeAlerts.map(mapAlertToFlightDto);
       resetAlertsFromServer(flightsForContext);
@@ -349,20 +355,24 @@ export default function PriceAlertScreen() {
     }
   };
 
+  // ✈ 상세 화면 이동
   const goDetail = (alert: FlightAlertItem) => {
     const matched = findFlightFromLocalAlerts(localAlerts, alert);
 
     if (matched) {
+      // ✅ 이 기기에서 저장해두었던 "진짜 flight" 스냅샷 사용
       navigation.navigate("FlightDetail", { flight: matched });
       return;
     }
 
+    // ❗ 스냅샷이 없으면 서버 DTO 기반의 "거친" flight로라도 보여준다
     const fakeFlight: FlightSearchResponseDto = mapAlertToFlightDto(alert);
     navigation.navigate("FlightDetail", { flight: fakeFlight });
   };
+
   const [globalToggling, setGlobalToggling] = useState(false);
 
-  // 전체 알림 토글 (UI 전용)
+  // 전체 알림 토글
   const toggleGlobalSwitch = async () => {
     if (globalToggling || alertList.length === 0) return;
 
@@ -370,7 +380,7 @@ export default function PriceAlertScreen() {
     setGlobalToggling(true);
 
     try {
-      // 1) UI 먼저 반영 (낙관적 업데이트)
+      // 1) UI 먼저 반영
       setGlobalSwitch(newVal);
 
       setSwitchStates((prev) => {
@@ -382,7 +392,7 @@ export default function PriceAlertScreen() {
         return updated;
       });
 
-      // 2) 서버에 실제 전체 토글 요청 (개별 토글 반복)
+      // 2) 서버에 실제 전체 토글 요청
       const targets = alertList.filter((item) =>
         typeof item.active === "boolean" ? item.active !== newVal : true
       );
@@ -393,7 +403,7 @@ export default function PriceAlertScreen() {
           .map((t) => toggleFlightAlert(t.alertId!))
       );
 
-      // 3) alertList 상태 업데이트 + 컨텍스트 동기화
+      // 3) alertList 상태 업데이트
       const updatedList = alertList.map((a) =>
         a.alertId && targets.some((t) => t.alertId === a.alertId)
           ? { ...a, active: newVal }
@@ -401,6 +411,7 @@ export default function PriceAlertScreen() {
       );
       setAlertList(updatedList);
 
+      // 4) 컨텍스트도 active=true인 것만 머지
       const activeAlerts = updatedList.filter((a) => a.active);
       const flightsForContext = activeAlerts.map(mapAlertToFlightDto);
       resetAlertsFromServer(flightsForContext);
@@ -408,7 +419,7 @@ export default function PriceAlertScreen() {
       console.log("[toggleGlobalSwitch] error", e);
       Alert.alert("오류", "전체 알림 변경에 실패했어요.");
 
-      // 실패 시 서버 상태 다시 맞추기 (안전하게)
+      // 실패 시 서버 상태와 다시 동기화
       await loadAlerts();
     } finally {
       setGlobalToggling(false);

@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { Avatar } from "react-native-paper";
 import { Feather } from "@expo/vector-icons";
-import { useFavorite } from "../../context/FavoriteContext";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
@@ -32,7 +31,6 @@ import { deleteAccount, fetchProfile, updateUser } from "../../api/user";
 const themeColor = "white";
 const HEADER_BG = "#0be5ecd7";
 
-// ------------------ Reusable Pretty Info Sheet ------------------
 // ------------------ Reusable Pretty Info Sheet ------------------
 function InfoSheet({
   visible,
@@ -118,7 +116,6 @@ const Divider = () => <View style={styles.divider} />;
 const ProfileScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { favorites } = useFavorite(); // 필요시 사용
   const { preferredDepartureAirport, setPreferredDepartureAirport, loading } =
     useUserSettings();
 
@@ -140,7 +137,7 @@ const ProfileScreen = () => {
     const loadProfile = async () => {
       try {
         const profile = await fetchProfile();
-        console.log("🔥 profile from backend:", profile); // 👈 추가
+        console.log("🔥 profile from backend:", profile);
 
         if (profile) {
           setUser({
@@ -162,33 +159,31 @@ const ProfileScreen = () => {
   }, []);
 
   // 로그아웃 실행 함수
-const handleConfirmLogout = async () => {
-  try {
-    await logout(); // 서버 + 토큰 삭제 등
+  const handleConfirmLogout = async () => {
+    try {
+      await logout(); // 서버 + 토큰 삭제 등
 
-    // 프론트 상태에서 로그인 유저를 없앰
-    setUser(null);
+      // 프론트 상태에서 로그인 유저를 없앰
+      setUser(null);
 
-    Alert.alert("로그아웃", "정상적으로 로그아웃되었습니다.");
-  } catch (e) {
-    console.error("로그아웃 에러:", e);
-    Alert.alert("에러", "로그아웃에 실패했습니다. 다시 시도해주세요.");
-  }
-};
-
+      Alert.alert("로그아웃", "정상적으로 로그아웃되었습니다.");
+    } catch (e) {
+      console.error("로그아웃 에러:", e);
+      Alert.alert("에러", "로그아웃에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
 
   // 로그아웃 버튼 눌렀을 때: 확인창 띄우기
-const handleLogoutPress = () => {
-  Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
-    { text: "취소", style: "cancel" },
-    {
-      text: "로그아웃",
-      style: "destructive",
-      onPress: handleConfirmLogout,
-    },
-  ]);
-};
-
+  const handleLogoutPress = () => {
+    Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "로그아웃",
+        style: "destructive",
+        onPress: handleConfirmLogout,
+      },
+    ]);
+  };
 
   // SearchModal 제어
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -202,6 +197,7 @@ const handleLogoutPress = () => {
 
   // Pretty placeholder sheet state
   type SheetKind =
+    | "즐겨찾기"
     | "알림 설정"
     | "언어 및 통화"
     | "예약 내역"
@@ -238,14 +234,8 @@ const handleLogoutPress = () => {
     setEditVisible(true);
   };
 
-  // ✅ 내 정보 수정 저장 (이제 username만 수정, email은 그대로 유지)
+  // ✅ 내 정보 수정 저장 (username만 수정, email은 그대로 유지)
   const handleSaveEdit = async () => {
-    // 기존 이메일까지 같이 체크하던 로직 주석 처리
-    // if (!editUsername.trim() || !editEmail.trim()) {
-    //   Alert.alert("알림", "이름과 이메일을 모두 입력해주세요.");
-    //   return;
-    // }
-
     if (!editUsername.trim()) {
       Alert.alert("알림", "이름을 입력해주세요.");
       return;
@@ -255,7 +245,6 @@ const handleLogoutPress = () => {
       setSaving(true);
       const updated = await updateUser({
         username: editUsername.trim(),
-        // ✅ 이메일은 변경하지 않고, 기존 값 그대로 전송
         email: editEmail,
       });
 
@@ -364,11 +353,10 @@ const handleLogoutPress = () => {
               key={index}
               style={styles.sectionItem}
               onPress={() => {
-                if (item.label === "즐겨찾기") {
-                  navigation.navigate("FavoriteList");
-                } else if (item.label === "내 정보 수정") {
+                if (item.label === "내 정보 수정") {
                   openEditModal();
                 } else {
+                  // ✅ 즐겨찾기 포함해서 전부 InfoSheet로 통일
                   openSheet(item.label as Exclude<SheetKind, null>);
                 }
               }}
@@ -418,6 +406,25 @@ const handleLogoutPress = () => {
         data={airportData}
         fieldLabel="출발지"
       />
+
+      {/* ✅ 즐겨찾기 안내 시트 */}
+      <InfoSheet
+        visible={sheet === "즐겨찾기"}
+        onClose={closeSheet}
+        title="즐겨찾기"
+        subtitle="자주 조회하는 항공편을 한 곳에 모아볼 수 있어요."
+      >
+        <Text style={styles.subhead}>서비스 준비 중</Text>
+        <Text style={styles.caption}>
+          즐겨찾기 기능은 현재 준비 중입니다.{"\n"}곧 원하는 항공편을
+          저장해두고, 가격 변동과 함께 한 번에 확인할 수 있도록 업데이트될
+          예정이에요.
+        </Text>
+        <Divider />
+        <Text style={styles.caption}>
+          조금만 기다려 주시면 더 편리한 경험을 제공해 드릴게요 ✈️
+        </Text>
+      </InfoSheet>
 
       {/* ✅ Pretty placeholder sheets (view-only) */}
       <InfoSheet
@@ -593,6 +600,8 @@ const handleLogoutPress = () => {
         <Divider />
         <Text style={styles.caption}>※ 실제 동작하지 않는 미리보기입니다.</Text>
       </InfoSheet>
+
+      {/* 내 정보 수정 모달 */}
       <Modal
         visible={editVisible}
         animationType="slide"
@@ -600,6 +609,12 @@ const handleLogoutPress = () => {
         onRequestClose={() => setEditVisible(false)}
       >
         <View style={styles.editBackdrop}>
+          {/* 바깥 여백 누르면 닫히도록 */}
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setEditVisible(false)}
+          />
+
           <View style={styles.editCard}>
             <Text style={styles.editTitle}>내 정보 수정</Text>
 
@@ -887,6 +902,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   disabledBtnText: { color: "white", fontWeight: "600" },
+
   // ✅ 내 정보 수정 모달
   editBackdrop: {
     flex: 1,

@@ -32,10 +32,7 @@ const FlightDetailScreen: React.FC = () => {
     }
   }
 
-  // ✅ 왕복/편도 판별: return* 존재 여부로
-  const isRoundTrip = !!(
-    flight.returnDepartureTime && flight.returnArrivalTime
-  );
+  const isRoundTrip = flight.tripType === "ROUND_TRIP";
 
   // ✅ 가는 편 세트 (편도 fallback 포함)
   const oDep: string =
