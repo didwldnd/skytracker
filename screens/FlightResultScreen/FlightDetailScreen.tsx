@@ -101,7 +101,7 @@ const FlightDetailScreen: React.FC = () => {
         />
         <InfoRow
           icon={<Feather name="calendar" size={18} color={THEME} />}
-          label="총 소요 시간"
+          label="비행 시간"
           value={formatDuration(oDur)}
         />
       </SectionCard>

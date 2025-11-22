@@ -1,9 +1,9 @@
 import axios from "axios";
 import type { FlightSearchRequestDto } from "../types/FlightSearchRequestDto";
-import type { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
+import type { FlightSearchResponseDto,BackendFlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import { API_BASE } from "../config/env";
+import { mapBackendFlightToFrontend } from "./mapBackendFlight";
 
-// Wi-Fi 바뀔 때 바꿔야 하는 기존 베이스
 const API_BASE_URL =
   API_BASE;
 
@@ -18,38 +18,27 @@ const http = axios.create({
   headers: { "Content-Type": "application/json" }, // 모든 요청은 JSON으로 처리
 });
 
-// ===== 기존 검색 =====
-export async function searchFlights(request: FlightSearchRequestDto) {
-  try {
-    const res = await http.post<FlightSearchResponseDto[]>(
-      "/api/flights/search",
-      request
-    );
+export const searchFlights = async (
+  payload: FlightSearchRequestDto
+): Promise<FlightSearchResponseDto[]> => {
+  const res = await http.post<BackendFlightSearchResponseDto[]>(
+    "/api/flights/search",
+    payload
+  );
 
-    return res.data;
-  } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const cfg = err.config;
 
-      // 🔵 최종 URL 로그 찍기
-      console.log(
-        "🔵 FINAL URL:",
-        `${cfg?.baseURL || ""}${cfg?.url || ""}`
-      );
+  const rawList = res.data ?? [];
 
-      console.log("🔴 AXIOS ERROR:", {
-        message: err.message,
-        code: err.code,
-        status: err.response?.status,
-        data: err.response?.data,
-      });
-    } else {
-      console.log("🔴 UNKNOWN ERROR:", err);
+  const mapped: FlightSearchResponseDto[] = rawList.map(
+    (item, idx): FlightSearchResponseDto => {
+      const f = mapBackendFlightToFrontend(item);
+      console.log("✅ mapped flight", idx, f);
+      return f;
     }
+  );
 
-    throw err;
-  }
-}
+  return mapped;
+};
 
 // // ===== 인기도시 → 항공편 DTO[] (카드 탭 시 호출) =====
 // // 연동 실패, 네트워크 이슈 mock 데이터 사용
