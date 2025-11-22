@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Modal,
   Animated,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
 
@@ -286,39 +287,45 @@ const DateSelector = ({
 
       {/* 달력 모달 */}
       <Modal visible={showDeparturePicker} transparent animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.calendarWrapper}>
-            <Calendar
-              key={String(startDate) + "_" + String(endDate)}
-              current={currentMonth}
-              onDayPress={onDayPress}
-              markedDates={markedDates}
-              markingType={"period"}
-              minDate={formatDate(new Date())}
-              theme={{
-                selectedDayBackgroundColor: THEME,
-                todayTextColor: THEME,
-                arrowColor: THEME,
-                textDayFontWeight: "500",
-                textMonthFontWeight: "bold",
-              }}
-            />
-            <View style={styles.buttonRow}>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: "#ccc" }]}
-                onPress={() => setShowDeparturePicker(false)}
-              >
-                <Text style={styles.modalButtonText}>닫기</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: THEME }]}
-                onPress={() => setShowDeparturePicker(false)}
-              >
-                <Text style={styles.modalButtonText}>적용</Text>
-              </TouchableOpacity>
-            </View>
+        {/* ✅ 바깥 어두운 영역 터치하면 닫힘 */}
+        <TouchableWithoutFeedback onPress={() => setShowDeparturePicker(false)}>
+          <View style={styles.modalContainer}>
+            {/* ✅ 아래 시트 부분은 터치해도 닫히지 않도록 한 번 더 감싸서 이벤트 차단 */}
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.calendarWrapper}>
+                <Calendar
+                  key={String(startDate) + "_" + String(endDate)}
+                  current={currentMonth}
+                  onDayPress={onDayPress}
+                  markedDates={markedDates}
+                  markingType={"period"}
+                  minDate={formatDate(new Date())}
+                  theme={{
+                    selectedDayBackgroundColor: THEME,
+                    todayTextColor: THEME,
+                    arrowColor: THEME,
+                    textDayFontWeight: "500",
+                    textMonthFontWeight: "bold",
+                  }}
+                />
+                <View style={styles.buttonRow}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+                    onPress={() => setShowDeparturePicker(false)}
+                  >
+                    <Text style={styles.modalButtonText}>닫기</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: THEME }]}
+                    onPress={() => setShowDeparturePicker(false)}
+                  >
+                    <Text style={styles.modalButtonText}>적용</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </View>
   );
