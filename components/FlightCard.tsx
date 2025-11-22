@@ -116,8 +116,8 @@ const FlightCard = ({
           return (
             a.airlineCode === flight.airlineCode &&
             String(a.flightNumber) === String(flight.flightNumber) &&
-            a.departureAirport === flight.departureAirport &&
-            a.arrivalAirport === flight.arrivalAirport &&
+            a.origin === flight.departureAirport &&
+            a.destination === flight.arrivalAirport &&
             a.departureDate === departureDate &&
             a.travelClass === flight.travelClass
           );
@@ -159,14 +159,19 @@ const FlightCard = ({
       const dto: FlightAlertRequestDto = {
         airlineCode: flight.airlineCode,
         flightNumber: String(flight.flightNumber),
-        departureAirport: flight.departureAirport,
-        arrivalAirport: flight.arrivalAirport,
+
+        originLocationAirport: flight.departureAirport,
+        destinationLocationAirport: flight.arrivalAirport,
+
         departureDate,
-        arrivalDate: returnIso ? returnIso.split("T")[0] : null,
+        returnDate: returnIso ? returnIso.split("T")[0] : null,
+
         travelClass: flight.travelClass,
         currency: flight.currency ?? "KRW",
-        adults: 1,
         lastCheckedPrice: safeLastCheckedPrice,
+        adults: 1,
+        nonStop: !!flight.nonStop,
+        roundTrip: flight.tripType === "ROUND_TRIP",
       };
 
       console.log("🚀 [FlightCard] register alert payload:", dto);

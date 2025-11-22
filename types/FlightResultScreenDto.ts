@@ -24,5 +24,8 @@ export interface FlightSearchResponseDto {
   currency: string;
   price: number;           // ✅ 왕복이면 왕복 전체 가격, 편도면 편도 가격
 
+  origin: string;
+  destination: string;
+
   tripType?:"ONE_WAY" | "ROUND_TRIP";
 }

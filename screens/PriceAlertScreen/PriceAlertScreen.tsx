@@ -140,33 +140,32 @@ const formatSeatClass = (cls: string) => {
   }
 };
 
-// 🔄 서버 alert DTO -> 실제 FlightSearchResponseDto 형태로 최대한 보존
 const mapAlertToFlightDto = (
   alert: FlightAlertItem
 ): FlightSearchResponseDto => {
   return {
     airlineCode: alert.airlineCode,
-    // 🔥 타입에 없는 필드는 any로 한 번만 우회
     airlineName: (alert as any).airlineName ?? alert.airlineCode,
     flightNumber: alert.flightNumber,
 
-    departureAirport: alert.departureAirport,
-    arrivalAirport: alert.arrivalAirport,
+    // 공항 코드 매핑
+    departureAirport: alert.origin,
+    arrivalAirport: alert.destination,
+    origin: alert.origin,
+    destination: alert.destination,
 
-    // 왕복이면 둘 다 날짜 넣고, 편도면 return* 비워둠
+    // 날짜 → ISO 흉내만 내주기
     outboundDepartureTime: alert.departureDate
-      ? alert.departureDate + "T00:00:00"
+      ? `${alert.departureDate}T00:00:00`
       : "",
     outboundArrivalTime: alert.departureDate
-      ? alert.departureDate + "T00:00:00"
+      ? `${alert.departureDate}T00:00:00`
       : "",
     outboundDuration: "",
 
-    returnDepartureTime: alert.arrivalDate
-      ? alert.arrivalDate + "T00:00:00"
-      : "",
-    returnArrivalTime: alert.arrivalDate ? alert.arrivalDate + "T00:00:00" : "",
-    returnDuration: alert.arrivalDate ? "" : "",
+    returnDepartureTime: alert.returnDate ? `${alert.returnDate}T00:00:00` : "",
+    returnArrivalTime: alert.returnDate ? `${alert.returnDate}T00:00:00` : "",
+    returnDuration: alert.returnDate ? "" : "",
 
     travelClass: alert.travelClass,
     numberOfBookableSeats: 0,
@@ -176,6 +175,9 @@ const mapAlertToFlightDto = (
 
     isRefundable: false,
     isChangeable: false,
+
+    // tripType도 넣어주면 나중에 쓸 때 편함
+    tripType: alert.returnDate ? "ROUND_TRIP" : "ONE_WAY",
   };
 };
 
@@ -191,7 +193,7 @@ const findFlightFromLocalAlerts = (
   const list = Object.values(alertsMap);
 
   const depDate = alert.departureDate ?? "";
-  const retDate = alert.arrivalDate ?? "";
+  const retDate = alert.returnDate ?? "";
   const alertIsRoundTrip = !!retDate;
 
   return list.find((f) => {
@@ -202,25 +204,24 @@ const findFlightFromLocalAlerts = (
     const depPart = depIso.split("T")[0];
     const retPart = retIso.split("T")[0];
 
-    // 공통 조건
+    // 🔹 공통 조건 (여기서 공항 비교를 departureAirport/arrivalAirport vs origin/destination로 맞춰야 함)
     const baseMatch =
       f.airlineCode === alert.airlineCode &&
       String(f.flightNumber) === String(alert.flightNumber) &&
-      f.departureAirport === alert.departureAirport &&
-      f.arrivalAirport === alert.arrivalAirport &&
+      f.departureAirport === alert.origin && // ✅ 이렇게
+      f.arrivalAirport === alert.destination && // ✅ 이렇게
       f.travelClass === alert.travelClass &&
       depPart === depDate;
 
     if (!baseMatch) return false;
 
-    // 🔥 왕복 알림이면 returnDate도 검증해야 한다
+    // 🔥 왕복 알림이면 returnDate도 검증
     if (alertIsRoundTrip) {
       return retPart === retDate;
     }
 
     // 🔥 편도 알림이면 로컬 flight도 편도여야 한다
     const localHasReturn = !!f.returnDepartureTime || !!f.returnArrivalTime;
-
     return !localHasReturn;
   });
 };
@@ -280,11 +281,11 @@ export default function PriceAlertScreen() {
       const initialStates: { [key: string]: boolean } = {};
       data.forEach((item) => {
         initialStates[String(item.alertId)] =
-          typeof item.active === "boolean" ? item.active : true;
+          typeof item.isActive === "boolean" ? item.isActive : true;
       });
       setSwitchStates(initialStates);
 
-      const allOn = data.length > 0 && data.every((a) => a.active);
+      const allOn = data.length > 0 && data.every((a) => a.isActive);
       setGlobalSwitch(allOn);
     } catch (e) {
       console.log("loadAlerts error", e);
@@ -327,7 +328,7 @@ export default function PriceAlertScreen() {
     if (!alertId || togglingId !== null) return;
 
     const id = String(alertId);
-    const prev = switchStates[id] ?? item.active;
+    const prev = switchStates[id] ?? item.isActive;
 
     try {
       // 1) UI 먼저 토글
@@ -344,12 +345,12 @@ export default function PriceAlertScreen() {
 
       // 3) alertList 상태 업데이트
       const updatedList = alertList.map((a) =>
-        a.alertId === alertId ? { ...a, active: nextActive } : a
+        a.alertId === alertId ? { ...a, isActive: nextActive } : a
       );
       setAlertList(updatedList);
 
-      // 4) 컨텍스트에 active=true인 것만 머지
-      const activeAlerts = updatedList.filter((a) => a.active);
+      // 4) 컨텍스트에 isActive=true인 것만 머지
+      const activeAlerts = updatedList.filter((a) => a.isActive);
       const flightsForContext = activeAlerts.map(mapAlertToFlightDto);
       resetAlertsFromServer(flightsForContext);
     } catch (e) {
@@ -405,7 +406,7 @@ export default function PriceAlertScreen() {
 
       // 2) 서버에 실제 전체 토글 요청
       const targets = alertList.filter((item) =>
-        typeof item.active === "boolean" ? item.active !== newVal : true
+        typeof item.isActive === "boolean" ? item.isActive !== newVal : true
       );
 
       await Promise.all(
@@ -417,13 +418,13 @@ export default function PriceAlertScreen() {
       // 3) alertList 상태 업데이트
       const updatedList = alertList.map((a) =>
         a.alertId && targets.some((t) => t.alertId === a.alertId)
-          ? { ...a, active: newVal }
+          ? { ...a, isActive: newVal }
           : a
       );
       setAlertList(updatedList);
 
-      // 4) 컨텍스트도 active=true인 것만 머지
-      const activeAlerts = updatedList.filter((a) => a.active);
+      // 4) 컨텍스트도 isActive=true인 것만 머지
+      const activeAlerts = updatedList.filter((a) => a.isActive);
       const flightsForContext = activeAlerts.map(mapAlertToFlightDto);
       resetAlertsFromServer(flightsForContext);
     } catch (e) {
@@ -440,8 +441,8 @@ export default function PriceAlertScreen() {
   const renderItem = ({ item }: { item: FlightAlertItem }) => {
     const id = String(item.alertId);
 
-    const depCode = item.departureAirport || "-";
-    const arrCode = item.arrivalAirport || "-";
+    const depCode = item.origin || "-";
+    const arrCode = item.destination || "-";
 
     const from = `${airportMap[depCode] ?? depCode} (${depCode})`;
     const to = `${airportMap[arrCode] ?? arrCode} (${arrCode})`;
@@ -449,24 +450,25 @@ export default function PriceAlertScreen() {
     // 1) 로컬 스냅샷 찾기
     const matched = findFlightFromLocalAlerts(localAlerts, item);
 
-    // 2) 날짜/왕복 여부를 스냅샷 기준으로
+    // 2) 날짜: 스냅샷 있으면 거기서, 없으면 서버값 사용
     const departDateStr = matched?.outboundDepartureTime
       ? matched.outboundDepartureTime.split("T")[0]
       : item.departureDate;
 
-    const returnDateStr = matched?.returnDepartureTime ?? null; // 서버 arrivalDate는 안 믿음
+    const returnDateStr = matched?.returnDepartureTime
+      ? matched.returnDepartureTime.split("T")[0]
+      : item.returnDate ?? null;
 
     const departDate = formatDate(departDateStr);
-    const returnDate = returnDateStr
-      ? formatDate(returnDateStr.split("T")[0])
-      : null;
+    const returnDate = returnDateStr ? formatDate(returnDateStr) : null;
 
-    const isRoundTrip = !!matched?.returnDepartureTime;
+    // 3) 왕복 여부: 서버 roundTrip 우선
+    const isRoundTrip = item.roundTrip;
     const tripTypeLabel = isRoundTrip ? "왕복" : "편도";
     const seatInfo = `${tripTypeLabel}, ${formatSeatClass(item.travelClass)}`;
 
     const mainPrice = priceText(item.lastCheckedPrice, item.currency ?? "KRW");
-    const isOn = switchStates[id] ?? item.active;
+    const isOn = switchStates[id] ?? item.isActive;
 
     return (
       <Pressable
@@ -572,7 +574,13 @@ export default function PriceAlertScreen() {
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <View style={styles.globalToggle}>
-        <Text style={styles.globalToggleText}>전체 알림</Text>
+        <View style={{ flexDirection: "column" }}>
+          <Text style={styles.globalToggleText}>전체 알림</Text>
+          <Text style={styles.globalToggleSub}>
+            모든 알림은 이메일로 전송됩니다
+          </Text>
+        </View>
+
         <TouchableOpacity
           onPress={toggleGlobalSwitch}
           disabled={globalToggling || loading}
@@ -724,13 +732,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16,
+    marginBottom: 20,
   },
+
   globalToggleText: {
-    fontSize: 24,
-    fontWeight: "bold",
-    padding: 5,
+    fontSize: 26, // 🔼 기존 18 → 20
+    fontWeight: "700",
+    color: "#111827",
   },
+
+  globalToggleSub: {
+    marginTop: 4, // 🔼 기존 2 → 4 (간격 살짝)
+    fontSize: 18, // 🔼 기존 12 → 14 (가독성↑)
+    color: "#6b7280",
+  },
+
   card: {
     backgroundColor: "#fff",
     borderRadius: 14,

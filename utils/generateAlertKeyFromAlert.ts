@@ -12,10 +12,10 @@ export const generateAlertKeyFromAlert = (a: FlightAlertItem): string => {
   const parts = [
     a.airlineCode ?? "",
     String(a.flightNumber ?? ""),
-    a.departureAirport,
-    a.arrivalAirport,
+    a.origin,
+    a.destination,
     timeToKeyFromDate(a.departureDate),
-    timeToKeyFromDate(a.arrivalDate ?? null),
+    timeToKeyFromDate(a.returnDate ?? null),
     a.travelClass ?? "",
   ];
 
