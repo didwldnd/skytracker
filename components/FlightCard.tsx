@@ -17,6 +17,9 @@ import { formatPrice, formatDurationKo } from "../utils/formatters";
 import {
   registerFlightAlert,
   FlightAlertRequestDto,
+  fetchFlightAlerts,
+  FlightAlertItem,
+  deleteFlightAlert,
 } from "../utils/priceAlertApi";
 
 const THEME = "#0be5ecd7";
@@ -71,8 +74,7 @@ const FlightCard = ({
   // 출발/도착 시간: outbound* 우선, 없으면 구 DTO(departureTime/arrivalTime) 사용
   const departureTime =
     flight.outboundDepartureTime ?? (flight as any).departureTime;
-  const arrivalTime =
-    flight.outboundArrivalTime ?? (flight as any).arrivalTime;
+  const arrivalTime = flight.outboundArrivalTime ?? (flight as any).arrivalTime;
 
   // 🔥 duration은 절대 Date로 계산하지 않고, 서버에서 준 ISO duration만 사용
   const outboundDurationIso =
@@ -87,38 +89,67 @@ const FlightCard = ({
   const handleAlertPress = async () => {
     if (alertLoading) return;
 
-    // 이미 알림 켜져 있으면 → 기존처럼 컨텍스트에서만 제거
-    if (alerted) {
-      removeAlert(flight);
+    // 출발 날짜 ISO
+    const departIso =
+      flight.outboundDepartureTime ?? (flight as any).departureTime;
+
+    if (!departIso) {
+      Alert.alert(
+        "알림 설정 불가",
+        "출발 일자 정보를 찾을 수 없어요. 다시 시도해 주세요."
+      );
       return;
     }
 
+    const departureDate = departIso.split("T")[0];
+
+    // ✅ 1) 이미 알림 켜져 있는 상태 → 서버 & 로컬 둘 다 OFF
+    if (alerted) {
+      try {
+        setAlertLoading(true);
+
+        // 서버 알림 목록 조회
+        const serverAlerts: FlightAlertItem[] = await fetchFlightAlerts();
+
+        // 이 flight에 해당하는 서버 알림 찾기
+        const matched = serverAlerts.find((a) => {
+          return (
+            a.airlineCode === flight.airlineCode &&
+            String(a.flightNumber) === String(flight.flightNumber) &&
+            a.departureAirport === flight.departureAirport &&
+            a.arrivalAirport === flight.arrivalAirport &&
+            a.departureDate === departureDate &&
+            a.travelClass === flight.travelClass
+          );
+        });
+
+        if (matched?.alertId != null) {
+          console.log("🗑 [FlightCard] deleteFlightAlert:", matched.alertId);
+          await deleteFlightAlert(matched.alertId);
+        } else {
+          console.log(
+            "⚠ [FlightCard] 매칭되는 서버 알림(alertId)을 찾지 못했어요. 로컬만 OFF 처리."
+          );
+        }
+
+        // 서버 삭제 성공 or 못 찾았더라도 → 로컬에서는 OFF
+        removeAlert(flight);
+      } catch (e) {
+        console.log("❌ [FlightCard] deleteFlightAlert error:", e);
+        Alert.alert("오류", "알림 해제에 실패했어요.");
+      } finally {
+        setAlertLoading(false);
+      }
+      return;
+    }
+
+    // ✅ 2) 알림이 꺼져 있는 상태 → 서버 등록 + 로컬 ON
     try {
       setAlertLoading(true);
-
-      // 🔔 기존 로직: 컨텍스트에 먼저 추가 → UI에서 즉시 노란 종 표시
-      addAlert(flight);
-
-      const departIso =
-        flight.outboundDepartureTime ?? (flight as any).departureTime;
 
       const returnIso =
         flight.returnDepartureTime ?? (flight as any).returnDepartureTime;
 
-      if (!departIso) {
-        console.log("❌ [FlightCard] departIso 없음, 알림 생성 불가");
-        Alert.alert(
-          "알림 생성 불가",
-          "출발 일자 정보를 찾을 수 없어요. 다시 시도해 주세요."
-        );
-        // 컨텍스트 롤백
-        removeAlert(flight);
-        return;
-      }
-
-      const departureDate = departIso?.split("T")[0] ?? "";
-
-      // price 안전 가드
       const rawPrice = (flight as any).price;
       const numPrice = Number(rawPrice);
       const safeLastCheckedPrice = Number.isFinite(numPrice)
@@ -131,9 +162,7 @@ const FlightCard = ({
         departureAirport: flight.departureAirport,
         arrivalAirport: flight.arrivalAirport,
         departureDate,
-        arrivalDate: flight.returnDepartureTime // ✅ 왕복이면 오는 편 날짜 넣기
-          ? flight.returnDepartureTime.split("T")[0]
-          : null,
+        arrivalDate: returnIso ? returnIso.split("T")[0] : null,
         travelClass: flight.travelClass,
         currency: flight.currency ?? "KRW",
         adults: 1,
@@ -142,11 +171,13 @@ const FlightCard = ({
 
       console.log("🚀 [FlightCard] register alert payload:", dto);
       await registerFlightAlert(dto);
-      console.log("✅ [FlightCard] registerFlightAlert 성공");
+
+      console.log("✅ 서버 등록 성공 → 로컬 ON");
+      addAlert(flight);
     } catch (e) {
       console.log("❌ [FlightCard] registerFlightAlert error:", e);
-      Alert.alert("오류", "알림 등록에 실패했어요. 잠시 후 다시 시도해주세요.");
-      // 실패 시 로컬 알림 롤백
+      Alert.alert("오류", "알림 등록에 실패했어요.");
+      // 혹시 중간에 어디선가 ON 됐어도, 실패면 OFF 쪽으로 맞춘다
       removeAlert(flight);
     } finally {
       setAlertLoading(false);
@@ -294,6 +325,7 @@ const FlightCard = ({
             <TouchableOpacity
               onPress={handleAlertPress}
               disabled={alertLoading}
+              style={{ padding: 10 }}
             >
               {alertLoading ? (
                 <ActivityIndicator

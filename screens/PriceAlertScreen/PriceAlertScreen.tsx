@@ -27,6 +27,7 @@ import {
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 import { usePriceAlert } from "../../context/PriceAlertContext";
 import axios from "axios";
+import { generateAlertKeyFromAlert } from "../../utils/generateAlertKeyFromAlert";
 
 global.Buffer = Buffer;
 
@@ -139,33 +140,33 @@ const formatSeatClass = (cls: string) => {
   }
 };
 
-// 🔄 서버 알림 DTO → FlightSearchResponseDto (fallback용 간이 데이터)
+// 🔄 서버 alert DTO -> 실제 FlightSearchResponseDto 형태로 최대한 보존
 const mapAlertToFlightDto = (
   alert: FlightAlertItem
 ): FlightSearchResponseDto => {
   return {
     airlineCode: alert.airlineCode,
-    airlineName: alert.airlineCode,
+    // 🔥 타입에 없는 필드는 any로 한 번만 우회
+    airlineName: (alert as any).airlineName ?? alert.airlineCode,
     flightNumber: alert.flightNumber,
 
     departureAirport: alert.departureAirport,
     arrivalAirport: alert.arrivalAirport,
 
+    // 왕복이면 둘 다 날짜 넣고, 편도면 return* 비워둠
     outboundDepartureTime: alert.departureDate
-      ? `${alert.departureDate}T00:00:00`
+      ? alert.departureDate + "T00:00:00"
       : "",
     outboundArrivalTime: alert.departureDate
-      ? `${alert.departureDate}T00:00:00`
+      ? alert.departureDate + "T00:00:00"
       : "",
     outboundDuration: "",
 
     returnDepartureTime: alert.arrivalDate
-      ? `${alert.arrivalDate}T00:00:00`
+      ? alert.arrivalDate + "T00:00:00"
       : "",
-    returnArrivalTime: alert.arrivalDate
-      ? `${alert.arrivalDate}T00:00:00`
-      : "",
-    returnDuration: "",
+    returnArrivalTime: alert.arrivalDate ? alert.arrivalDate + "T00:00:00" : "",
+    returnDuration: alert.arrivalDate ? "" : "",
 
     travelClass: alert.travelClass,
     numberOfBookableSeats: 0,
@@ -178,14 +179,20 @@ const mapAlertToFlightDto = (
   };
 };
 
-// 🔎 알림 DTO와 로컬 스냅샷(PriceAlertContext.alerts) 매칭해서 원본 flight 찾기
+const sameDate = (iso?: string | null, dateOnly?: string | null) => {
+  if (!iso || !dateOnly) return false;
+  return iso.split("T")[0] === dateOnly;
+};
+
 const findFlightFromLocalAlerts = (
   alertsMap: Record<string, FlightSearchResponseDto>,
   alert: FlightAlertItem
 ): FlightSearchResponseDto | undefined => {
   const list = Object.values(alertsMap);
+
   const depDate = alert.departureDate ?? "";
   const retDate = alert.arrivalDate ?? "";
+  const alertIsRoundTrip = !!retDate;
 
   return list.find((f) => {
     const depIso = f.outboundDepartureTime ?? (f as any).departureTime ?? "";
@@ -195,16 +202,26 @@ const findFlightFromLocalAlerts = (
     const depPart = depIso.split("T")[0];
     const retPart = retIso.split("T")[0];
 
-    return (
+    // 공통 조건
+    const baseMatch =
       f.airlineCode === alert.airlineCode &&
       String(f.flightNumber) === String(alert.flightNumber) &&
       f.departureAirport === alert.departureAirport &&
       f.arrivalAirport === alert.arrivalAirport &&
       f.travelClass === alert.travelClass &&
-      !!depDate &&
-      depPart === depDate &&
-      (!retDate || retPart === retDate)
-    );
+      depPart === depDate;
+
+    if (!baseMatch) return false;
+
+    // 🔥 왕복 알림이면 returnDate도 검증해야 한다
+    if (alertIsRoundTrip) {
+      return retPart === retDate;
+    }
+
+    // 🔥 편도 알림이면 로컬 flight도 편도여야 한다
+    const localHasReturn = !!f.returnDepartureTime || !!f.returnArrivalTime;
+
+    return !localHasReturn;
   });
 };
 
@@ -269,12 +286,6 @@ export default function PriceAlertScreen() {
 
       const allOn = data.length > 0 && data.every((a) => a.active);
       setGlobalSwitch(allOn);
-
-      // 3) 컨텍스트에 서버 알림 목록을 "추가만" 한다 (이미 있는 스냅샷은 유지)
-      const activeAlerts = data.filter((a) => a.active);
-      const flightsForContext: FlightSearchResponseDto[] =
-        activeAlerts.map(mapAlertToFlightDto);
-      resetAlertsFromServer(flightsForContext);
     } catch (e) {
       console.log("loadAlerts error", e);
       Alert.alert("오류", "알림 목록을 불러오지 못했어요.");
@@ -355,19 +366,19 @@ export default function PriceAlertScreen() {
     }
   };
 
-  // ✈ 상세 화면 이동
   const goDetail = (alert: FlightAlertItem) => {
     const matched = findFlightFromLocalAlerts(localAlerts, alert);
 
-    if (matched) {
-      // ✅ 이 기기에서 저장해두었던 "진짜 flight" 스냅샷 사용
-      navigation.navigate("FlightDetail", { flight: matched });
+    if (!matched) {
+      Alert.alert(
+        "안내",
+        "이 알림의 원본 항공편 정보를 찾을 수 없어요.\n같은 조건으로 다시 검색해서 알림을 등록해 주세요."
+      );
       return;
     }
 
-    // ❗ 스냅샷이 없으면 서버 DTO 기반의 "거친" flight로라도 보여준다
-    const fakeFlight: FlightSearchResponseDto = mapAlertToFlightDto(alert);
-    navigation.navigate("FlightDetail", { flight: fakeFlight });
+    console.log("✅ 상세 flight 데이터:", matched);
+    navigation.navigate("FlightDetail", { flight: matched });
   };
 
   const [globalToggling, setGlobalToggling] = useState(false);
@@ -435,14 +446,26 @@ export default function PriceAlertScreen() {
     const from = `${airportMap[depCode] ?? depCode} (${depCode})`;
     const to = `${airportMap[arrCode] ?? arrCode} (${arrCode})`;
 
-    const departDate = formatDate(item.departureDate);
-    const returnDate = item.arrivalDate ? formatDate(item.arrivalDate) : null;
+    // 1) 로컬 스냅샷 찾기
+    const matched = findFlightFromLocalAlerts(localAlerts, item);
 
-    const tripTypeLabel = item.arrivalDate ? "왕복" : "편도";
+    // 2) 날짜/왕복 여부를 스냅샷 기준으로
+    const departDateStr = matched?.outboundDepartureTime
+      ? matched.outboundDepartureTime.split("T")[0]
+      : item.departureDate;
+
+    const returnDateStr = matched?.returnDepartureTime ?? null; // 서버 arrivalDate는 안 믿음
+
+    const departDate = formatDate(departDateStr);
+    const returnDate = returnDateStr
+      ? formatDate(returnDateStr.split("T")[0])
+      : null;
+
+    const isRoundTrip = !!matched?.returnDepartureTime;
+    const tripTypeLabel = isRoundTrip ? "왕복" : "편도";
     const seatInfo = `${tripTypeLabel}, ${formatSeatClass(item.travelClass)}`;
 
     const mainPrice = priceText(item.lastCheckedPrice, item.currency ?? "KRW");
-
     const isOn = switchStates[id] ?? item.active;
 
     return (
@@ -624,12 +647,10 @@ export default function PriceAlertScreen() {
                       prev.filter((item) => item.alertId !== targetId)
                     );
 
-                    // 로컬 PriceAlertContext에서도 대응되는 flight 있으면 같이 제거
+                    // confirmDelete 안에서
                     if (targetAlert) {
-                      const localFlight = findFlightFromLocalAlerts(
-                        localAlerts,
-                        targetAlert
-                      );
+                      const key = generateAlertKeyFromAlert(targetAlert);
+                      const localFlight = localAlerts[key];
                       if (localFlight) {
                         removeLocalAlert(localFlight);
                       }

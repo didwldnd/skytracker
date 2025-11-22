@@ -254,9 +254,7 @@ const LocationBlock = ({
       }}
     >
       <Feather name="clock" size={16} color="#6b7280" />
-      <Text style={{ color: "#6b7280" }}>
-        {time || "시간 없음"} (현지시간)
-      </Text>
+      <Text style={{ color: "#6b7280" }}>{time || "시간 없음"} (현지시간)</Text>
     </View>
   </View>
 );
@@ -329,3 +327,4 @@ const ToggleRow = ({ label, value }: { label: string; value: boolean }) => (
 );
 
 export default FlightDetailScreen;
+ 

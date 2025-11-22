@@ -184,3 +184,5 @@ export async function deleteFlightAlert(alertId: number) {
     throw new Error("알림 삭제에 실패했어요.");
   }
 }
+
+
