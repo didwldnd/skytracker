@@ -9,6 +9,7 @@ import {
   Platform,
   ToastAndroid,
   Alert,
+  TouchableWithoutFeedback,
 } from "react-native";
 
 interface Props {
@@ -84,59 +85,69 @@ const PassengerSelector = ({
     <>
       {/* 승객 선택 모달 */}
       <Modal visible={visible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ScrollView>
-              {ageGroups.map((group) => (
-                <View key={group.key} style={styles.option}>
-                  <View>
-                    <Text style={styles.optionText}>{group.label}</Text>
-                    <Text style={{ color: "gray" }}>{group.description}</Text>
-                  </View>
+        {/* 🔹 바깥(어두운 영역) 터치 시 닫기 */}
+        <TouchableWithoutFeedback onPress={onClose}>
+          <View style={styles.modalOverlay}>
+            {/* 🔹 안쪽 시트는 터치해도 안 닫히게 한 번 더 래핑 */}
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={styles.modalContent}>
+                <ScrollView>
+                  {ageGroups.map((group) => (
+                    <View key={group.key} style={styles.option}>
+                      <View>
+                        <Text style={styles.optionText}>{group.label}</Text>
+                        <Text style={{ color: "gray" }}>
+                          {group.description}
+                        </Text>
+                      </View>
 
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <TouchableOpacity
-                      onPress={() =>
-                        onDecrement(group.key as keyof Props["counts"])
-                      }
-                      style={styles.btn}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${group.label} 감소`}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <Text>-</Text>
-                    </TouchableOpacity>
+                      <View
+                        style={{ flexDirection: "row", alignItems: "center" }}
+                      >
+                        <TouchableOpacity
+                          onPress={() =>
+                            onDecrement(group.key as keyof Props["counts"])
+                          }
+                          style={styles.btn}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${group.label} 감소`}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <Text>-</Text>
+                        </TouchableOpacity>
 
-                    <Text style={{ marginHorizontal: 10 }}>
-                      {counts[group.key as keyof Props["counts"]]}
-                    </Text>
+                        <Text style={{ marginHorizontal: 10 }}>
+                          {counts[group.key as keyof Props["counts"]]}
+                        </Text>
 
-                    <TouchableOpacity
-                      onPress={() =>
-                        onIncrement(group.key as keyof Props["counts"])
-                      }
-                      style={styles.btn}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${group.label} 증가`}
-                      hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                    >
-                      <Text>+</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
+                        <TouchableOpacity
+                          onPress={() =>
+                            onIncrement(group.key as keyof Props["counts"])
+                          }
+                          style={styles.btn}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${group.label} 증가`}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                        >
+                          <Text>+</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
 
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={onClose}
-              accessibilityRole="button"
-              accessibilityLabel="승객 수 적용"
-            >
-              <Text style={styles.modalCloseButtonText}>적용</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalCloseButton}
+                  onPress={onClose}
+                  accessibilityRole="button"
+                  accessibilityLabel="승객 수 적용"
+                >
+                  <Text style={styles.modalCloseButtonText}>적용</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </>
   );
