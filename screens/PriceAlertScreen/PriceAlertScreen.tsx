@@ -140,21 +140,36 @@ const formatSeatClass = (cls: string) => {
   }
 };
 
+// 알림 카드에 표시할 실제 가격 결정
+const getDisplayPrice = (
+  alert: FlightAlertItem,
+  matchedFlight?: FlightSearchResponseDto
+): number => {
+  // localAlerts에서 찾은 원본 flight가 있으면 그 price 사용 (왕복 총액 포함)
+  if (matchedFlight && typeof matchedFlight.price === "number") {
+    return matchedFlight.price;
+  }
+
+  // 못 찾으면 서버에서 온 lastCheckedPrice 그대로 사용
+  return alert.lastCheckedPrice ?? 0;
+};
+
 const mapAlertToFlightDto = (
-  alert: FlightAlertItem
+  alert: FlightAlertItem,
+  matchedFlight?: FlightSearchResponseDto
 ): FlightSearchResponseDto => {
+  const totalPrice = getDisplayPrice(alert, matchedFlight);
+
   return {
     airlineCode: alert.airlineCode,
-    airlineName: (alert as any).airlineName ?? alert.airlineCode,
+    airlineName: alert.airlineCode,
     flightNumber: alert.flightNumber,
 
-    // 공항 코드 매핑
     departureAirport: alert.origin,
     arrivalAirport: alert.destination,
     origin: alert.origin,
     destination: alert.destination,
 
-    // 날짜 → ISO 흉내만 내주기
     outboundDepartureTime: alert.departureDate
       ? `${alert.departureDate}T00:00:00`
       : "",
@@ -165,25 +180,19 @@ const mapAlertToFlightDto = (
 
     returnDepartureTime: alert.returnDate ? `${alert.returnDate}T00:00:00` : "",
     returnArrivalTime: alert.returnDate ? `${alert.returnDate}T00:00:00` : "",
-    returnDuration: alert.returnDate ? "" : "",
+    returnDuration: "",
 
     travelClass: alert.travelClass,
     numberOfBookableSeats: 0,
     hasCheckedBags: false,
     currency: alert.currency ?? "KRW",
-    price: alert.lastCheckedPrice || 0,
+    price: totalPrice, // 왕복이면 총액, 편도면 편도 가격
 
     isRefundable: false,
     isChangeable: false,
 
-    // tripType도 넣어주면 나중에 쓸 때 편함
     tripType: alert.returnDate ? "ROUND_TRIP" : "ONE_WAY",
-  };
-};
-
-const sameDate = (iso?: string | null, dateOnly?: string | null) => {
-  if (!iso || !dateOnly) return false;
-  return iso.split("T")[0] === dateOnly;
+  } as any;
 };
 
 const findFlightFromLocalAlerts = (
@@ -204,23 +213,20 @@ const findFlightFromLocalAlerts = (
     const depPart = depIso.split("T")[0];
     const retPart = retIso.split("T")[0];
 
-    // 🔹 공통 조건 (여기서 공항 비교를 departureAirport/arrivalAirport vs origin/destination로 맞춰야 함)
     const baseMatch =
       f.airlineCode === alert.airlineCode &&
       String(f.flightNumber) === String(alert.flightNumber) &&
-      f.departureAirport === alert.origin && // ✅ 이렇게
-      f.arrivalAirport === alert.destination && // ✅ 이렇게
+      f.departureAirport === alert.origin &&
+      f.arrivalAirport === alert.destination &&
       f.travelClass === alert.travelClass &&
       depPart === depDate;
 
     if (!baseMatch) return false;
 
-    // 🔥 왕복 알림이면 returnDate도 검증
     if (alertIsRoundTrip) {
       return retPart === retDate;
     }
 
-    // 🔥 편도 알림이면 로컬 flight도 편도여야 한다
     const localHasReturn = !!f.returnDepartureTime || !!f.returnArrivalTime;
     return !localHasReturn;
   });
@@ -349,9 +355,12 @@ export default function PriceAlertScreen() {
       );
       setAlertList(updatedList);
 
-      // 4) 컨텍스트에 isActive=true인 것만 머지
+      // 4) 컨텍스트에 isActive=true인 것만 머지 (왕복 총액 기준)
       const activeAlerts = updatedList.filter((a) => a.isActive);
-      const flightsForContext = activeAlerts.map(mapAlertToFlightDto);
+      const flightsForContext = activeAlerts.map((a) => {
+        const matched = findFlightFromLocalAlerts(localAlerts, a);
+        return mapAlertToFlightDto(a, matched);
+      });
       resetAlertsFromServer(flightsForContext);
     } catch (e) {
       console.log("handleToggleAlert error", e);
@@ -423,9 +432,12 @@ export default function PriceAlertScreen() {
       );
       setAlertList(updatedList);
 
-      // 4) 컨텍스트도 isActive=true인 것만 머지
+      // 4) 컨텍스트도 isActive=true인 것만 머지 (왕복 총액 기준)
       const activeAlerts = updatedList.filter((a) => a.isActive);
-      const flightsForContext = activeAlerts.map(mapAlertToFlightDto);
+      const flightsForContext = activeAlerts.map((a) => {
+        const matched = findFlightFromLocalAlerts(localAlerts, a);
+        return mapAlertToFlightDto(a, matched);
+      });
       resetAlertsFromServer(flightsForContext);
     } catch (e) {
       console.log("[toggleGlobalSwitch] error", e);
@@ -467,7 +479,10 @@ export default function PriceAlertScreen() {
     const tripTypeLabel = isRoundTrip ? "왕복" : "편도";
     const seatInfo = `${tripTypeLabel}, ${formatSeatClass(item.travelClass)}`;
 
-    const mainPrice = priceText(item.lastCheckedPrice, item.currency ?? "KRW");
+    // 🔥 여기서 왕복이면 왕복 총액, 편도면 편도 가격
+    const rawPrice = getDisplayPrice(item, matched);
+    const mainPrice = priceText(rawPrice, item.currency ?? "KRW");
+
     const isOn = switchStates[id] ?? item.isActive;
 
     return (
@@ -655,7 +670,6 @@ export default function PriceAlertScreen() {
                       prev.filter((item) => item.alertId !== targetId)
                     );
 
-                    // confirmDelete 안에서
                     if (targetAlert) {
                       const key = generateAlertKeyFromAlert(targetAlert);
                       const localFlight = localAlerts[key];
@@ -736,14 +750,14 @@ const styles = StyleSheet.create({
   },
 
   globalToggleText: {
-    fontSize: 26, // 🔼 기존 18 → 20
+    fontSize: 26,
     fontWeight: "700",
     color: "#111827",
   },
 
   globalToggleSub: {
-    marginTop: 4, // 🔼 기존 2 → 4 (간격 살짝)
-    fontSize: 16, // 🔼 기존 12 → 14 (가독성↑)
+    marginTop: 4,
+    fontSize: 16,
     color: "#6b7280",
   },
 
