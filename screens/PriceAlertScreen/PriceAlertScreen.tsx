@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
 
   globalToggleSub: {
     marginTop: 4, // 🔼 기존 2 → 4 (간격 살짝)
-    fontSize: 18, // 🔼 기존 12 → 14 (가독성↑)
+    fontSize: 16, // 🔼 기존 12 → 14 (가독성↑)
     color: "#6b7280",
   },
 

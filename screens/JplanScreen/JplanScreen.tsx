@@ -10,6 +10,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   Keyboard,
+  Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import * as SecureStore from "expo-secure-store";
@@ -53,6 +54,11 @@ const JplanScreen = () => {
   const [sending, setSending] = useState(false);
 
   const flatListRef = useRef<FlatList<ChatMessage>>(null);
+
+  // 🔹 사용법 안내 토글 + 애니메이션 상태
+  const [showGuide, setShowGuide] = useState(true); // 논리 상태
+  const [guideMounted, setGuideMounted] = useState(true); // 완전히 제거 여부
+  const guideAnim = useRef(new Animated.Value(1)).current; // 0:숨김, 1:보임
 
   const goToLogin = () => {
     navigation.navigate("LoginScreen"); // 🔁 라우트 이름 프로젝트에 맞게 수정
@@ -125,23 +131,44 @@ const JplanScreen = () => {
     flatListRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
+  useEffect(() => {
+    if (showGuide) {
+      // 보이게 할 때: 먼저 마운트하고 애니메이션으로 내려오기
+      setGuideMounted(true);
+      Animated.timing(guideAnim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      // 숨길 때: 위로 사라지면서 투명 -> 끝나고 마운트 해제
+      Animated.timing(guideAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          setGuideMounted(false);
+        }
+      });
+    }
+  }, [showGuide, guideAnim]);
+
   // ✅ 키보드 열릴 때 자동으로 맨 아래로 스크롤
-useEffect(() => {
-  const eventName =
-    Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+  useEffect(() => {
+    const eventName =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
 
-  const showSub = Keyboard.addListener(eventName, () => {
-    // 살짝 딜레이 주면 레이아웃 변경 후에 스크롤되어 더 안정적
-    setTimeout(() => {
-      flatListRef.current?.scrollToEnd({ animated: true });
-    }, 50);
-  });
+    const showSub = Keyboard.addListener(eventName, () => {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 50);
+    });
 
-  return () => {
-    showSub.remove();
-  };
-}, []);
-
+    return () => {
+      showSub.remove();
+    };
+  }, []);
 
   const handleSend = async () => {
     if (!isLoggedIn) {
@@ -248,75 +275,127 @@ useEffect(() => {
   // 3) 로그인 상태 – 기존 챗봇 UI
   return (
     <KeyboardAvoidingView
-    style={{ flex: 1 }}
-    behavior="padding"  
-    keyboardVerticalOffset={Platform.OS === "android" ? 25 : 25}
-  >
-    <View style={{ flex: 1, backgroundColor: "white" }}>
-      <Text style={styles.title}>J플랜</Text>
+      style={{ flex: 1 }}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === "android" ? 25 : 25}
+    >
+      <View style={{ flex: 1, backgroundColor: "white" }}>
+        {/* 🔹 상단 헤더 + 사용법 토글 버튼 */}
+        <View style={styles.headerRow}>
+          <Text style={styles.title}>J플랜</Text>
 
-      <View style={{ flex: 1 }}>
-        {loadingHistory ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator />
-            <Text style={styles.loadingText}>
-              대화 기록을 불러오는 중입니다...
+          <TouchableOpacity
+            onPress={() => setShowGuide((prev) => !prev)}
+            style={styles.guideToggle}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.guideToggleText}>
+              {showGuide ? "사용법 접기 ▲" : "사용법 보기 ▼"}
             </Text>
-          </View>
-        ) : (
-          <FlatList
-            ref={flatListRef}
-            data={messages}
-            keyExtractor={(item) => item.id}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ padding: 10 }}
-            keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => {
-              if (item.role === "user") {
+          </TouchableOpacity>
+        </View>
+
+        {/* 🔹 사용법 안내 Overlay (채팅 레이아웃과 독립) */}
+        {guideMounted && (
+          <Animated.View
+            pointerEvents={showGuide ? "auto" : "none"}
+            style={[
+              styles.guideOverlay,
+              {
+                opacity: guideAnim,
+                transform: [
+                  {
+                    translateY: guideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-10, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.guideContainer}>
+              <Text style={styles.guideTitle}>J플랜 사용 가이드</Text>
+              <Text style={styles.guideText}>
+                • J플랜은 항공권·여행 시기 추천 도우미예요.{"\n"}• 도시명 또는
+                국가명을 입력해 주시면{"\n"}
+                {"   "}– 항공권이 가장 저렴한 시기{"\n"}
+                {"   "}– 여행하기 좋은 계절과 이유{"\n"}
+                {"   "}– 가격 경향{"\n"}
+                {"   "}등을 기준으로 안내해 드립니다.{"\n\n"}• 날짜를 함께
+                지정해 주시면 그 날짜 기준으로{"\n"}
+                {"   "}– 여행 적합성{"\n"}
+                {"   "}– 항공권 가격 경향{"\n"}
+                {"   "}을 상세히 설명해 드려요.{"\n\n"}
+                항상 존댓말로, 이해하기 쉽게 설명해 드릴게요. 🙂
+              </Text>
+            </View>
+          </Animated.View>
+        )}
+
+        {/* 🔹 채팅 영역 (이제는 가이드와 완전 분리됨, 높이 안 바뀜) */}
+        <View style={{ flex: 1 }}>
+          {loadingHistory ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator />
+              <Text style={styles.loadingText}>
+                대화 기록을 불러오는 중입니다...
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              keyExtractor={(item) => item.id}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ padding: 10, paddingTop: 4 }}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => {
+                if (item.role === "user") {
+                  return (
+                    <View style={[styles.bubble, styles.userBubble]}>
+                      <Text style={styles.userText}>{item.content}</Text>
+                    </View>
+                  );
+                }
+
                 return (
-                  <View style={[styles.bubble, styles.userBubble]}>
-                    <Text style={styles.userText}>{item.content}</Text>
+                  <View style={styles.botMessageWrapper}>
+                    <Text style={styles.botIcon}>🤖</Text>
+                    <View style={[styles.bubble, styles.botBubble]}>
+                      <Text style={styles.botText}>{item.content}</Text>
+                    </View>
                   </View>
                 );
-              }
-
-              return (
-                <View style={styles.botMessageWrapper}>
-                  <Text style={styles.botIcon}>🤖</Text>
-                  <View style={[styles.bubble, styles.botBubble]}>
-                    <Text style={styles.botText}>{item.content}</Text>
-                  </View>
-                </View>
-              );
-            }}
-          />
-        )}
-      </View>
-
-      {/* 입력창 */}
-      <View style={styles.inputBox}>
-        <TextInput
-          style={styles.input}
-          value={input}
-          onChangeText={setInput}
-          placeholder="메시지를 입력하세요"
-          returnKeyType="send"
-          onSubmitEditing={handleSend}
-        />
-        <TouchableOpacity
-          onPress={handleSend}
-          style={styles.sendBtn}
-          activeOpacity={0.7}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={{ color: "white" }}>전송</Text>
+              }}
+            />
           )}
-        </TouchableOpacity>
+        </View>
+
+        {/* 입력창 */}
+        <View style={styles.inputBox}>
+          <TextInput
+            style={styles.input}
+            value={input}
+            onChangeText={setInput}
+            placeholder="메시지를 입력하세요"
+            returnKeyType="send"
+            onSubmitEditing={handleSend}
+          />
+          <TouchableOpacity
+            onPress={handleSend}
+            style={styles.sendBtn}
+            activeOpacity={0.7}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={{ color: "white" }}>전송</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  </KeyboardAvoidingView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -365,12 +444,58 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // 🔹 기존 J플랜 챗 UI
+  // 🔹 상단 헤더 + 사용법 토글
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  guideOverlay: {
+  position: "absolute",
+  top: 55,             // 헤더 바로 아래, 필요하면 숫자 조절
+  left: 0,
+  right: 0,
+  paddingHorizontal: 10,
+  zIndex: 10,
+},
+
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    padding: 20,
   },
+  guideToggle: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: "#eef2ff",
+  },
+  guideToggleText: {
+    fontSize: 12,
+    color: "#4b5563",
+    fontWeight: "500",
+  },
+  guideContainer: {
+  paddingVertical: 8,
+  paddingHorizontal: 10,
+  borderRadius: 8,
+  backgroundColor: "#f1f1f1",  // botBubble이랑 비슷한 느낌
+},
+guideTitle: {
+  fontSize: 13,
+  fontWeight: "600",
+  marginBottom: 4,
+  color: "#111827",
+},
+guideText: {
+  fontSize: 12,
+  color: "#333",
+  lineHeight: 18,
+},
+
+  // 🔹 기존 J플랜 챗 UI
   wrapper: {
     flex: 1,
     backgroundColor: "white",
