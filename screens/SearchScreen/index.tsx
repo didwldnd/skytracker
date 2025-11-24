@@ -23,7 +23,6 @@ import { FlightSearchRequestDto } from "../../types/FlightSearchRequestDto";
 import { airportData } from "../../data/airportData";
 import { sanitizeResults } from "../../utils/flightSanitizer";
 import { useUserSettings } from "../../context/UserSettingsContext";
-import axios from "axios";
 
 // ====== 중복 제거용 공통 헬퍼 ======
 const norm = (s?: any) => (s == null ? "" : String(s).trim());

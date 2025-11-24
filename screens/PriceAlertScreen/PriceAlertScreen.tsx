@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import {
   View,
   Text,
@@ -17,7 +17,6 @@ import { RootStackParamList } from "../../App";
 import { Buffer } from "buffer";
 import { formatPrice } from "../../utils/formatters";
 import { Ionicons, FontAwesome } from "@expo/vector-icons";
-import * as SecureStore from "expo-secure-store";
 import {
   fetchFlightAlerts,
   toggleFlightAlert,
@@ -28,6 +27,7 @@ import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 import { usePriceAlert } from "../../context/PriceAlertContext";
 import axios from "axios";
 import { generateAlertKeyFromAlert } from "../../utils/generateAlertKeyFromAlert";
+import { AuthContext } from "../../context/AuthContext";
 
 global.Buffer = Buffer;
 
@@ -244,9 +244,8 @@ export default function PriceAlertScreen() {
     resetAlertsFromServer,
   } = usePriceAlert();
 
-  // 🔐 로그인 여부
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginChecked, setLoginChecked] = useState(false);
+  const auth = useContext(AuthContext);
+  const isLoggedIn = auth?.authState.isAuthenticated ?? false;
 
   // 📡 서버에서 가져온 알림 목록 (UI용)
   const [alertList, setAlertList] = useState<FlightAlertItem[]>([]);
@@ -300,22 +299,6 @@ export default function PriceAlertScreen() {
       setLoading(false);
     }
   };
-
-  // 로그인 상태 확인
-  useEffect(() => {
-    const checkLogin = async () => {
-      try {
-        const token = await SecureStore.getItemAsync("accessToken");
-        setIsLoggedIn(!!token);
-      } catch (e) {
-        console.log("checkLogin error", e);
-        setIsLoggedIn(false);
-      } finally {
-        setLoginChecked(true);
-      }
-    };
-    checkLogin();
-  }, []);
 
   // 화면 포커스될 때마다 서버에서 새로 로드
   useFocusEffect(
@@ -554,17 +537,7 @@ export default function PriceAlertScreen() {
     );
   };
 
-  // 1) 로그인 여부 체크 중이면 로딩
-  if (!loginChecked) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator />
-        <Text style={styles.loadingText}>로그인 상태 확인 중...</Text>
-      </View>
-    );
-  }
-
-  // 2) 비로그인 상태
+  // 1) 비로그인 상태
   if (!isLoggedIn) {
     return (
       <View style={styles.lockContainer}>
@@ -585,7 +558,7 @@ export default function PriceAlertScreen() {
     );
   }
 
-  // 3) 로그인 상태: 알림 화면
+  // 2) 로그인 상태: 알림 화면
   return (
     <View style={{ flex: 1, padding: 16 }}>
       <View style={styles.globalToggle}>

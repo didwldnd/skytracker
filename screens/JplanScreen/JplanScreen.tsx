@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -13,8 +13,8 @@ import {
   Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import * as SecureStore from "expo-secure-store";
 import { apiFetch } from "../../utils/apiClient";
+import { AuthContext } from "../../context/AuthContext"; //
 
 type ChatMessage = {
   id: string;
@@ -39,14 +39,13 @@ const WELCOME_MESSAGE: ChatMessage = {
 
 const CHAT_HISTORY_URL = "/chatRoom";
 const CHAT_ASK_URL = "/ask";
-const ACCESS_TOKEN_KEY = "accessToken";
 
 const JplanScreen = () => {
   const navigation = useNavigation<any>();
 
   // 로그인 여부
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [loginChecked, setLoginChecked] = useState(false);
+  const auth = useContext(AuthContext);
+  const isLoggedIn = auth?.authState.isAuthenticated ?? false;
 
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
@@ -64,26 +63,12 @@ const JplanScreen = () => {
     navigation.navigate("LoginScreen"); // 🔁 라우트 이름 프로젝트에 맞게 수정
   };
 
-  // 1) 진입 시 로그인 여부 확인
-  useEffect(() => {
-    const checkLogin = async () => {
-      try {
-        const token = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY);
-        setIsLoggedIn(!!token);
-      } catch (e) {
-        console.log("[Jplan] checkLogin error:", e);
-        setIsLoggedIn(false);
-      } finally {
-        setLoginChecked(true);
-      }
-    };
-    checkLogin();
-  }, []);
-
   // 2) 로그인된 경우에만 히스토리 불러오기
   useEffect(() => {
     const fetchHistory = async () => {
       if (!isLoggedIn) {
+        setMessages([WELCOME_MESSAGE]);
+
         setLoadingHistory(false);
         return;
       }
@@ -120,11 +105,8 @@ const JplanScreen = () => {
         setLoadingHistory(false);
       }
     };
-
-    if (loginChecked) {
-      fetchHistory();
-    }
-  }, [loginChecked, isLoggedIn]);
+    fetchHistory();
+  }, [isLoggedIn]);
 
   // 메시지 바뀔 때 맨 아래로 자동 스크롤
   useEffect(() => {
@@ -242,17 +224,7 @@ const JplanScreen = () => {
     }
   };
 
-  // 1) 로그인 체크 중 로딩
-  if (!loginChecked) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator />
-        <Text style={styles.loadingText}>로그인 상태 확인 중...</Text>
-      </View>
-    );
-  }
-
-  // 2) 비회원 화면 – 버튼 눌렀을 때만 로그인 이동
+  // 1) 비회원 화면 – 버튼 눌렀을 때만 로그인 이동
   if (!isLoggedIn) {
     return (
       <View style={styles.lockContainer}>
@@ -272,7 +244,7 @@ const JplanScreen = () => {
     );
   }
 
-  // 3) 로그인 상태 – 기존 챗봇 UI
+  // 2) 로그인 상태 – 기존 챗봇 UI
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -454,13 +426,13 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   guideOverlay: {
-  position: "absolute",
-  top: 55,             // 헤더 바로 아래, 필요하면 숫자 조절
-  left: 0,
-  right: 0,
-  paddingHorizontal: 10,
-  zIndex: 10,
-},
+    position: "absolute",
+    top: 55, // 헤더 바로 아래, 필요하면 숫자 조절
+    left: 0,
+    right: 0,
+    paddingHorizontal: 10,
+    zIndex: 10,
+  },
 
   title: {
     fontSize: 24,
@@ -478,22 +450,22 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   guideContainer: {
-  paddingVertical: 8,
-  paddingHorizontal: 10,
-  borderRadius: 8,
-  backgroundColor: "#f1f1f1",  // botBubble이랑 비슷한 느낌
-},
-guideTitle: {
-  fontSize: 13,
-  fontWeight: "600",
-  marginBottom: 4,
-  color: "#111827",
-},
-guideText: {
-  fontSize: 12,
-  color: "#333",
-  lineHeight: 18,
-},
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#f1f1f1", // botBubble이랑 비슷한 느낌
+  },
+  guideTitle: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 4,
+    color: "#111827",
+  },
+  guideText: {
+    fontSize: 12,
+    color: "#333",
+    lineHeight: 18,
+  },
 
   // 🔹 기존 J플랜 챗 UI
   wrapper: {

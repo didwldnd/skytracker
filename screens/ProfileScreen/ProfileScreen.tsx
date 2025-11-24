@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -19,14 +19,9 @@ import { RootStackParamList } from "../../App";
 import { useUserSettings } from "../../context/UserSettingsContext";
 import SearchModal from "../../components/SearchModal";
 import { airportData } from "../../data/airportData";
-import * as SecureStore from "expo-secure-store";
-import {
-  clearTokens,
-  getAccessToken,
-  getRefreshToken,
-} from "../../utils/tokenStorage";
 import { logout } from "../../api/auth";
 import { deleteAccount, fetchProfile, updateUser } from "../../api/user";
+import { AuthContext } from "../../context/AuthContext";
 
 const themeColor = "white";
 const HEADER_BG = "#0be5ecd7";
@@ -114,6 +109,13 @@ const Divider = () => <View style={styles.divider} />;
 
 // ------------------ Main Screen ------------------
 const ProfileScreen = () => {
+  const auth = useContext(AuthContext);
+
+  const handleLogout = async () => {
+    if (!auth) return;
+    await auth.logout();
+  };
+
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { preferredDepartureAirport, setPreferredDepartureAirport, loading } =
@@ -387,8 +389,35 @@ const ProfileScreen = () => {
                 {
                   text: "탈퇴",
                   style: "destructive",
-                  onPress: () =>
-                    Alert.alert("탈퇴 완료", "계정이 삭제되었습니다."),
+                  onPress: async () => {
+                    try {
+                      // 1) 서버에 계정 삭제 요청 + 토큰 삭제
+                      await deleteAccount();
+
+                      // 2) 전역 Auth 상태 초기화 (PriceAlert, J플랜 등도 같이 반응하도록)
+                      if (auth) {
+                        await auth.logout?.();
+                      }
+
+                      // 3) 로컬 프로필 상태 비우기
+                      setUser(null);
+
+                      // 4) 네비게이션 초기화 (원하는 화면으로)
+                      navigation.reset({
+                        index: 0,
+                        routes: [{ name: "HomeScreen" }],
+                      });
+
+                      Alert.alert("탈퇴 완료", "계정이 삭제되었습니다.");
+                    } catch (e) {
+                      console.error("계정 삭제 에러:", e);
+                      Alert.alert(
+                        "에러",
+                        (e as any)?.message ??
+                          "계정 삭제에 실패했습니다. 다시 시도해주세요."
+                      );
+                    }
+                  },
                 },
               ])
             }

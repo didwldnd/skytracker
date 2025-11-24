@@ -11,6 +11,8 @@ interface AuthState {
 interface AuthContextType {
   authState: AuthState;
   setAuthState: React.Dispatch<React.SetStateAction<AuthState>>;
+  login: (token: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 // 3. createContext에 null 대신 "AuthContextType | null" 넣기
@@ -27,18 +29,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
     accessToken: null,
   });
 
+  // 앱 시작 시 저장된 토큰 로드
   useEffect(() => {
     async function load() {
       const token = await getAccessToken();
       if (token) {
         setAuthState({ isAuthenticated: true, accessToken: token });
+      } else {
+        setAuthState({ isAuthenticated: false, accessToken: null });
       }
     }
     load();
   }, []);
 
+  const login = async (token: string) => {
+    setAuthState({
+      isAuthenticated: true,
+      accessToken: token,
+    });
+  };
+
+  const logout = async () => {
+    setAuthState({
+      isAuthenticated: false,
+      accessToken: null,  
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ authState, setAuthState }}>
+    <AuthContext.Provider value={{ authState, setAuthState, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
