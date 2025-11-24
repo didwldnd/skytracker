@@ -30,17 +30,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
   });
 
   // 앱 시작 시 저장된 토큰 로드
-  useEffect(() => {
-    async function load() {
-      const token = await getAccessToken();
-      if (token) {
-        setAuthState({ isAuthenticated: true, accessToken: token });
-      } else {
-        setAuthState({ isAuthenticated: false, accessToken: null });
+useEffect(() => {
+  async function load() {
+    const token = await getAccessToken();
+
+    // ❗ 이미 로그인 중이면 덮어쓰지 말아야 함
+    setAuthState(prev => {
+      if (prev.isAuthenticated) {
+        return prev; // 🔥 이미 로그인 반영된 상태면 그대로 유지
       }
-    }
-    load();
-  }, []);
+
+      if (token) {
+        return { isAuthenticated: true, accessToken: token };
+      }
+      return { isAuthenticated: false, accessToken: null };
+    });
+  }
+  load();
+}, []);
+
 
   const login = async (token: string) => {
     setAuthState({

@@ -111,11 +111,6 @@ const Divider = () => <View style={styles.divider} />;
 const ProfileScreen = () => {
   const auth = useContext(AuthContext);
 
-  const handleLogout = async () => {
-    if (!auth) return;
-    await auth.logout();
-  };
-
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { preferredDepartureAirport, setPreferredDepartureAirport, loading } =
@@ -165,6 +160,9 @@ const ProfileScreen = () => {
     try {
       await logout(); // 서버 + 토큰 삭제 등
 
+      if (auth) {
+        await auth.logout();
+      }
       // 프론트 상태에서 로그인 유저를 없앰
       setUser(null);
 

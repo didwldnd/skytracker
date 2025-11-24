@@ -1,5 +1,5 @@
 // screens/LoginScreen.tsx
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { API_BASE } from "../../config/env";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../App";
+import { AuthContext } from "../../context/AuthContext";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -81,7 +82,6 @@ function buildAuthorizeUrl(provider: Provider) {
   return `${baseAPI}/oauth2/authorization/${provider}?redirect_uri=${encodedRedirect}`;
 }
 
-
 /** 앱이 받는 리디렉션 URI: skytracker://redirect */
 const redirectUri = AuthSession.makeRedirectUri({
   path: "redirect",
@@ -108,6 +108,8 @@ export default function LoginScreen() {
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const auth = useContext(AuthContext);
 
   const isDisabled = loadingProvider !== null;
 
@@ -152,6 +154,8 @@ export default function LoginScreen() {
       // 🔥 토큰 저장 + refreshToken 발급
       await handleLoginSuccess(accessToken);
       console.log(`✅ [${provider}] handleLoginSuccess 완료`);
+
+      await auth?.login(accessToken);
 
       Alert.alert("로그인 완료", "로그인 성공", [
         {
@@ -288,16 +292,14 @@ export default function LoginScreen() {
         )}
       </TouchableOpacity>
 
-{/* Guest Login */}
-<TouchableOpacity
-  style={[styles.button, styles.guest]}
-  onPress={() => navigation.navigate("HomeScreen")}
-  activeOpacity={0.7}
->
-  <Text>비회원으로 계속하기</Text>
-</TouchableOpacity>
-
-
+      {/* Guest Login */}
+      <TouchableOpacity
+        style={[styles.button, styles.guest]}
+        onPress={() => navigation.navigate("HomeScreen")}
+        activeOpacity={0.7}
+      >
+        <Text>비회원으로 계속하기</Text>
+      </TouchableOpacity>
 
       <Text style={styles.footer}>
         로그인하면 SkyTracker의 <Text style={styles.link}>서비스 약관</Text>과{" "}
@@ -359,11 +361,11 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   link: { textDecorationLine: "underline" },
-guest: {
-  backgroundColor: "#b7a1f1c2",
-  borderRadius: 8,
-  paddingVertical: 14,
-  alignItems: "center",
-  justifyContent: "center",
-},
+  guest: {
+    backgroundColor: "#b7a1f1c2",
+    borderRadius: 8,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
 });

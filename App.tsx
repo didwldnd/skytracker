@@ -13,6 +13,7 @@ import CityFlightListScreen from "./screens/SearchScreen/CityFlightListScreen";
 import { PriceAlertProvider } from "./context/PriceAlertContext";
 import { UserSettingsProvider } from "./context/UserSettingsContext";
 import { FlightSearchResponseDto } from "./types/FlightResultScreenDto";
+import { AuthProvider } from "./context/AuthContext";
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -42,8 +43,10 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SafeAreaView style={{ flex: 1 }}>
-          <UserSettingsProvider>
-            <PriceAlertProvider>
+          {/* ✅ 여기 AuthProvider 추가 */}
+          <AuthProvider>
+            <UserSettingsProvider>
+              <PriceAlertProvider>
                 <NavigationContainer>
                   <Stack.Navigator
                     initialRouteName="Splash"
@@ -71,8 +74,9 @@ export default function App() {
                     />
                   </Stack.Navigator>
                 </NavigationContainer>
-            </PriceAlertProvider>
-          </UserSettingsProvider>
+              </PriceAlertProvider>
+            </UserSettingsProvider>
+          </AuthProvider>
         </SafeAreaView>
       </SafeAreaProvider>
     </GestureHandlerRootView>
