@@ -23,6 +23,7 @@ import { FlightSearchRequestDto } from "../../types/FlightSearchRequestDto";
 import { airportData } from "../../data/airportData";
 import { sanitizeResults } from "../../utils/flightSanitizer";
 import { useUserSettings } from "../../context/UserSettingsContext";
+import { useTheme } from "../../context/ThemeContext"; // ⭐ 추가
 
 // ====== 중복 제거용 공통 헬퍼 ======
 const norm = (s?: any) => (s == null ? "" : String(s).trim());
@@ -61,6 +62,8 @@ const dedupeExact = (list: any[]) => {
 const SearchScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { theme } = useTheme(); // ⭐ 테마 가져오기
+
   const [tripType, setTripType] = useState<"왕복" | "편도">("왕복");
 
   const [departure, setDeparture] = useState("");
@@ -104,7 +107,6 @@ const SearchScreen = () => {
     () => Object.values(passengerCounts).reduce((a, b) => a + b, 0),
     [passengerCounts]
   );
-
 
   // 동일 공항 선택시 useMemo로 계산 -> 경고라벨 + Alert로 즉각 피드백, 검색 버튼도 disabled
   const sameAirports = useMemo(
@@ -165,12 +167,12 @@ const SearchScreen = () => {
     useUserSettings();
 
   useEffect(() => {
-  if (settingsLoading) return;
-  if (!preferredDepartureAirport) return;
+    if (settingsLoading) return;
+    if (!preferredDepartureAirport) return;
 
-  // 컨텍스트 값이 바뀔 때마다 departure도 맞춰준다
-  setDeparture(preferredDepartureAirport);
-}, [settingsLoading, preferredDepartureAirport]);
+    // 컨텍스트 값이 바뀔 때마다 departure도 맞춰준다
+    setDeparture(preferredDepartureAirport);
+  }, [settingsLoading, preferredDepartureAirport]);
 
   const resetForm = () => {
     setDeparture(preferredDepartureAirport ?? "");
@@ -197,9 +199,19 @@ const SearchScreen = () => {
   const isSearchingRef = useRef(false);
 
   return (
-    <ScrollView>
-      <View style={styles.container}>
-        <Text style={styles.title}>항공권 검색</Text>
+    <ScrollView
+      style={{ flex: 1, backgroundColor: theme.background }} // ⭐ 전체 배경
+      contentContainerStyle={{ flexGrow: 1 }}
+    >
+      <View
+        style={[
+          styles.container,
+          { backgroundColor: theme.background }, // ⭐ 안쪽도 테마 배경
+        ]}
+      >
+        <Text style={[styles.title, { color: theme.text }]}>
+          항공권 검색
+        </Text>
 
         {/* Trip Type Selector */}
         <View style={styles.tripTypeRow}>
@@ -254,12 +266,18 @@ const SearchScreen = () => {
 
         <View style={styles.selectorRow}>
           <View style={styles.selectorItem}>
-            <Text style={styles.label}>여행객</Text>
+            <Text style={[styles.label, { color: theme.text }]}>여행객</Text>
             <TouchableOpacity
-              style={styles.input}
+              style={[
+                styles.input,
+                {
+                  backgroundColor: theme.card,
+                  borderColor: theme.border,
+                },
+              ]}
               onPress={() => setShowPassengerModal(true)}
             >
-              <Text>{`총 ${totalPassengers}명`}</Text>
+              <Text style={{ color: theme.text }}>{`총 ${totalPassengers}명`}</Text>
             </TouchableOpacity>
           </View>
 
@@ -268,15 +286,23 @@ const SearchScreen = () => {
             { label: "경유횟수", value: stopover, type: "stopover" },
           ].map((item) => (
             <View key={item.type} style={styles.selectorItem}>
-              <Text style={styles.label}>{item.label}</Text>
+              <Text style={[styles.label, { color: theme.text }]}>
+                {item.label}
+              </Text>
               <TouchableOpacity
-                style={styles.input}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                  },
+                ]}
                 onPress={() => {
                   setModalType(item.type as "seatClass" | "stopover");
                   setModalVisible(true);
                 }}
               >
-                <Text>{item.value}</Text>
+                <Text style={{ color: theme.text }}>{item.value}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -284,7 +310,7 @@ const SearchScreen = () => {
 
         {/* 동일 공항 경고 라벨 */}
         {sameAirports && (
-          <Text style={{ color: "#d00", fontSize: 12, marginTop: 6 }}>
+          <Text style={{ color: "#f97373", fontSize: 12, marginTop: 6 }}>
             출발지와 도착지가 같습니다. 다른 공항을 선택해주세요.
           </Text>
         )}
@@ -322,74 +348,77 @@ const SearchScreen = () => {
         />
 
         <SearchButtons
-  onReset={resetForm}
-  onSearch={async () => {
-    if (isSearchingRef.current) return; // 더블탭 가드
-    isSearchingRef.current = true;
+          onReset={resetForm}
+          onSearch={async () => {
+            if (isSearchingRef.current) return; // 더블탭 가드
+            isSearchingRef.current = true;
 
-    if (sameAirports) {
-      Alert.alert(
-        "잘못된 경로",
-        "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요."
-      );
-      isSearchingRef.current = false;
-      return;
-    }
+            if (sameAirports) {
+              Alert.alert(
+                "잘못된 경로",
+                "출발지와 도착지가 같습니다. 다른 공항을 선택해주세요."
+              );
+              isSearchingRef.current = false;
+              return;
+            }
 
-    setLoading(true);
-    try {
-      // ✅ 경유 옵션 → nonStop(boolean) 매핑
-      // "직항만"일 때만 true, 나머지는 전부 false
-      const nonStop = stopover === "직항만";
+            setLoading(true);
+            try {
+              // ✅ 경유 옵션 → nonStop(boolean) 매핑
+              // "직항만"일 때만 true, 나머지는 전부 false
+              const nonStop = stopover === "직항만";
 
-      // ✅ 좌석 등급 → 백엔드 ENUM 매핑
-      let travelClass: "ECONOMY" | "BUSINESS" | undefined;
-      if (seatClass === "일반석") travelClass = "ECONOMY";
-      else if (seatClass === "비즈니스") travelClass = "BUSINESS";
+              // ✅ 좌석 등급 → 백엔드 ENUM 매핑
+              let travelClass: "ECONOMY" | "BUSINESS" | undefined;
+              if (seatClass.includes("일반석")) {
+  travelClass = "ECONOMY";
+} else if (seatClass.includes("비즈니스")) {
+  travelClass = "BUSINESS";
+}
 
-      const requestDto: FlightSearchRequestDto = {
-        originLocationAirport: departure,
-        destinationLocationAirport: destination,
-        departureDate: departureDate.toISOString().split("T")[0],
-        returnDate:
-          tripType === "왕복"
-            ? returnDate.toISOString().split("T")[0]
-            : undefined,
-        nonStop, // ✅ 이제 항상 true/false
-        travelClass,
-        adults: Math.max(1, passengerCounts.adult),
-        max: 10,
-      };
+              const requestDto: FlightSearchRequestDto = {
+                originLocationAirport: departure,
+                destinationLocationAirport: destination,
+                departureDate: departureDate.toISOString().split("T")[0],
+                returnDate:
+                  tripType === "왕복"
+                    ? returnDate.toISOString().split("T")[0]
+                    : undefined,
+                nonStop, // ✅ 이제 항상 true/false
+                travelClass,
+                adults: Math.max(1, passengerCounts.adult),
+                max: 10,
+              };
 
-      console.log("[REQ] Flight search payload:", requestDto);
+              console.log("[REQ] Flight search payload:", requestDto);
 
-      const rawResults = await searchFlights(requestDto);
-      const { valid } = sanitizeResults(rawResults || []);
-      const uniq = dedupeExact(valid);
+              const rawResults = await searchFlights(requestDto);
+              const { valid } = sanitizeResults(rawResults || []);
+              const uniq = dedupeExact(valid);
 
-      // 🔽 이 부분은 일단 그대로 두되, stopover 옵션이 "경유만"은 없으니까 사실상 안 쓰이는 상태
-      const filtered =
-        stopover === "경유만" ? uniq.filter((f) => !isDirect(f)) : uniq;
+              // 🔽 이 부분은 일단 그대로 두되, stopover 옵션이 "경유만"은 없으니까 사실상 안 쓰이는 상태
+              const filtered =
+                stopover === "경유만" ? uniq.filter((f) => !isDirect(f)) : uniq;
 
-      navigation.navigate("FlightResult", {
-        originLocationCode: departure,
-        destinationLocationCode: destination,
-        departureDate: departureDate.toISOString(),
-        returnDate: tripType === "왕복" ? returnDate.toISOString() : "",
-        adults: passengerCounts.adult,
-        travelClass: seatClass,
-        stopover,
-        results: filtered,
-      });
-    } catch (err: any) {
-      // ... 기존 에러 처리 그대로
-    } finally {
-      setLoading(false);
-      isSearchingRef.current = false;
-    }
-  }}
-  disabled={isSearchDisabled}
-/>
+              navigation.navigate("FlightResult", {
+                originLocationCode: departure,
+                destinationLocationCode: destination,
+                departureDate: departureDate.toISOString(),
+                returnDate: tripType === "왕복" ? returnDate.toISOString() : "",
+                adults: passengerCounts.adult,
+                travelClass: seatClass,
+                stopover,
+                results: filtered,
+              });
+            } catch (err: any) {
+              // ... 기존 에러 처리 그대로
+            } finally {
+              setLoading(false);
+              isSearchingRef.current = false;
+            }
+          }}
+          disabled={isSearchDisabled}
+        />
 
         <FlightLoadingModal visible={loading} />
         <PopularScreen />
@@ -413,7 +442,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: "#fff",
+    // backgroundColor: "#fff", // ❌ 이거 때문에 다크모드 안 먹음 → 제거
     gap: 15,
   },
   title: {

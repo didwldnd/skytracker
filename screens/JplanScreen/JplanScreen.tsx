@@ -14,7 +14,8 @@ import {
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { apiFetch } from "../../utils/apiClient";
-import { AuthContext } from "../../context/AuthContext"; //
+import { AuthContext } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext"; // ⭐ 추가
 
 type ChatMessage = {
   id: string;
@@ -47,6 +48,8 @@ const JplanScreen = () => {
   const auth = useContext(AuthContext);
   const isLoggedIn = auth?.authState.isAuthenticated ?? false;
 
+  const { theme } = useTheme(); // ⭐ 테마 사용
+
   const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [loadingHistory, setLoadingHistory] = useState(true);
@@ -60,7 +63,7 @@ const JplanScreen = () => {
   const guideAnim = useRef(new Animated.Value(1)).current; // 0:숨김, 1:보임
 
   const goToLogin = () => {
-    navigation.navigate("LoginScreen"); // 🔁 라우트 이름 프로젝트에 맞게 수정
+    navigation.navigate("LoginScreen");
   };
 
   // 2) 로그인된 경우에만 히스토리 불러오기
@@ -68,7 +71,6 @@ const JplanScreen = () => {
     const fetchHistory = async () => {
       if (!isLoggedIn) {
         setMessages([WELCOME_MESSAGE]);
-
         setLoadingHistory(false);
         return;
       }
@@ -227,15 +229,22 @@ const JplanScreen = () => {
   // 1) 비회원 화면 – 버튼 눌렀을 때만 로그인 이동
   if (!isLoggedIn) {
     return (
-      <View style={styles.lockContainer}>
-        <Text style={styles.lockTitle}>로그인 후 이용 가능한 서비스에요</Text>
-        <Text style={styles.lockDesc}>
+      <View
+        style={[
+          styles.lockContainer,
+          { backgroundColor: theme.background }, // ⭐ 테마 배경
+        ]}
+      >
+        <Text style={[styles.lockTitle, { color: theme.text }]}>
+          로그인 후 이용 가능한 서비스에요
+        </Text>
+        <Text style={[styles.lockDesc, { color: theme.text }]}>
           J플랜은 회원 전용 서비스입니다.{`\n`}
           맞춤형 여행 일정을 이용하려면 먼저 로그인 해주세요.
         </Text>
 
         <TouchableOpacity
-          style={styles.lockButton}
+          style={[styles.lockButton, { backgroundColor: theme.primary }]}
           onPress={() => navigation.navigate("LoginScreen")}
         >
           <Text style={styles.lockButtonText}>로그인 하러 가기</Text>
@@ -247,27 +256,30 @@ const JplanScreen = () => {
   // 2) 로그인 상태 – 기존 챗봇 UI
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: theme.background }}
       behavior="padding"
       keyboardVerticalOffset={Platform.OS === "android" ? 25 : 25}
     >
-      <View style={{ flex: 1, backgroundColor: "white" }}>
+      <View style={{ flex: 1, backgroundColor: theme.background }}>
         {/* 🔹 상단 헤더 + 사용법 토글 버튼 */}
-        <View style={styles.headerRow}>
-          <Text style={styles.title}>J플랜</Text>
+        <View style={[styles.headerRow, { backgroundColor: theme.background }]}>
+          <Text style={[styles.title, { color: theme.text }]}>J플랜</Text>
 
           <TouchableOpacity
             onPress={() => setShowGuide((prev) => !prev)}
-            style={styles.guideToggle}
+            style={[
+              styles.guideToggle,
+              { backgroundColor: theme.card, borderColor: theme.border },
+            ]}
             activeOpacity={0.7}
           >
-            <Text style={styles.guideToggleText}>
+            <Text style={[styles.guideToggleText, { color: theme.text }]}>
               {showGuide ? "사용법 접기 ▲" : "사용법 보기 ▼"}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* 🔹 사용법 안내 Overlay (채팅 레이아웃과 독립) */}
+        {/* 🔹 사용법 안내 Overlay */}
         {guideMounted && (
           <Animated.View
             pointerEvents={showGuide ? "auto" : "none"}
@@ -286,9 +298,16 @@ const JplanScreen = () => {
               },
             ]}
           >
-            <View style={styles.guideContainer}>
-              <Text style={styles.guideTitle}>J플랜 사용 가이드</Text>
-              <Text style={styles.guideText}>
+            <View
+              style={[
+                styles.guideContainer,
+                { backgroundColor: theme.card, borderColor: theme.border },
+              ]}
+            >
+              <Text style={[styles.guideTitle, { color: theme.text }]}>
+                J플랜 사용 가이드
+              </Text>
+              <Text style={[styles.guideText, { color: theme.text }]}>
                 • J플랜은 항공권·여행 시기 추천 도우미예요.{"\n"}• 도시명 또는
                 국가명을 입력해 주시면{"\n"}
                 {"   "}– 항공권이 가장 저렴한 시기{"\n"}
@@ -305,12 +324,12 @@ const JplanScreen = () => {
           </Animated.View>
         )}
 
-        {/* 🔹 채팅 영역 (이제는 가이드와 완전 분리됨, 높이 안 바뀜) */}
+        {/* 🔹 채팅 영역 */}
         <View style={{ flex: 1 }}>
           {loadingHistory ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator />
-              <Text style={styles.loadingText}>
+              <Text style={[styles.loadingText, { color: theme.text }]}>
                 대화 기록을 불러오는 중입니다...
               </Text>
             </View>
@@ -333,9 +352,19 @@ const JplanScreen = () => {
 
                 return (
                   <View style={styles.botMessageWrapper}>
-                    <Text style={styles.botIcon}>🤖</Text>
-                    <View style={[styles.bubble, styles.botBubble]}>
-                      <Text style={styles.botText}>{item.content}</Text>
+                    <Text style={[styles.botIcon, { color: theme.text }]}>
+                      🤖
+                    </Text>
+                    <View
+                      style={[
+                        styles.bubble,
+                        styles.botBubble,
+                        { backgroundColor: theme.card },
+                      ]}
+                    >
+                      <Text style={[styles.botText, { color: theme.text }]}>
+                        {item.content}
+                      </Text>
                     </View>
                   </View>
                 );
@@ -345,18 +374,27 @@ const JplanScreen = () => {
         </View>
 
         {/* 입력창 */}
-        <View style={styles.inputBox}>
+        <View
+          style={[
+            styles.inputBox,
+            { backgroundColor: theme.card, borderColor: theme.border },
+          ]}
+        >
           <TextInput
-            style={styles.input}
+            style={[
+              styles.input,
+              { backgroundColor: theme.background, color: theme.text },
+            ]}
             value={input}
             onChangeText={setInput}
             placeholder="메시지를 입력하세요"
+            placeholderTextColor="#9ca3af"
             returnKeyType="send"
             onSubmitEditing={handleSend}
           />
           <TouchableOpacity
             onPress={handleSend}
-            style={styles.sendBtn}
+            style={[styles.sendBtn, { backgroundColor: theme.primary }]}
             activeOpacity={0.7}
           >
             {sending ? (
@@ -374,7 +412,7 @@ const JplanScreen = () => {
 export default JplanScreen;
 
 const styles = StyleSheet.create({
-  // 🔹 PriceAlertScreen이랑 맞춘 부분
+  // 🔹 공통 로딩/락 스타일
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -389,7 +427,6 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8fafc",
   },
   lockTitle: {
     fontSize: 20,
@@ -399,7 +436,6 @@ const styles = StyleSheet.create({
   },
   lockDesc: {
     fontSize: 14,
-    color: "#64748b",
     textAlign: "center",
     marginBottom: 24,
     lineHeight: 20,
@@ -408,7 +444,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: "#6ea1d4",
   },
   lockButtonText: {
     color: "#fff",
@@ -427,7 +462,7 @@ const styles = StyleSheet.create({
   },
   guideOverlay: {
     position: "absolute",
-    top: 55, // 헤더 바로 아래, 필요하면 숫자 조절
+    top: 55,
     left: 0,
     right: 0,
     paddingHorizontal: 10,
@@ -442,32 +477,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: "#eef2ff",
+    borderWidth: 1,
   },
   guideToggleText: {
     fontSize: 12,
-    color: "#4b5563",
     fontWeight: "500",
   },
   guideContainer: {
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderRadius: 8,
-    backgroundColor: "#f1f1f1", // botBubble이랑 비슷한 느낌
+    borderWidth: 1,
   },
   guideTitle: {
     fontSize: 13,
     fontWeight: "600",
     marginBottom: 4,
-    color: "#111827",
   },
   guideText: {
     fontSize: 12,
-    color: "#333",
     lineHeight: 18,
   },
 
-  // 🔹 기존 J플랜 챗 UI
+  // 🔹 채팅 UI
   wrapper: {
     flex: 1,
     backgroundColor: "white",
@@ -508,7 +540,6 @@ const styles = StyleSheet.create({
   },
   botBubble: {
     alignSelf: "flex-start",
-    backgroundColor: "#f1f1f1",
     padding: 10,
     marginLeft: 10,
   },
@@ -520,17 +551,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 8,
     borderTopWidth: 1,
-    borderColor: "#ccc",
-    backgroundColor: "white",
   },
   input: {
     flex: 1,
     padding: 10,
-    backgroundColor: "#f9f9f9",
     borderRadius: 20,
   },
   sendBtn: {
-    backgroundColor: "#6ea1d4",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 20,

@@ -1,6 +1,7 @@
 // screens/SearchScreen/SearchButtons.tsx
-import React, { useState } from "react";
+import React from "react";
 import { View, TouchableOpacity, Text, StyleSheet } from "react-native";
+import { useTheme } from "../../context/ThemeContext"; // ⭐ 추가
 
 interface Props {
   onReset: () => void;
@@ -9,13 +10,35 @@ interface Props {
 }
 
 export default function SearchButtons({ onReset, onSearch, disabled }: Props) {
+  const { theme, isDark } = useTheme(); // ⭐ 다크모드 정보 가져오기
+
   return (
     <View style={styles.buttonRow}>
-      <TouchableOpacity style={styles.resetButton} onPress={onReset}>
-        <Text style={styles.resetText}>초기화</Text>
-      </TouchableOpacity>
+      {/* 초기화 버튼 */}
       <TouchableOpacity
-        style={[styles.searchButton, disabled && styles.disabled]}
+        style={[
+          styles.resetButton,
+          { borderColor: isDark ? "#555" : "#aaa" } // ⭐ 다크모드 경계선
+        ]}
+        onPress={onReset}
+      >
+        <Text
+          style={[
+            styles.resetText,
+            { color: isDark ? theme.text : "#333" } // ⭐ 다크모드 글씨
+          ]}
+        >
+          초기화
+        </Text>
+      </TouchableOpacity>
+
+      {/* 검색 버튼 */}
+      <TouchableOpacity
+        style={[
+          styles.searchButton,
+          disabled && styles.disabled,
+          { backgroundColor: theme.primary } // ⭐ 다크모드에서도 theme.primary 사용
+        ]}
         onPress={onSearch}
         disabled={disabled}
       >
@@ -36,19 +59,16 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 14,
     borderRadius: 8,
-    borderColor: "#aaa",
     borderWidth: 1,
     alignItems: "center",
   },
   resetText: {
-    color: "#333",
     fontWeight: "600",
   },
   searchButton: {
     flex: 2,
     padding: 14,
     borderRadius: 8,
-    backgroundColor: "#6ea1d4",
     alignItems: "center",
   },
   searchText: {

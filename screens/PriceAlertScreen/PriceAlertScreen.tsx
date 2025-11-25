@@ -30,6 +30,7 @@ import { generateAlertKeyFromAlert } from "../../utils/generateAlertKeyFromAlert
 import { AuthContext } from "../../context/AuthContext";
 // 💡 검색 API
 import { searchFlights } from "../../utils/api";
+import { useTheme } from "../../context/ThemeContext";
 
 global.Buffer = Buffer;
 
@@ -130,13 +131,9 @@ const priceText = (
 const formatSeatClass = (cls: string) => {
   switch (cls) {
     case "ECONOMY":
-      return "일반석";
-    case "PREMIUM_ECONOMY":
-      return "프리미엄일반석";
+      return "ECONOMY";
     case "BUSINESS":
-      return "비즈니스석";
-    case "FIRST":
-      return "일등석";
+      return "BUSINESS";
     default:
       return cls;
   }
@@ -261,7 +258,7 @@ const MIN_TOUCH = 33;
 export default function PriceAlertScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
+  const { theme, isDark } = useTheme();
   const {
     alerts: localAlerts,
     removeAlert: removeLocalAlert,
@@ -383,58 +380,58 @@ export default function PriceAlertScreen() {
     }
   };
 
- const goDetail = async (alert: FlightAlertItem) => {
-  try {
-    if (!alert.departureDate) {
-      Alert.alert("안내", "출발일 정보가 없어 다시 검색할 수 없어요.");
-      return;
+  const goDetail = async (alert: FlightAlertItem) => {
+    try {
+      if (!alert.departureDate) {
+        Alert.alert("안내", "출발일 정보가 없어 다시 검색할 수 없어요.");
+        return;
+      }
+
+      setLoading(true);
+
+      const depDate = alert.departureDate.split("T")[0];
+      const retDate = alert.returnDate
+        ? alert.returnDate.split("T")[0]
+        : undefined;
+
+      const searchTravelClass: SearchTravelClass = mapAlertSeatToSearchClass(
+        alert.travelClass
+      );
+
+      // 검색 payload
+      const payload = {
+        originLocationAirport: alert.origin,
+        destinationLocationAirport: alert.destination,
+        departureDate: depDate,
+        adults: 1,
+        travelClass: searchTravelClass,
+        nonStop: alert.nonStop,
+        max: 10,
+        ...(retDate ? { returnDate: retDate } : {}),
+      };
+
+      const flights: FlightSearchResponseDto[] = await searchFlights(
+        payload as any
+      );
+
+      if (flights.length === 0) {
+        Alert.alert("안내", "해당 조건의 항공편을 찾을 수 없어요.");
+        return;
+      }
+
+      // 🔥 여기서 FlightDetailScreen 으로 바로 이동
+      const firstFlight = flights[0];
+
+      navigation.navigate("FlightDetail", {
+        flight: firstFlight,
+      });
+    } catch (e) {
+      console.log("[PriceAlertScreen] goDetail re-search error:", e);
+      Alert.alert("오류", "항공편을 다시 불러오지 못했어요.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(true);
-
-    const depDate = alert.departureDate.split("T")[0];
-    const retDate = alert.returnDate
-      ? alert.returnDate.split("T")[0]
-      : undefined;
-
-    const searchTravelClass: SearchTravelClass =
-      mapAlertSeatToSearchClass(alert.travelClass);
-
-    // 검색 payload
-    const payload = {
-      originLocationAirport: alert.origin,
-      destinationLocationAirport: alert.destination,
-      departureDate: depDate,
-      adults: 1,
-      travelClass: searchTravelClass,
-      nonStop: alert.nonStop,
-      max: 10,
-      ...(retDate ? { returnDate: retDate } : {}),
-    };
-
-    const flights: FlightSearchResponseDto[] = await searchFlights(
-      payload as any
-    );
-
-    if (flights.length === 0) {
-      Alert.alert("안내", "해당 조건의 항공편을 찾을 수 없어요.");
-      return;
-    }
-
-    // 🔥 여기서 FlightDetailScreen 으로 바로 이동
-    const firstFlight = flights[0];
-
-    navigation.navigate("FlightDetail", {
-      flight: firstFlight,
-    });
-  } catch (e) {
-    console.log("[PriceAlertScreen] goDetail re-search error:", e);
-    Alert.alert("오류", "항공편을 다시 불러오지 못했어요.");
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   const [globalToggling, setGlobalToggling] = useState(false);
 
@@ -532,30 +529,49 @@ export default function PriceAlertScreen() {
 
     return (
       <Pressable
-        style={styles.card}
+        style={[
+          styles.card,
+          {
+            backgroundColor: isDark ? "#111827" : "#fff", // 다크일 땐 어두운 카드
+          },
+        ]}
         onPress={() => goDetail(item)}
         android_ripple={{ color: "rgba(0,0,0,0.05)" }}
       >
         <View style={styles.row}>
-          <View style={styles.circle}>
+          <View
+            style={[
+              styles.circle,
+              { backgroundColor: isDark ? "#1f2937" : "#f0f0f0" },
+            ]}
+          >
             <Text style={{ fontSize: 18 }}>✈️</Text>
           </View>
 
           <View style={styles.middle}>
-            <Text style={styles.route}>
+            <Text style={[styles.route, { color: theme.text }]}>
               {from} - {to}
             </Text>
 
-            <Text style={styles.info}>
+            <Text
+              style={[
+                styles.info,
+                { color: isDark ? "#e5e7eb" : "#555" }, // 서브텍스트 색
+              ]}
+            >
               {departDate}
               {returnDate ? ` ~ ${returnDate}` : ""} · {seatInfo}
             </Text>
 
-            <Text style={styles.info}>최근 최저가 {mainPrice}</Text>
+            <Text style={[styles.info, { color: isDark ? "#e5e7eb" : "#555" }]}>
+              최근 최저가 {mainPrice}
+            </Text>
           </View>
 
           <View style={styles.right}>
-            <Text style={styles.price}>{mainPrice}</Text>
+            <Text style={[styles.price, { color: theme.text }]}>
+              {mainPrice}
+            </Text>
 
             <TouchableOpacity
               onPress={(e) => {
@@ -622,11 +638,20 @@ export default function PriceAlertScreen() {
 
   // 2) 로그인 상태: 알림 화면
   return (
-    <View style={{ flex: 1, padding: 16 }}>
+    <View
+      style={{
+        flex: 1,
+        padding: 16,
+        backgroundColor: theme.background, // 다크모드 배경 적용 (원하면 지워도 됨)
+      }}
+    >
+      {/* 상단 전체 알림 헤더 */}
       <View style={styles.globalToggle}>
         <View style={{ flexDirection: "column" }}>
-          <Text style={styles.globalToggleText}>전체 알림</Text>
-          <Text style={styles.globalToggleSub}>
+          <Text style={[styles.globalToggleText, { color: theme.text }]}>
+            전체 알림
+          </Text>
+          <Text style={[styles.globalToggleSub, { color: theme.text }]}>
             모든 알림은 이메일로 전송됩니다
           </Text>
         </View>
@@ -700,7 +725,6 @@ export default function PriceAlertScreen() {
                       return;
                     }
                   } finally {
-                    // 서버에 있든 없든, 여기까지 왔으면 로컬에선 무조건 제거
                     setAlertList((prev) =>
                       prev.filter((item) => item.alertId !== targetId)
                     );
@@ -769,7 +793,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: "#6ea1d4",
+    backgroundColor: "#0be5ecd7",
   },
   lockButtonText: {
     color: "#fff",

@@ -1,5 +1,10 @@
+// App.tsx
 import React from "react";
-import { NavigationContainer } from "@react-navigation/native";
+import {
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+} from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -10,10 +15,17 @@ import LoginScreen from "./screens/LoginScreen/LoginScreen";
 import FlightDetailScreen from "./screens/FlightResultScreen/FlightDetailScreen";
 import SplashScreen from "./screens/SplashScreen/SplashScreen";
 import CityFlightListScreen from "./screens/SearchScreen/CityFlightListScreen";
+
 import { PriceAlertProvider } from "./context/PriceAlertContext";
 import { UserSettingsProvider } from "./context/UserSettingsContext";
-import { FlightSearchResponseDto } from "./types/FlightResultScreenDto";
 import { AuthProvider } from "./context/AuthContext";
+import { ThemeProvider, useTheme } from "./context/ThemeContext";
+
+import { FlightSearchResponseDto } from "./types/FlightResultScreenDto";
+
+import { patchStyleSheet } from "./utils/patchStyleSheet";
+
+patchStyleSheet();
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -38,42 +50,56 @@ export type RootStackParamList = {
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+// ⭐ 여기서 theme을 실제 네비게이션/화면에 연결해 주는 컴포넌트
+function AppInner() {
+  const { theme, resolvedMode } = useTheme();
+
+  // React Navigation 기본 다크/라이트 테마랑도 연동
+  const navTheme = resolvedMode === "dark" ? DarkTheme : DefaultTheme;
+  navTheme.colors.background = theme.background;
+  navTheme.colors.card = theme.card;
+  navTheme.colors.text = theme.text;
+  navTheme.colors.primary = theme.primary;
+
+  return (
+    <NavigationContainer theme={navTheme}>
+      <Stack.Navigator
+        initialRouteName="Splash"
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: true,
+          gestureDirection: "horizontal",
+        }}
+      >
+        <Stack.Screen name="Splash" component={SplashScreen} />
+        <Stack.Screen name="HomeScreen" component={HomeScreen} />
+        <Stack.Screen name="LoginScreen" component={LoginScreen} />
+        <Stack.Screen name="FlightResult" component={FlightResult} />
+        <Stack.Screen name="FlightDetail" component={FlightDetailScreen} />
+        <Stack.Screen
+          name="CityFlightList"
+          component={CityFlightListScreen}
+          options={{ title: "도시별 항공편" }}
+        />
+        {/* ProfileScreen도 여기에 이미 등록돼 있겠지 */}
+        {/* <Stack.Screen name="ProfileScreen" component={ProfileScreen} /> */}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SafeAreaView style={{ flex: 1 }}>
-          {/* ✅ 여기 AuthProvider 추가 */}
           <AuthProvider>
             <UserSettingsProvider>
               <PriceAlertProvider>
-                <NavigationContainer>
-                  <Stack.Navigator
-                    initialRouteName="Splash"
-                    screenOptions={{
-                      headerShown: false,
-                      gestureEnabled: true,
-                      gestureDirection: "horizontal",
-                    }}
-                  >
-                    <Stack.Screen name="Splash" component={SplashScreen} />
-                    <Stack.Screen name="HomeScreen" component={HomeScreen} />
-                    <Stack.Screen name="LoginScreen" component={LoginScreen} />
-                    <Stack.Screen
-                      name="FlightResult"
-                      component={FlightResult}
-                    />
-                    <Stack.Screen
-                      name="FlightDetail"
-                      component={FlightDetailScreen}
-                    />
-                    <Stack.Screen
-                      name="CityFlightList"
-                      component={CityFlightListScreen}
-                      options={{ title: "도시별 항공편" }}
-                    />
-                  </Stack.Navigator>
-                </NavigationContainer>
+                {/* ⭐ 요 ThemeProvider가 "앱 전체"를 감싸는 핵심 */}
+                <ThemeProvider>
+                  <AppInner />
+                </ThemeProvider>
               </PriceAlertProvider>
             </UserSettingsProvider>
           </AuthProvider>

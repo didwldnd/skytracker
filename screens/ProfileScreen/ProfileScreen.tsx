@@ -22,8 +22,8 @@ import { airportData } from "../../data/airportData";
 import { logout } from "../../api/auth";
 import { deleteAccount, fetchProfile, updateUser } from "../../api/user";
 import { AuthContext } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext";
 
-const themeColor = "white";
 const HEADER_BG = "#6ea1d4";
 
 // ------------------ Reusable Pretty Info Sheet ------------------
@@ -40,14 +40,36 @@ function InfoSheet({
   subtitle?: string;
   children: React.ReactNode;
 }) {
+  const { theme } = useTheme();
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.sheetBackdrop}>
         <Pressable style={styles.sheetBackdropTouch} onPress={onClose} />
-        <View style={styles.sheetCard}>
-          <View style={styles.sheetHeader}>
-            <Text style={styles.sheetTitle}>{title}</Text>
-            {!!subtitle && <Text style={styles.sheetSubtitle}>{subtitle}</Text>}
+        <View style={[styles.sheetCard, { backgroundColor: theme.card }]}>
+          <View
+            style={[
+              styles.sheetHeader,
+              { backgroundColor: theme.muted, borderColor: theme.border },
+            ]}
+          >
+            <Text
+              style={[
+                styles.sheetTitle,
+                { color: theme.text },
+              ]}
+            >
+              {title}
+            </Text>
+            {!!subtitle && (
+              <Text
+                style={[
+                  styles.sheetSubtitle,
+                  { color: theme.subText },
+                ]}
+              >
+                {subtitle}
+              </Text>
+            )}
           </View>
 
           <ScrollView
@@ -58,7 +80,10 @@ function InfoSheet({
             <View style={{ height: 16 }} />
           </ScrollView>
 
-          <Pressable style={styles.sheetCloseBtn} onPress={onClose}>
+          <Pressable
+            style={[styles.sheetCloseBtn, { backgroundColor: HEADER_BG }]}
+            onPress={onClose}
+          >
             <Text style={{ color: "white", fontWeight: "600" }}>확인</Text>
           </Pressable>
         </View>
@@ -76,19 +101,32 @@ const Tag = ({
   label: string;
   selected?: boolean;
   disabled?: boolean;
-}) => (
-  <View
-    style={[
-      styles.tag,
-      selected && { backgroundColor: HEADER_BG + "22", borderColor: HEADER_BG },
-      disabled && { opacity: 0.5 },
-    ]}
-  >
-    <Text style={[styles.tagText, selected && { color: "#0b7285" }]}>
-      {label}
-    </Text>
-  </View>
-);
+}) => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.tag,
+        { borderColor: theme.border },
+        selected && {
+          backgroundColor: HEADER_BG + "22",
+          borderColor: HEADER_BG,
+        },
+        disabled && { opacity: 0.5 },
+      ]}
+    >
+      <Text
+        style={[
+          styles.tagText,
+          { color: theme.text },
+          selected && { color: HEADER_BG },
+        ]}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+};
 
 const PlaceholderRow = ({
   left,
@@ -105,11 +143,22 @@ const PlaceholderRow = ({
   </View>
 );
 
-const Divider = () => <View style={styles.divider} />;
+const Divider = () => {
+  const { theme } = useTheme();
+  return (
+    <View
+      style={[
+        styles.divider,
+        { backgroundColor: theme.border },
+      ]}
+    />
+  );
+};
 
 // ------------------ Main Screen ------------------
 const ProfileScreen = () => {
   const auth = useContext(AuthContext);
+  const { theme, resolvedMode, setThemePreference } = useTheme();
 
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -158,12 +207,11 @@ const ProfileScreen = () => {
   // 로그아웃 실행 함수
   const handleConfirmLogout = async () => {
     try {
-      await logout(); // 서버 + 토큰 삭제 등
+      await logout();
 
       if (auth) {
         await auth.logout();
       }
-      // 프론트 상태에서 로그인 유저를 없앰
       setUser(null);
 
       Alert.alert("로그아웃", "정상적으로 로그아웃되었습니다.");
@@ -173,7 +221,6 @@ const ProfileScreen = () => {
     }
   };
 
-  // 로그아웃 버튼 눌렀을 때: 확인창 띄우기
   const handleLogoutPress = () => {
     Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
       { text: "취소", style: "cancel" },
@@ -191,7 +238,7 @@ const ProfileScreen = () => {
   const closePicker = () => setPickerOpen(false);
 
   const handleSelectAirport = async (code: string) => {
-    await setPreferredDepartureAirport(code); // 컨텍스트 + AsyncStorage 저장
+    await setPreferredDepartureAirport(code);
     closePicker();
   };
 
@@ -223,7 +270,6 @@ const ProfileScreen = () => {
     });
   };
 
-  // ✅ 내 정보 수정 모달 열기
   const openEditModal = () => {
     if (!user) {
       Alert.alert("알림", "로그인이 필요합니다.");
@@ -234,7 +280,6 @@ const ProfileScreen = () => {
     setEditVisible(true);
   };
 
-  // ✅ 내 정보 수정 저장 (username만 수정, email은 그대로 유지)
   const handleSaveEdit = async () => {
     if (!editUsername.trim()) {
       Alert.alert("알림", "이름을 입력해주세요.");
@@ -248,7 +293,6 @@ const ProfileScreen = () => {
         email: editEmail,
       });
 
-      // 서버에서 준 최신 정보로 화면 상태 갱신
       setUser({
         username: updated.username,
         email: updated.email,
@@ -265,50 +309,117 @@ const ProfileScreen = () => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>프로필</Text>
+    <ScrollView
+      style={[
+        styles.container,
+        { backgroundColor: theme.background },
+      ]}
+    >
+      <Text
+        style={[
+          styles.title,
+          { color: theme.text },
+        ]}
+      >
+        프로필
+      </Text>
 
       {/* 프로필 헤더 */}
-      <View style={styles.profileHeader}>
+      <View
+        style={[
+          styles.profileHeader,
+          { backgroundColor: theme.card },
+        ]}
+      >
         {userLoading ? (
-          <Text style={styles.loginRequiredText}>로딩 중...</Text>
+          <Text
+            style={[
+              styles.loginRequiredText,
+              { color: theme.text },
+            ]}
+          >
+            로딩 중...
+          </Text>
         ) : user ? (
-          // ✅ 로그인 된 상태
           <View style={styles.profileRow}>
             <Avatar.Text
               size={80}
               label={user?.username?.charAt(0) ?? "?"}
-              style={styles.avatar}
-              labelStyle={{ fontSize: 32 }}
+              style={{
+                backgroundColor: HEADER_BG,
+                borderColor: theme.background,
+                borderWidth: 2,
+              }}
+              labelStyle={{ fontSize: 32, color: "white" }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.name}>{user.username}</Text>
-              <Text style={styles.email}>{user.email}</Text>
+              <Text
+                style={[
+                  styles.name,
+                  { color: theme.text },
+                ]}
+              >
+                {user.username}
+              </Text>
+              <Text
+                style={[
+                  styles.email,
+                  { color: theme.subText },
+                ]}
+              >
+                {user.email}
+              </Text>
 
-              {/* 나의 출발 공항 행 */}
               <View style={styles.infoRow}>
-                <Feather name="send" size={14} color="black" />
-                <Text style={styles.infoText}>
+                <Feather name="send" size={14} color={theme.subText} />
+                <Text
+                  style={[
+                    styles.infoText,
+                    { color: theme.subText },
+                  ]}
+                >
                   나의 출발 공항: {loading ? "로딩중..." : airportLabel}
                 </Text>
-                <TouchableOpacity onPress={openPicker} style={styles.miniBtn}>
-                  <Text style={{ fontSize: 12 }}>변경</Text>
+                <TouchableOpacity
+                  onPress={openPicker}
+                  style={[
+                    styles.miniBtn,
+                    { borderColor: theme.border },
+                  ]}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      color: theme.text,
+                    }}
+                  >
+                    변경
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         ) : (
-          // ❌ 로그아웃 상태
           <TouchableOpacity
             style={styles.loginRequiredBox}
             onPress={handleGoLogin}
             activeOpacity={0.8}
           >
-            <Text style={styles.loginRequiredText}>
+            <Text
+              style={[
+                styles.loginRequiredText,
+                { color: theme.text },
+              ]}
+            >
               로그인이 필요한 서비스입니다
             </Text>
-            <Text style={styles.loginRequiredSub}>
-              로그인하고 나의 출발 공항, 즐겨찾기 등을 관리해 보세요.
+            <Text
+              style={[
+                styles.loginRequiredSub,
+                { color: theme.subText },
+              ]}
+            >
+              로그인하고 회원 전용 서비스를 경험 해보세요.
             </Text>
           </TouchableOpacity>
         )}
@@ -318,7 +429,7 @@ const ProfileScreen = () => {
       {[
         {
           title: "내 정보 관리",
-          icon: <Feather name="user" size={18} color={themeColor} />,
+          icon: <Feather name="user" size={18} color="white" />,
           items: [
             { label: "알림 설정", icon: "bell" },
             { label: "언어 및 통화", icon: "globe" },
@@ -327,7 +438,7 @@ const ProfileScreen = () => {
         },
         {
           title: "여행 관리",
-          icon: <Feather name="map-pin" size={18} color={themeColor} />,
+          icon: <Feather name="map-pin" size={18} color="white" />,
           items: [
             { label: "즐겨찾기", icon: "heart" },
             { label: "예약 내역", icon: "calendar" },
@@ -335,7 +446,7 @@ const ProfileScreen = () => {
         },
         {
           title: "고객 지원",
-          icon: <Feather name="help-circle" size={18} color={themeColor} />,
+          icon: <Feather name="help-circle" size={18} color="white" />,
           items: [
             { label: "자주 묻는 질문", icon: "help-circle" },
             { label: "고객센터 문의", icon: "phone" },
@@ -343,20 +454,36 @@ const ProfileScreen = () => {
           ],
         },
       ].map((section, idx) => (
-        <View key={idx} style={styles.sectionBox}>
-          <View style={styles.sectionTitleRow}>
+        <View
+          key={idx}
+          style={[
+            styles.sectionBox,
+            {
+              backgroundColor: theme.card,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.sectionTitleRow,
+              { backgroundColor: HEADER_BG },
+            ]}
+          >
             {section.icon}
             <Text style={styles.sectionTitle}>{section.title}</Text>
           </View>
           {section.items.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={styles.sectionItem}
+              style={[
+                styles.sectionItem,
+                { borderColor: theme.border },
+              ]}
               onPress={() => {
                 if (item.label === "내 정보 수정") {
                   openEditModal();
                 } else {
-                  // ✅ 즐겨찾기 포함해서 전부 InfoSheet로 통일
                   openSheet(item.label as Exclude<SheetKind, null>);
                 }
               }}
@@ -364,20 +491,38 @@ const ProfileScreen = () => {
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
               >
-                <Feather name={item.icon as any} size={16} color="black" />
-                <Text style={styles.sectionLabel}>{item.label}</Text>
+                <Feather
+                  name={item.icon as any}
+                  size={16}
+                  color={theme.text}
+                />
+                <Text
+                  style={[
+                    styles.sectionLabel,
+                    { color: theme.text },
+                  ]}
+                >
+                  {item.label}
+                </Text>
               </View>
-              <Feather name="chevron-right" size={16} color="gray" />
+              <Feather name="chevron-right" size={16} color={theme.subText} />
             </TouchableOpacity>
           ))}
         </View>
       ))}
 
-      {/* 로그아웃 / 탈퇴 → 로그인 상태에서만 표시 */}
+      {/* 로그아웃 / 탈퇴 */}
       {user && (
         <View style={styles.logoutRow}>
           <TouchableOpacity onPress={handleLogoutPress}>
-            <Text style={styles.logoutText}>로그아웃</Text>
+            <Text
+              style={[
+                styles.logoutText,
+                { color: theme.subText },
+              ]}
+            >
+              로그아웃
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -389,23 +534,15 @@ const ProfileScreen = () => {
                   style: "destructive",
                   onPress: async () => {
                     try {
-                      // 1) 서버에 계정 삭제 요청 + 토큰 삭제
                       await deleteAccount();
-
-                      // 2) 전역 Auth 상태 초기화 (PriceAlert, J플랜 등도 같이 반응하도록)
                       if (auth) {
                         await auth.logout?.();
                       }
-
-                      // 3) 로컬 프로필 상태 비우기
                       setUser(null);
-
-                      // 4) 네비게이션 초기화 (원하는 화면으로)
                       navigation.reset({
                         index: 0,
                         routes: [{ name: "HomeScreen" }],
                       });
-
                       Alert.alert("탈퇴 완료", "계정이 삭제되었습니다.");
                     } catch (e) {
                       console.error("계정 삭제 에러:", e);
@@ -425,7 +562,7 @@ const ProfileScreen = () => {
         </View>
       )}
 
-      {/* ✅ SearchModal 재사용 */}
+      {/* SearchModal */}
       <SearchModal
         visible={pickerOpen}
         onClose={closePicker}
@@ -434,26 +571,43 @@ const ProfileScreen = () => {
         fieldLabel="출발지"
       />
 
-      {/* ✅ 즐겨찾기 안내 시트 */}
+      {/* 즐겨찾기 안내 시트 */}
       <InfoSheet
         visible={sheet === "즐겨찾기"}
         onClose={closeSheet}
         title="즐겨찾기"
         subtitle="자주 조회하는 항공편을 한 곳에 모아볼 수 있어요."
       >
-        <Text style={styles.subhead}>서비스 준비 중</Text>
-        <Text style={styles.caption}>
+        <Text
+          style={[
+            styles.subhead,
+            { color: theme.text },
+          ]}
+        >
+          서비스 준비 중
+        </Text>
+        <Text
+          style={[
+            styles.caption,
+            { color: theme.subText },
+          ]}
+        >
           즐겨찾기 기능은 현재 준비 중입니다.{"\n"}곧 원하는 항공편을
           저장해두고, 가격 변동과 함께 한 번에 확인할 수 있도록 업데이트될
           예정이에요.
         </Text>
         <Divider />
-        <Text style={styles.caption}>
+        <Text
+          style={[
+            styles.caption,
+            { color: theme.subText },
+          ]}
+        >
           조금만 기다려 주시면 더 편리한 경험을 제공해 드릴게요 ✈️
         </Text>
       </InfoSheet>
 
-      {/* ✅ Pretty placeholder sheets (view-only) */}
+      {/* 알림 설정 */}
       <InfoSheet
         visible={sheet === "알림 설정"}
         onClose={closeSheet}
@@ -463,8 +617,8 @@ const ProfileScreen = () => {
         <PlaceholderRow
           left={
             <>
-              <Feather name="bell" size={16} />
-              <Text>가격 알림 받기</Text>
+              <Feather name="bell" size={16} color={theme.text} />
+              <Text style={{ color: theme.text }}>가격 알림 받기</Text>
             </>
           }
           right={<Switch value={true} disabled />}
@@ -472,8 +626,8 @@ const ProfileScreen = () => {
         <PlaceholderRow
           left={
             <>
-              <Feather name="tag" size={16} />
-              <Text>특가/쿠폰 알림</Text>
+              <Feather name="tag" size={16} color={theme.text} />
+              <Text style={{ color: theme.text }}>특가/쿠폰 알림</Text>
             </>
           }
           right={<Switch value={true} disabled />}
@@ -481,23 +635,38 @@ const ProfileScreen = () => {
         <PlaceholderRow
           left={
             <>
-              <Feather name="airplay" size={16} />
-              <Text>좌석 알림</Text>
+              <Feather name="airplay" size={16} color={theme.text} />
+              <Text style={{ color: theme.text }}>좌석 알림</Text>
             </>
           }
           right={<Switch value={false} disabled />}
         />
         <Divider />
-        <Text style={styles.caption}>※ 실제 기능은 곧 제공 예정입니다.</Text>
+        <Text
+          style={[
+            styles.caption,
+            { color: theme.subText },
+          ]}
+        >
+          ※ 실제 기능은 곧 제공 예정입니다.
+        </Text>
       </InfoSheet>
 
+      {/* 언어 및 통화 */}
       <InfoSheet
         visible={sheet === "언어 및 통화"}
         onClose={closeSheet}
         title="언어 및 통화"
         subtitle=""
       >
-        <Text style={styles.subhead}>언어</Text>
+        <Text
+          style={[
+            styles.subhead,
+            { color: theme.text },
+          ]}
+        >
+          언어
+        </Text>
         <View style={styles.rowWrap}>
           <Tag label="한국어" selected />
           <Tag label="English" />
@@ -505,7 +674,14 @@ const ProfileScreen = () => {
           <Tag label="中文" />
         </View>
         <Divider />
-        <Text style={styles.subhead}>통화</Text>
+        <Text
+          style={[
+            styles.subhead,
+            { color: theme.text },
+          ]}
+        >
+          통화
+        </Text>
         <View style={styles.rowWrap}>
           <Tag label="KRW ₩" selected />
           <Tag label="USD $" />
@@ -513,11 +689,17 @@ const ProfileScreen = () => {
           <Tag label="EUR €" />
         </View>
         <Divider />
-        <Text style={styles.caption}>
+        <Text
+          style={[
+            styles.caption,
+            { color: theme.subText },
+          ]}
+        >
           ※ 선택해도 저장되지 않습니다 (UI 프리뷰).
         </Text>
       </InfoSheet>
 
+      {/* 예약 내역 */}
       <InfoSheet
         visible={sheet === "예약 내역"}
         onClose={closeSheet}
@@ -525,22 +707,61 @@ const ProfileScreen = () => {
         subtitle="아직 예약이 없어요"
       >
         {[1, 2].map((i) => (
-          <View key={i} style={styles.skeletonCard}>
+          <View
+            key={i}
+            style={[
+              styles.skeletonCard,
+              {
+                borderColor: theme.border,
+                backgroundColor: theme.card,
+              },
+            ]}
+          >
             <View style={styles.skelRow}>
-              <View style={styles.skelBadge} />
+              <View
+                style={[
+                  styles.skelBadge,
+                  { backgroundColor: theme.muted },
+                ]}
+              />
               <View style={{ flex: 1 }}>
-                <View style={styles.skelLineWide} />
-                <View style={styles.skelLine} />
+                <View
+                  style={[
+                    styles.skelLineWide,
+                    { backgroundColor: theme.muted },
+                  ]}
+                />
+                <View
+                  style={[
+                    styles.skelLine,
+                    { backgroundColor: theme.muted },
+                  ]}
+                />
               </View>
             </View>
-            <View style={[styles.skelLine, { marginTop: 10, width: "40%" }]} />
+            <View
+              style={[
+                styles.skelLine,
+                {
+                  marginTop: 10,
+                  width: "40%",
+                  backgroundColor: theme.muted,
+                },
+              ]}
+            />
           </View>
         ))}
-        <Text style={[styles.caption, { marginTop: 8 }]}>
+        <Text
+          style={[
+            styles.caption,
+            { marginTop: 8, color: theme.subText },
+          ]}
+        >
           실제 예약이 생성되면 여기에 표시됩니다.
         </Text>
       </InfoSheet>
 
+      {/* FAQ */}
       <InfoSheet
         visible={sheet === "자주 묻는 질문"}
         onClose={closeSheet}
@@ -550,47 +771,92 @@ const ProfileScreen = () => {
         <FAQ />
       </InfoSheet>
 
+      {/* 고객센터 */}
       <InfoSheet
         visible={sheet === "고객센터 문의"}
         onClose={closeSheet}
         title="고객센터 문의"
         subtitle="운영시간: 09:00 ~ 18:00 (KST)"
       >
-        <View style={styles.contactCard}>
-          <Feather name="mail" size={18} />
+        <View
+          style={[
+            styles.contactCard,
+            { borderColor: theme.border },
+          ]}
+        >
+          <Feather name="mail" size={18} color={theme.text} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "600" }}>이메일</Text>
-            <Text style={styles.caption}>skytrackerofficial@gmail.com</Text>
+            <Text style={{ fontWeight: "600", color: theme.text }}>이메일</Text>
+            <Text
+              style={[
+                styles.caption,
+                { color: theme.subText },
+              ]}
+            >
+              skytrackerofficial@gmail.com
+            </Text>
           </View>
           <View style={styles.disabledBtn}>
             <Text style={styles.disabledBtnText}>보내기</Text>
           </View>
         </View>
-        <View style={styles.contactCard}>
-          <Feather name="phone" size={18} />
+        <View
+          style={[
+            styles.contactCard,
+            { borderColor: theme.border },
+          ]}
+        >
+          <Feather name="phone" size={18} color={theme.text} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "600" }}>전화</Text>
-            <Text style={styles.caption}>02-551-3122</Text>
+            <Text style={{ fontWeight: "600", color: theme.text }}>전화</Text>
+            <Text
+              style={[
+                styles.caption,
+                { color: theme.subText },
+              ]}
+            >
+              02-551-3122
+            </Text>
           </View>
           <View style={styles.disabledBtn}>
             <Text style={styles.disabledBtnText}>전화하기</Text>
           </View>
         </View>
-        <View style={styles.contactCard}>
-          <Feather name="message-circle" size={18} />
+        <View
+          style={[
+            styles.contactCard,
+            { borderColor: theme.border },
+          ]}
+        >
+          <Feather name="message-circle" size={18} color={theme.text} />
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: "600" }}>카카오톡</Text>
-            <Text style={styles.caption}>@SKYTRACKER</Text>
+            <Text style={{ fontWeight: "600", color: theme.text }}>
+              카카오톡
+            </Text>
+            <Text
+              style={[
+                styles.caption,
+                { color: theme.subText },
+              ]}
+            >
+              @SKYTRACKER
+            </Text>
           </View>
           <View style={styles.disabledBtn}>
             <Text style={styles.disabledBtnText}>열기</Text>
           </View>
         </View>
-        <Text style={[styles.caption, { marginTop: 8 }]}>
+        <Text
+          style={[
+            styles.caption,
+            { marginTop: 8, color: theme.subText },
+          ]}
+        >
           ※ 버튼은 예시용으로만 표시됩니다.
         </Text>
       </InfoSheet>
 
+      {/* 앱 설정 (다크 모드 토글) */}
       <InfoSheet
         visible={sheet === "앱 설정"}
         onClose={closeSheet}
@@ -600,17 +866,24 @@ const ProfileScreen = () => {
         <PlaceholderRow
           left={
             <>
-              <Feather name="moon" size={16} />
-              <Text>다크 모드</Text>
+              <Feather name="moon" size={16} color={theme.text} />
+              <Text style={{ color: theme.text }}>다크 모드</Text>
             </>
           }
-          right={<Switch value={false} disabled />}
+          right={
+            <Switch
+              value={resolvedMode === "dark"}
+              onValueChange={(value) =>
+                setThemePreference(value ? "dark" : "light")
+              }
+            />
+          }
         />
         <PlaceholderRow
           left={
             <>
-              <Feather name="lock" size={16} />
-              <Text>생체인증 잠금</Text>
+              <Feather name="lock" size={16} color={theme.text} />
+              <Text style={{ color: theme.text }}>생체인증 잠금</Text>
             </>
           }
           right={<Switch value={true} disabled />}
@@ -618,14 +891,23 @@ const ProfileScreen = () => {
         <PlaceholderRow
           left={
             <>
-              <Feather name="wifi" size={16} />
-              <Text>Wi-Fi에서만 이미지 로드</Text>
+              <Feather name="wifi" size={16} color={theme.text} />
+              <Text style={{ color: theme.text }}>
+                Wi-Fi에서만 이미지 로드
+              </Text>
             </>
           }
           right={<Switch value={true} disabled />}
         />
         <Divider />
-        <Text style={styles.caption}>※ 실제 동작하지 않는 미리보기입니다.</Text>
+        <Text
+          style={[
+            styles.caption,
+            { color: theme.subText },
+          ]}
+        >
+          ※ 실제 동작하지 않는 미리보기입니다.
+        </Text>
       </InfoSheet>
 
       {/* 내 정보 수정 모달 */}
@@ -636,46 +918,91 @@ const ProfileScreen = () => {
         onRequestClose={() => setEditVisible(false)}
       >
         <View style={styles.editBackdrop}>
-          {/* 바깥 여백 누르면 닫히도록 */}
           <Pressable
             style={StyleSheet.absoluteFillObject}
             onPress={() => setEditVisible(false)}
           />
 
-          <View style={styles.editCard}>
-            <Text style={styles.editTitle}>내 정보 수정</Text>
+          <View
+            style={[
+              styles.editCard,
+              { backgroundColor: theme.card },
+            ]}
+          >
+            <Text
+              style={[
+                styles.editTitle,
+                { color: theme.text },
+              ]}
+            >
+              내 정보 수정
+            </Text>
 
-            <Text style={styles.editLabel}>이름</Text>
+            <Text
+              style={[
+                styles.editLabel,
+                { color: theme.subText },
+              ]}
+            >
+              이름
+            </Text>
             <TextInput
-              style={styles.editInput}
+              style={[
+                styles.editInput,
+                {
+                  borderColor: theme.border,
+                  color: theme.text,
+                },
+              ]}
               value={editUsername}
               onChangeText={setEditUsername}
               placeholder="이름을 입력하세요"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={theme.subText}
             />
 
-            <Text style={styles.editLabel}>이메일 (변경 불가)</Text>
+            <Text
+              style={[
+                styles.editLabel,
+                { color: theme.subText },
+              ]}
+            >
+              이메일 (변경 불가)
+            </Text>
             <TextInput
-              style={[styles.editInput, styles.editInputDisabled]}
+              style={[
+                styles.editInput,
+                styles.editInputDisabled,
+                {
+                  borderColor: theme.border,
+                  backgroundColor: theme.muted,
+                  color: theme.subText,
+                },
+              ]}
               value={editEmail}
               editable={false}
               selectTextOnFocus={false}
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={theme.subText}
             />
 
             <View style={styles.editButtonRow}>
               <TouchableOpacity
-                style={[styles.editButton, { backgroundColor: "#e2e8f0" }]}
+                style={[
+                  styles.editButton,
+                  { backgroundColor: theme.muted },
+                ]}
                 onPress={() => setEditVisible(false)}
                 disabled={saving}
               >
-                <Text style={{ fontWeight: "600", color: "#0f172a" }}>
+                <Text style={{ fontWeight: "600", color: theme.text }}>
                   취소
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.editButton, { backgroundColor: HEADER_BG }]}
+                style={[
+                  styles.editButton,
+                  { backgroundColor: HEADER_BG },
+                ]}
                 onPress={handleSaveEdit}
                 disabled={saving}
               >
@@ -693,6 +1020,7 @@ const ProfileScreen = () => {
 
 // ------------------ FAQ component (accordion) ------------------
 const FAQ = () => {
+  const { theme } = useTheme();
   const [open, setOpen] = useState<number | null>(0);
   const items = [
     {
@@ -714,18 +1042,39 @@ const FAQ = () => {
       {items.map((it, idx) => {
         const opened = open === idx;
         return (
-          <View key={idx} style={styles.faqItem}>
+          <View
+            key={idx}
+            style={[
+              styles.faqItem,
+              { borderColor: theme.border },
+            ]}
+          >
             <TouchableOpacity
-              style={styles.faqHeader}
+              style={[
+                styles.faqHeader,
+                { backgroundColor: theme.muted },
+              ]}
               onPress={() => setOpen(opened ? null : idx)}
             >
-              <Text style={{ fontWeight: "600" }}>{it.q}</Text>
+              <Text style={{ fontWeight: "600", color: theme.text }}>
+                {it.q}
+              </Text>
               <Feather
                 name={opened ? "chevron-up" : "chevron-down"}
                 size={18}
+                color={theme.text}
               />
             </TouchableOpacity>
-            {opened && <Text style={styles.faqBody}>{it.a}</Text>}
+            {opened && (
+              <Text
+                style={[
+                  styles.faqBody,
+                  { color: theme.subText },
+                ]}
+              >
+                {it.a}
+              </Text>
+            )}
           </View>
         );
       })}
@@ -735,21 +1084,18 @@ const FAQ = () => {
 
 // ------------------ Styles ------------------
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "white", padding: 16 },
+  container: { flex: 1, padding: 16 },
   profileHeader: {
-    backgroundColor: themeColor,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
   profileRow: { flexDirection: "row", alignItems: "center", gap: 16 },
-  avatar: { backgroundColor: "white", borderColor: themeColor, borderWidth: 2 },
-  name: { color: "black", fontSize: 20, fontWeight: "bold", marginBottom: 4 },
-  email: { color: "black", marginBottom: 4 },
+  name: { fontSize: 20, fontWeight: "bold", marginBottom: 4 },
+  email: { marginBottom: 4 },
   infoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
-  infoText: { color: "black", fontSize: 12 },
+  infoText: { fontSize: 12 },
 
-  // ✅ 로그아웃 상태 문구용
   loginRequiredBox: {
     alignItems: "center",
     justifyContent: "center",
@@ -758,12 +1104,10 @@ const styles = StyleSheet.create({
   loginRequiredText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#0f172a",
   },
   loginRequiredSub: {
     marginTop: 6,
     fontSize: 12,
-    color: "#64748b",
     textAlign: "center",
   },
 
@@ -773,17 +1117,14 @@ const styles = StyleSheet.create({
 
   sectionBox: {
     borderWidth: 1,
-    borderColor: "#bae6fd",
     borderRadius: 10,
     marginBottom: 16,
-    backgroundColor: "white",
   },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     padding: 12,
-    backgroundColor: HEADER_BG,
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
   },
@@ -794,9 +1135,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     borderTopWidth: 1,
-    borderColor: "#f1f5f9",
   },
-  sectionLabel: { fontSize: 14, color: "#1e293b" },
+  sectionLabel: { fontSize: 14 },
 
   logoutRow: {
     flexDirection: "row",
@@ -804,7 +1144,8 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingBottom: 40,
   },
-  logoutText: { fontSize: 14, color: "gray" },
+  logoutText: { fontSize: 14 },
+
   title: { fontSize: 24, fontWeight: "bold", marginLeft: 4 },
 
   // Sheet
@@ -814,22 +1155,18 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheetCard: {
-    backgroundColor: "white",
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     overflow: "hidden",
   },
   sheetHeader: {
     padding: 16,
-    backgroundColor: "#f8fafc",
     borderBottomWidth: 1,
-    borderColor: "#e2e8f0",
   },
   sheetTitle: { fontSize: 18, fontWeight: "bold" },
-  sheetSubtitle: { fontSize: 12, color: "#64748b", marginTop: 4 },
+  sheetSubtitle: { fontSize: 12, marginTop: 4 },
   sheetCloseBtn: {
     margin: 16,
-    backgroundColor: "#6ea1d4",
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",
@@ -840,35 +1177,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
     borderRadius: 9999,
   },
-  tagText: { fontSize: 13, color: "#334155" },
+  tagText: { fontSize: 13 },
   rowWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  divider: { height: 1, backgroundColor: "#e2e8f0", marginVertical: 16 },
+  divider: { height: 1, marginVertical: 16 },
   miniBtn: {
     marginLeft: 8,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderWidth: 1,
-    borderColor: "#cbd5e1",
     borderRadius: 6,
   },
 
-  // Placeholder list rows
   placeholderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 12,
   },
-  caption: { color: "#64748b", fontSize: 12 },
+  caption: { fontSize: 12 },
   subhead: { fontSize: 14, fontWeight: "600", marginBottom: 8 },
 
   // Skeletons
   skeletonCard: {
     borderWidth: 1,
-    borderColor: "#e2e8f0",
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
@@ -878,18 +1211,15 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: "#e2e8f0",
   },
   skelLine: {
     height: 10,
-    backgroundColor: "#e2e8f0",
     borderRadius: 6,
     width: "60%",
     marginTop: 6,
   },
   skelLineWide: {
     height: 12,
-    backgroundColor: "#e2e8f0",
     borderRadius: 6,
     width: "80%",
     marginBottom: 6,
@@ -898,7 +1228,6 @@ const styles = StyleSheet.create({
   // FAQ
   faqItem: {
     borderWidth: 1,
-    borderColor: "#e2e8f0",
     borderRadius: 10,
     overflow: "hidden",
   },
@@ -907,9 +1236,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 12,
-    backgroundColor: "#f8fafc",
   },
-  faqBody: { paddingHorizontal: 12, paddingBottom: 12, color: "#334155" },
+  faqBody: { paddingHorizontal: 12, paddingBottom: 12 },
 
   // Contact
   contactCard: {
@@ -918,7 +1246,6 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
     borderRadius: 12,
     marginBottom: 10,
   },
@@ -930,7 +1257,7 @@ const styles = StyleSheet.create({
   },
   disabledBtnText: { color: "white", fontWeight: "600" },
 
-  // ✅ 내 정보 수정 모달
+  // 내 정보 수정 모달
   editBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
@@ -939,7 +1266,6 @@ const styles = StyleSheet.create({
   },
   editCard: {
     width: "88%",
-    backgroundColor: "white",
     borderRadius: 16,
     padding: 20,
   },
@@ -947,29 +1273,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 16,
-    color: "#0f172a",
   },
   editLabel: {
     fontSize: 13,
     fontWeight: "600",
     marginTop: 10,
     marginBottom: 4,
-    color: "#475569",
   },
   editInput: {
     borderWidth: 1,
-    borderColor: "#cbd5e1",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
     fontSize: 14,
-    color: "#0f172a",
   },
-  editInputDisabled: {
-    backgroundColor: "#e2e8f0",
-    color: "#64748b",
-  },
-
+  editInputDisabled: {},
   editButtonRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
