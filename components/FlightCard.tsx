@@ -1,26 +1,15 @@
-// components/FlightCard.tsx
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  ActivityIndicator,
-  Alert,
 } from "react-native";
 import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
-import { usePriceAlert } from "../context/PriceAlertContext";
 import { formatPrice, formatDurationKo } from "../utils/formatters";
-import {
-  registerFlightAlert,
-  FlightAlertRequestDto,
-  fetchFlightAlerts,
-  FlightAlertItem,
-  deleteFlightAlert,
-} from "../utils/priceAlertApi";
 
 const THEME = "#0be5ecd7";
 const { width } = Dimensions.get("window");
@@ -66,11 +55,6 @@ const FlightCard = ({
   };
   onPress?: () => void;
 }) => {
-  const { addAlert, removeAlert, isAlerted } = usePriceAlert();
-  const alerted = isAlerted(flight);
-
-  const [alertLoading, setAlertLoading] = useState(false);
-
   // 출발/도착 시간: outbound* 우선, 없으면 구 DTO(departureTime/arrivalTime) 사용
   const departureTime =
     flight.outboundDepartureTime ?? (flight as any).departureTime;
@@ -85,109 +69,6 @@ const FlightCard = ({
 
   const cls = seatLabel(flight.travelClass);
   const diff = diffPct(flight.price, flight.previousPrice);
-
-  const handleAlertPress = async () => {
-    if (alertLoading) return;
-
-    // 출발 날짜 ISO
-    const departIso =
-      flight.outboundDepartureTime ?? (flight as any).departureTime;
-
-    if (!departIso) {
-      Alert.alert(
-        "알림 설정 불가",
-        "출발 일자 정보를 찾을 수 없어요. 다시 시도해 주세요."
-      );
-      return;
-    }
-
-    const departureDate = departIso.split("T")[0];
-
-    // ✅ 1) 이미 알림 켜져 있는 상태 → 서버 & 로컬 둘 다 OFF
-    if (alerted) {
-      try {
-        setAlertLoading(true);
-
-        // 서버 알림 목록 조회
-        const serverAlerts: FlightAlertItem[] = await fetchFlightAlerts();
-
-        // 이 flight에 해당하는 서버 알림 찾기
-        const matched = serverAlerts.find((a) => {
-          return (
-            a.airlineCode === flight.airlineCode &&
-            String(a.flightNumber) === String(flight.flightNumber) &&
-            a.origin === flight.departureAirport &&
-            a.destination === flight.arrivalAirport &&
-            a.departureDate === departureDate &&
-            a.travelClass === flight.travelClass
-          );
-        });
-
-        if (matched?.alertId != null) {
-          console.log("🗑 [FlightCard] deleteFlightAlert:", matched.alertId);
-          await deleteFlightAlert(matched.alertId);
-        } else {
-          console.log(
-            "⚠ [FlightCard] 매칭되는 서버 알림(alertId)을 찾지 못했어요. 로컬만 OFF 처리."
-          );
-        }
-
-        // 서버 삭제 성공 or 못 찾았더라도 → 로컬에서는 OFF
-        removeAlert(flight);
-      } catch (e) {
-        console.log("❌ [FlightCard] deleteFlightAlert error:", e);
-        Alert.alert("오류", "알림 해제에 실패했어요.");
-      } finally {
-        setAlertLoading(false);
-      }
-      return;
-    }
-
-    // ✅ 2) 알림이 꺼져 있는 상태 → 서버 등록 + 로컬 ON
-    try {
-      setAlertLoading(true);
-
-      const returnIso =
-        flight.returnDepartureTime ?? (flight as any).returnDepartureTime;
-
-      const rawPrice = (flight as any).price;
-      const numPrice = Number(rawPrice);
-      const safeLastCheckedPrice = Number.isFinite(numPrice)
-        ? Math.round(numPrice)
-        : 0;
-
-      const dto: FlightAlertRequestDto = {
-        airlineCode: flight.airlineCode,
-        flightNumber: String(flight.flightNumber),
-
-        originLocationAirport: flight.departureAirport,
-        destinationLocationAirport: flight.arrivalAirport,
-
-        departureDate,
-        returnDate: returnIso ? returnIso.split("T")[0] : null,
-
-        travelClass: flight.travelClass,
-        currency: flight.currency ?? "KRW",
-        lastCheckedPrice: safeLastCheckedPrice,
-        adults: 1,
-        nonStop: !!flight.nonStop,
-        roundTrip: flight.tripType === "ROUND_TRIP",
-      };
-
-      console.log("🚀 [FlightCard] register alert payload:", dto);
-      await registerFlightAlert(dto);
-
-      console.log("✅ 서버 등록 성공 → 로컬 ON");
-      addAlert(flight);
-    } catch (e) {
-      console.log("❌ [FlightCard] registerFlightAlert error:", e);
-      Alert.alert("오류", "알림 등록에 실패했어요.");
-      // 혹시 중간에 어디선가 ON 됐어도, 실패면 OFF 쪽으로 맞춘다
-      removeAlert(flight);
-    } finally {
-      setAlertLoading(false);
-    }
-  };
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
@@ -256,7 +137,7 @@ const FlightCard = ({
           </View>
         </View>
 
-        {/* 서비스/정책 배지 + 액션 아이콘 */}
+        {/* 서비스/정책 배지 */}
         <View style={styles.bottomRow}>
           <View style={styles.badgesRow}>
             {/* 위탁수하물 */}
@@ -323,28 +204,6 @@ const FlightCard = ({
                 {flight.isChangeable ? "변경" : "변경불가"}
               </Text>
             </View>
-          </View>
-
-          {/* 🔔 종 아이콘: 기존 alerted 로직 그대로 + 로딩 처리만 추가 */}
-          <View style={styles.iconRow}>
-            <TouchableOpacity
-              onPress={handleAlertPress}
-              disabled={alertLoading}
-              style={{ padding: 10 }}
-            >
-              {alertLoading ? (
-                <ActivityIndicator
-                  size="small"
-                  color={alerted ? "gold" : "#6b7280"}
-                />
-              ) : (
-                <Ionicons
-                  name={alerted ? "notifications" : "notifications-outline"}
-                  size={22}
-                  color={alerted ? "gold" : "#6b7280"}
-                />
-              )}
-            </TouchableOpacity>
           </View>
         </View>
       </View>
@@ -426,6 +285,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   badgesRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+
   badge: {
     flexDirection: "row",
     alignItems: "center",
@@ -440,6 +300,4 @@ const styles = StyleSheet.create({
   badgePurple: { backgroundColor: "#ede9fe" },
   badgeRed: { backgroundColor: "#fee2e2" },
   badgeTxt: { fontSize: 11, fontWeight: "700" },
-
-  iconRow: { flexDirection: "row", alignItems: "center", gap: 14 },
 });

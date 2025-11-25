@@ -28,6 +28,8 @@ import { usePriceAlert } from "../../context/PriceAlertContext";
 import axios from "axios";
 import { generateAlertKeyFromAlert } from "../../utils/generateAlertKeyFromAlert";
 import { AuthContext } from "../../context/AuthContext";
+// 💡 검색 API
+import { searchFlights } from "../../utils/api";
 
 global.Buffer = Buffer;
 
@@ -137,6 +139,28 @@ const formatSeatClass = (cls: string) => {
       return "일등석";
     default:
       return cls;
+  }
+};
+
+// 🔁 검색 API에서 사용하는 좌석 타입 (searchFlights용)
+type SearchTravelClass = "ECONOMY" | "BUSINESS";
+
+// 🔁 알림에 저장된 좌석 등급(한글/코드) → 검색 API용 코드
+const mapAlertSeatToSearchClass = (cls: string): SearchTravelClass => {
+  switch (cls) {
+    case "비즈니스석":
+    case "BUSINESS":
+      return "BUSINESS";
+
+    // 나머지는 전부 ECONOMY 로 통일 (프리미엄/일등석도 일단 일반석으로 검색)
+    case "일반석":
+    case "ECONOMY":
+    case "프리미엄일반석":
+    case "PREMIUM_ECONOMY":
+    case "일등석":
+    case "FIRST":
+    default:
+      return "ECONOMY";
   }
 };
 
@@ -359,20 +383,58 @@ export default function PriceAlertScreen() {
     }
   };
 
-  const goDetail = (alert: FlightAlertItem) => {
-    const matched = findFlightFromLocalAlerts(localAlerts, alert);
-
-    if (!matched) {
-      Alert.alert(
-        "안내",
-        "이 알림의 원본 항공편 정보를 찾을 수 없어요.\n같은 조건으로 다시 검색해서 알림을 등록해 주세요."
-      );
+ const goDetail = async (alert: FlightAlertItem) => {
+  try {
+    if (!alert.departureDate) {
+      Alert.alert("안내", "출발일 정보가 없어 다시 검색할 수 없어요.");
       return;
     }
 
-    console.log("✅ 상세 flight 데이터:", matched);
-    navigation.navigate("FlightDetail", { flight: matched });
-  };
+    setLoading(true);
+
+    const depDate = alert.departureDate.split("T")[0];
+    const retDate = alert.returnDate
+      ? alert.returnDate.split("T")[0]
+      : undefined;
+
+    const searchTravelClass: SearchTravelClass =
+      mapAlertSeatToSearchClass(alert.travelClass);
+
+    // 검색 payload
+    const payload = {
+      originLocationAirport: alert.origin,
+      destinationLocationAirport: alert.destination,
+      departureDate: depDate,
+      adults: 1,
+      travelClass: searchTravelClass,
+      nonStop: alert.nonStop,
+      max: 10,
+      ...(retDate ? { returnDate: retDate } : {}),
+    };
+
+    const flights: FlightSearchResponseDto[] = await searchFlights(
+      payload as any
+    );
+
+    if (flights.length === 0) {
+      Alert.alert("안내", "해당 조건의 항공편을 찾을 수 없어요.");
+      return;
+    }
+
+    // 🔥 여기서 FlightDetailScreen 으로 바로 이동
+    const firstFlight = flights[0];
+
+    navigation.navigate("FlightDetail", {
+      flight: firstFlight,
+    });
+  } catch (e) {
+    console.log("[PriceAlertScreen] goDetail re-search error:", e);
+    Alert.alert("오류", "항공편을 다시 불러오지 못했어요.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const [globalToggling, setGlobalToggling] = useState(false);
 
@@ -489,7 +551,7 @@ export default function PriceAlertScreen() {
               {returnDate ? ` ~ ${returnDate}` : ""} · {seatInfo}
             </Text>
 
-            <Text style={styles.info}>최근 가격 {mainPrice}</Text>
+            <Text style={styles.info}>최근 최저가 {mainPrice}</Text>
           </View>
 
           <View style={styles.right}>
