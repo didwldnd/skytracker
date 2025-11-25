@@ -359,7 +359,12 @@ const JplanScreen = () => {
                       style={[
                         styles.bubble,
                         styles.botBubble,
-                        { backgroundColor: theme.card },
+                        {
+                          backgroundColor: theme.card,
+                          // ⭐ 테두리 추가 (라이트에서만 특히 효과, 다크도 무난)
+                          borderWidth: 1,
+                          borderColor: theme.border,
+                        },
                       ]}
                     >
                       <Text style={[styles.botText, { color: theme.text }]}>
