@@ -102,7 +102,7 @@ let manifest = {
   scope: "/skytracker/",
   display: "standalone",
   background_color: "#ffffff",
-  theme_color: "#0be5ecd7",
+  theme_color: "#6ea1d4",
   icons: []
 };
 

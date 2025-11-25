@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   optionText: { fontSize: 18 },
   modalCloseButton: {
     marginTop: 20,
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",

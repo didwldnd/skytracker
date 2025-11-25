@@ -182,13 +182,13 @@ export default function LoginScreen() {
 
   return (
     <LinearGradient
-      colors={["#97fcccff", "#0be5ecd7", "#5dccffff"]}
+      colors={["#97fcccff", "#6ea1d4", "#5dccffff"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}
     >
       <View style={styles.iconCircle}>
-        <FontAwesome name="plane" size={28} color="#0be5ecd7" />
+        <FontAwesome name="plane" size={28} color="#6ea1d4" />
       </View>
 
       <Text style={styles.title}>SkyTracker</Text>
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
   },
   iconCircle: {
     width: 64,

@@ -46,7 +46,7 @@ export default function SplashScreenCustom() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -63,6 +63,6 @@ const styles = StyleSheet.create({
   char: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#0be5ecd7",
+    color: "#6ea1d4",
   },
 });

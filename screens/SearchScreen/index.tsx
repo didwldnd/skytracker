@@ -436,8 +436,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f0f0f0",
   },
   tripTypeButtonActive: {
-    backgroundColor: "#0be5ecd7",
-    borderColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
+    borderColor: "#6ea1d4",
   },
   tripTypeText: {
     fontSize: 16,

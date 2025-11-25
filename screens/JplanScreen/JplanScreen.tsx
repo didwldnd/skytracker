@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
   },
   lockButtonText: {
     color: "#fff",
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   },
   userBubble: {
     alignSelf: "flex-end",
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
     paddingVertical: 10,
     paddingHorizontal: 14,
     marginBottom: 10,
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   sendBtn: {
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 20,

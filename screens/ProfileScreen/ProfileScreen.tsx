@@ -24,7 +24,7 @@ import { deleteAccount, fetchProfile, updateUser } from "../../api/user";
 import { AuthContext } from "../../context/AuthContext";
 
 const themeColor = "white";
-const HEADER_BG = "#0be5ecd7";
+const HEADER_BG = "#6ea1d4";
 
 // ------------------ Reusable Pretty Info Sheet ------------------
 function InfoSheet({
@@ -829,7 +829,7 @@ const styles = StyleSheet.create({
   sheetSubtitle: { fontSize: 12, color: "#64748b", marginTop: 4 },
   sheetCloseBtn: {
     margin: 16,
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
     paddingVertical: 12,
     borderRadius: 10,
     alignItems: "center",

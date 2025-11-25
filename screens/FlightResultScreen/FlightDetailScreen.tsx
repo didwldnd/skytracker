@@ -18,7 +18,7 @@ import { formatPrice } from "../../utils/formatters";
 
 type DetailRouteProp = RouteProp<RootStackParamList, "FlightDetail">;
 
-const THEME = "#0be5ecd7";
+const THEME = "#6ea1d4";
 
 const FlightDetailScreen: React.FC = () => {
   const { params } = useRoute<DetailRouteProp>();

@@ -11,7 +11,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 import { formatPrice, formatDurationKo } from "../utils/formatters";
 
-const THEME = "#0be5ecd7";
+const THEME = "#6ea1d4";
 const { width } = Dimensions.get("window");
 
 /* ----- 헬퍼 ----- */

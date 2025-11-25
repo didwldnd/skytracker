@@ -13,7 +13,7 @@ import { MaterialIcons, Ionicons } from "@expo/vector-icons";
 import type { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 
-const THEME = "#0be5ecd7";
+const THEME = "#6ea1d4";
 const { width } = Dimensions.get("window");
 
 // ---- 네비게이션 파라미터 타입 ----

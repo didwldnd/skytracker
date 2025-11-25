@@ -16,7 +16,7 @@ import FlightCard from "../../components/FlightCard";
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 
 // ====== 유틸 ======
-const THEME = "#0be5ecd7";
+const THEME = "#6ea1d4";
 
 const norm = (s?: any) => (s == null ? "" : String(s).trim());
 const upper = (s?: any) => norm(s).toUpperCase();

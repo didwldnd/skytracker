@@ -25,7 +25,7 @@ const HomeScreen = () => {
           const iconName = iconMap[route.name as keyof typeof iconMap];
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: "#0be5ecd7",
+        tabBarActiveTintColor: "#6ea1d4",
         tabBarInactiveTintColor: "gray",
         tabBarStyle: {
           height: 60,

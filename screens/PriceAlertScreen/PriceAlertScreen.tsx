@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
   },
   lockButtonText: {
     color: "#fff",
@@ -828,7 +828,7 @@ const styles = StyleSheet.create({
   price: { fontSize: 15, fontWeight: "bold", color: "#333" },
   viewBtn: {
     marginTop: 6,
-    backgroundColor: "#0be5ecd7",
+    backgroundColor: "#6ea1d4",
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,

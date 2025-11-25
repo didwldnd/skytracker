@@ -71,7 +71,7 @@ interface Props {
   setCurrentMonth: (month: string) => void;
 }
 
-const THEME = "#0be5ecd7";
+const THEME = "#6ea1d4";
 
 const DateSelector = ({
   tripType,

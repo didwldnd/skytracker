@@ -17,7 +17,7 @@ type RootStackParamList = {
   CityFlightList: { city: { cityKo: string; cityEn: string } };
 };
 
-const THEME_COLOR = "#0be5ecd7";
+const THEME_COLOR = "#6ea1d4";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const SIDE_INSET = 16;

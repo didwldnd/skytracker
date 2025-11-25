@@ -47,7 +47,7 @@
     },
     "web": {
       "favicon": "./assets/favicon.png",
-      "themeColor": "#0be5ecd7",
+      "themeColor": "#6ea1d4",
       "basePath": "/skytracker"
     },
     "platforms": [
