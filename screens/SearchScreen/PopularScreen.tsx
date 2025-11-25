@@ -61,6 +61,51 @@ const mock: PopularDestination[] = [
     currentPrice: 769000,
     previousPrice: 769000,
   },
+
+  // 🔥 추가된 6개 🔥
+
+  {
+    cityKo: "싱가포르",
+    cityEn: "Singapore",
+    image: require("../../assets/citys/singapore.png"),
+    currentPrice: 420000,
+    previousPrice: 450000,
+  },
+  {
+    cityKo: "방콕",
+    cityEn: "Bangkok",
+    image: require("../../assets/citys/bangkok.png"),
+    currentPrice: 310000,
+    previousPrice: 330000,
+  },
+  {
+    cityKo: "런던",
+    cityEn: "London",
+    image: require("../../assets/citys/london.png"),
+    currentPrice: 980000,
+    previousPrice: 1020000,
+  },
+  {
+    cityKo: "로스앤젤레스",
+    cityEn: "Los Angeles",
+    image: require("../../assets/citys/losangeles.png"),
+    currentPrice: 890000,
+    previousPrice: 910000,
+  },
+  {
+    cityKo: "밴쿠버",
+    cityEn: "Vancouver",
+    image: require("../../assets/citys/vancouver.png"),
+    currentPrice: 750000,
+    previousPrice: 780000,
+  },
+  {
+    cityKo: "프랑크푸르트",
+    cityEn: "Frankfurt",
+    image: require("../../assets/citys/frankfurt.png"),
+    currentPrice: 860000,
+    previousPrice: 900000,
+  },
 ];
 
 const formatKRW = (n: number) =>
