@@ -1,3 +1,4 @@
+// components/search/DateSelector.tsx
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -9,6 +10,7 @@ import {
   TouchableWithoutFeedback,
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
+import { useTheme } from "../../context/ThemeContext";
 
 LocaleConfig.locales["ko"] = {
   monthNames: [
@@ -90,23 +92,24 @@ const DateSelector = ({
   currentMonth,
   setCurrentMonth,
 }: Props) => {
+  const { isDark } = useTheme();
+
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
   const isOneWay = tripType === "편도";
 
-  // --- 폭 기반 애니메이션 (세로 튐 방지) ---
   const [rowWidth, setRowWidth] = useState(0);
-  const progress = useRef(new Animated.Value(isOneWay ? 0 : 1)).current; // 0: 편도(귀국일 닫힘), 1: 왕복(열림)
+  const progress = useRef(new Animated.Value(isOneWay ? 0 : 1)).current;
   const labelOpacity = useRef(new Animated.Value(isOneWay ? 0 : 1)).current;
 
   useEffect(() => {
     Animated.timing(progress, {
       toValue: isOneWay ? 0 : 1,
       duration: 260,
-      useNativeDriver: false, // width/opacity 애니메이션
+      useNativeDriver: false,
     }).start();
   }, [isOneWay, progress]);
+
   useEffect(() => {
-    // 편도로 갈 때는 라벨을 더 빠르게 사라지게(140ms)
     Animated.timing(labelOpacity, {
       toValue: isOneWay ? 0 : 1,
       duration: isOneWay ? 140 : 180,
@@ -135,7 +138,7 @@ const DateSelector = ({
         },
       });
       setDepartureDate(new Date(day.dateString));
-      setReturnDate(new Date(day.dateString)); // 내부 형식 통일 목적
+      setReturnDate(new Date(day.dateString));
       return;
     }
 
@@ -171,7 +174,10 @@ const DateSelector = ({
             textColor: "#fff",
           };
         } else {
-          newMarked[date] = { color: "#FFE0B2", textColor: "#000" };
+          newMarked[date] = {
+            color: isDark ? "#1f2937" : "#FFE0B2",
+            textColor: isDark ? "#e5e7eb" : "#000",
+          };
         }
       });
 
@@ -212,11 +218,50 @@ const DateSelector = ({
     outputRange: [12, 0],
   });
 
+  // 라이트/다크 공통 pill 색
+  const pillBg = isDark ? "#020617" : "#f9fafb";
+  const pillBorder = isDark ? "#1e293b" : "#e5e7eb";
+  const pillLabelColor = isDark ? "#9ca3af" : "#6b7280";
+  const pillValueColor = isDark ? "#f9fafb" : "#111827";
+
+  // 라이트 모드 때만 직접 색 세팅 (다크는 전역 패치에 맡김)
+  const lightCalendarTheme = !isDark
+    ? {
+        backgroundColor: "#ffffff",
+        calendarBackground: "#ffffff",
+        dayTextColor: "#111827",
+        textSectionTitleColor: "#111827",
+        monthTextColor: "#111827",
+        textDisabledColor: "#d1d5db",
+      }
+    : {};
+
+  const calendarTheme = {
+    selectedDayBackgroundColor: THEME,
+    selectedDayTextColor: "#fff",
+    todayTextColor: THEME,
+    arrowColor: THEME,
+    textDayFontWeight: "500",
+    textMonthFontWeight: "bold",
+    ...lightCalendarTheme,
+  };
+
+  const calendarStyle = !isDark
+    ? { backgroundColor: "#ffffff", borderRadius: 12 }
+    : { borderRadius: 12 };
+
+  const wrapperStyle = !isDark
+    ? [styles.calendarWrapper, { backgroundColor: "#ffffff" }]
+    : [styles.calendarWrapper];
+
   return (
     <View>
       {/* KAYAK 스타일: 붙어있는 두 입력 */}
       <View
-        style={styles.pillRow}
+        style={[
+          styles.pillRow,
+          { borderColor: pillBorder, backgroundColor: pillBg },
+        ]}
         onLayout={(e) => setRowWidth(e.nativeEvent.layout.width)}
       >
         {/* 출발일 */}
@@ -225,16 +270,24 @@ const DateSelector = ({
           onPress={() => setShowDeparturePicker(true)}
           accessibilityLabel="출발일 선택"
         >
-          <Text style={styles.pillLabel}>출발일</Text>
-          <Text style={styles.pillValue}>{formatDate(departureDate)}</Text>
+          <Text style={[styles.pillLabel, { color: pillLabelColor }]}>
+            출발일
+          </Text>
+          <Text style={[styles.pillValue, { color: pillValueColor }]}>
+            {formatDate(departureDate)}
+          </Text>
         </TouchableOpacity>
 
-        {/* 구분선 (왕복에서만 페이드인) */}
+        {/* 구분선 */}
         <Animated.View
           pointerEvents="none"
-          style={[styles.pillDivider, { opacity: dividerOpacity }]}
+          style={[
+            styles.pillDivider,
+            { opacity: dividerOpacity, backgroundColor: pillBorder },
+          ]}
         />
 
+        {/* 귀국일 */}
         <Animated.View
           style={[
             styles.returnWrap,
@@ -243,7 +296,7 @@ const DateSelector = ({
                 inputRange: [0, 1],
                 outputRange: [0, (rowWidth - 1) / 2],
               }),
-              opacity: progress, // 컨테이너 페이드(기존)
+              opacity: progress,
             },
           ]}
           pointerEvents={isOneWay ? "none" : "auto"}
@@ -257,15 +310,13 @@ const DateSelector = ({
             accessibilityLabel="귀국일 선택"
             activeOpacity={0.8}
           >
-            {/* ✅ 라벨은 isOneWay 바뀌자마자 빠르게 페이드아웃 */}
             <Animated.Text
-              style={[styles.pillLabel, { opacity: labelOpacity }]}
+              style={[styles.pillLabel, { opacity: labelOpacity, color: pillLabelColor }]}
               numberOfLines={1}
             >
               귀국일
             </Animated.Text>
 
-            {/* ✅ 값 텍스트는 폭이 어느 정도 나온 뒤에 등장(겹침 방지) */}
             <Animated.View
               pointerEvents="none"
               style={{
@@ -274,7 +325,7 @@ const DateSelector = ({
               }}
             >
               <Text
-                style={styles.pillValue}
+                style={[styles.pillValue, { color: pillValueColor }]}
                 numberOfLines={1}
                 ellipsizeMode="clip"
               >
@@ -287,12 +338,10 @@ const DateSelector = ({
 
       {/* 달력 모달 */}
       <Modal visible={showDeparturePicker} transparent animationType="slide">
-        {/* ✅ 바깥 어두운 영역 터치하면 닫힘 */}
         <TouchableWithoutFeedback onPress={() => setShowDeparturePicker(false)}>
           <View style={styles.modalContainer}>
-            {/* ✅ 아래 시트 부분은 터치해도 닫히지 않도록 한 번 더 감싸서 이벤트 차단 */}
             <TouchableWithoutFeedback onPress={() => {}}>
-              <View style={styles.calendarWrapper}>
+              <View style={wrapperStyle}>
                 <Calendar
                   key={String(startDate) + "_" + String(endDate)}
                   current={currentMonth}
@@ -300,17 +349,15 @@ const DateSelector = ({
                   markedDates={markedDates}
                   markingType={"period"}
                   minDate={formatDate(new Date())}
-                  theme={{
-                    selectedDayBackgroundColor: THEME,
-                    todayTextColor: THEME,
-                    arrowColor: THEME,
-                    textDayFontWeight: "500",
-                    textMonthFontWeight: "bold",
-                  }}
+                  style={calendarStyle}
+                  theme={calendarTheme}
                 />
                 <View style={styles.buttonRow}>
                   <TouchableOpacity
-                    style={[styles.modalButton, { backgroundColor: "#ccc" }]}
+                    style={[
+                      styles.modalButton,
+                      { backgroundColor: isDark ? "#4b5563" : "#ccc" },
+                    ]}
                     onPress={() => setShowDeparturePicker(false)}
                   >
                     <Text style={styles.modalButtonText}>닫기</Text>
@@ -339,11 +386,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    backgroundColor: "#f9fafb",
     borderRadius: 12,
     overflow: "hidden",
-    height: 56, // ✅ 세로 고정으로 높이 튐 방지
+    height: 56,
   },
   pillHalf: {
     flex: 1,
@@ -361,22 +406,19 @@ const styles = StyleSheet.create({
   },
   returnWrap: {
     height: "100%",
-    overflow: "hidden", // ✅ 접히는 동안 내용 잘림 처리
+    overflow: "hidden",
   },
   pillDivider: {
     width: 1,
-    backgroundColor: "#e5e7eb",
     alignSelf: "stretch",
   },
   pillLabel: {
     fontSize: 12,
-    color: "#6b7280",
     marginBottom: 2,
     includeFontPadding: false,
   },
   pillValue: {
     fontSize: 16,
-    color: "#111827",
     fontWeight: "600",
     includeFontPadding: false,
   },
@@ -388,7 +430,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.4)",
   },
   calendarWrapper: {
-    backgroundColor: "white",
     padding: 20,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,

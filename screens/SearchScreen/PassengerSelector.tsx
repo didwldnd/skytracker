@@ -11,6 +11,7 @@ import {
   Alert,
   TouchableWithoutFeedback,
 } from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 
 interface Props {
   visible: boolean;
@@ -22,6 +23,7 @@ interface Props {
     infantWithSeat: number;
     infantOnLap: number;
   };
+
   onIncrement: (type: keyof Props["counts"]) => void;
   onDecrement: (type: keyof Props["counts"]) => void;
   onClose: () => void;
@@ -55,12 +57,14 @@ const PassengerSelector = ({
   onDismissWarning,
   onDismissMinWarning,
 }: Props) => {
+  const { theme } = useTheme();
+
   // 최대 인원 경고
   useEffect(() => {
     if (showWarning) {
       const msg = "최대 9명까지 선택할 수 있습니다.";
       if (Platform.OS === "android") {
-        ToastAndroid.show(msg, ToastAndroid.SHORT); // ★ 3.5초 표시
+        ToastAndroid.show(msg, ToastAndroid.SHORT);
       } else {
         Alert.alert("", msg);
       }
@@ -73,7 +77,7 @@ const PassengerSelector = ({
     if (showMinWarning) {
       const msg = "최소한 1명의 승객을 추가해주시기 바랍니다.";
       if (Platform.OS === "android") {
-        ToastAndroid.show(msg, ToastAndroid.SHORT); // ★ 3.5초 표시
+        ToastAndroid.show(msg, ToastAndroid.SHORT);
       } else {
         Alert.alert("", msg);
       }
@@ -90,13 +94,29 @@ const PassengerSelector = ({
           <View style={styles.modalOverlay}>
             {/* 🔹 안쪽 시트는 터치해도 안 닫히게 한 번 더 래핑 */}
             <TouchableWithoutFeedback onPress={() => {}}>
-              <View style={styles.modalContent}>
+              <View
+                style={[styles.modalContent, { backgroundColor: theme.card }]}
+              >
                 <ScrollView>
                   {ageGroups.map((group) => (
-                    <View key={group.key} style={styles.option}>
+                    <View
+                      key={group.key}
+                      style={[
+                        styles.option,
+                        { borderBottomColor: theme.border },
+                      ]}
+                    >
                       <View>
-                        <Text style={styles.optionText}>{group.label}</Text>
-                        <Text style={{ color: "gray" }}>
+                        <Text
+                          style={[styles.optionText, { color: theme.text }]}
+                        >
+                          {group.label}
+                        </Text>
+                        <Text
+                          style={{
+                            color: (theme as any).subText ?? theme.text,
+                          }}
+                        >
                           {group.description}
                         </Text>
                       </View>
@@ -108,15 +128,27 @@ const PassengerSelector = ({
                           onPress={() =>
                             onDecrement(group.key as keyof Props["counts"])
                           }
-                          style={styles.btn}
+                          style={[
+                            styles.btn,
+                            {
+                              backgroundColor:
+                                (theme as any).buttonBackground ?? "#eee",
+                            },
+                          ]}
                           accessibilityRole="button"
                           accessibilityLabel={`${group.label} 감소`}
                           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
-                          <Text>-</Text>
+                          {/* + / - 는 항상 검정색 */}
+                          <Text style={{ color: "#000" }}>-</Text>
                         </TouchableOpacity>
 
-                        <Text style={{ marginHorizontal: 10 }}>
+                        <Text
+                          style={{
+                            marginHorizontal: 10,
+                            color: theme.text,
+                          }}
+                        >
                           {counts[group.key as keyof Props["counts"]]}
                         </Text>
 
@@ -124,12 +156,18 @@ const PassengerSelector = ({
                           onPress={() =>
                             onIncrement(group.key as keyof Props["counts"])
                           }
-                          style={styles.btn}
+                          style={[
+                            styles.btn,
+                            {
+                              backgroundColor:
+                                (theme as any).buttonBackground ?? "#eee",
+                            },
+                          ]}
                           accessibilityRole="button"
                           accessibilityLabel={`${group.label} 증가`}
                           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                         >
-                          <Text>+</Text>
+                          <Text style={{ color: "#000" }}>+</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -137,12 +175,19 @@ const PassengerSelector = ({
                 </ScrollView>
 
                 <TouchableOpacity
-                  style={styles.modalCloseButton}
+                  style={[
+                    styles.modalCloseButton,
+                    { backgroundColor: theme.primary },
+                  ]}
                   onPress={onClose}
                   accessibilityRole="button"
                   accessibilityLabel="승객 수 적용"
                 >
-                  <Text style={styles.modalCloseButtonText}>적용</Text>
+                  <Text
+                    style={{ color: "#fff", fontSize: 16, fontWeight: "bold" }}
+                  >
+                    적용
+                  </Text>
                 </TouchableOpacity>
               </View>
             </TouchableWithoutFeedback>
@@ -162,7 +207,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    backgroundColor: "#fff",
     padding: 24,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -170,7 +214,6 @@ const styles = StyleSheet.create({
   },
   option: {
     paddingVertical: 15,
-    borderBottomColor: "#ccc",
     borderBottomWidth: 1,
     flexDirection: "row",
     justifyContent: "space-between",
@@ -184,7 +227,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btn: {
-    backgroundColor: "#eee",
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 5,
@@ -196,14 +238,13 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     marginTop: 20,
-    backgroundColor: "#6ea1d4",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
     alignSelf: "stretch",
   },
   modalCloseButtonText: {
-    color: "#fff",
+    color: "#fff", // primary 위에 흰색 고정
     fontSize: 16,
     fontWeight: "bold",
   },

@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { View, TouchableOpacity, Text, StyleSheet, Alert } from "react-native";
 import { airportData } from "../../data/airportData";
+import { useTheme } from "../../context/ThemeContext";
 
 interface Props {
   departure: string;   // IATA 코드, 예: "ICN"
@@ -18,6 +19,8 @@ export default function LocationSelector({
   onSwap,
   onSelectField,
 }: Props) {
+  const { theme } = useTheme();
+
   // code -> city 맵
   const codeToCity = useMemo(() => {
     const map: Record<string, string> = {};
@@ -52,32 +55,56 @@ export default function LocationSelector({
 
   return (
     <View style={styles.locationWrapper}>
+      {/* 출발지 */}
       <TouchableOpacity
         onPress={() => onSelectField("departure", { excludeCode: destination })}
-        style={styles.input}
+        style={[
+          styles.input,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+          },
+        ]}
         accessibilityLabel="출발지 선택"
       >
-        <Text style={styles.inputText}>
+        <Text style={[styles.inputText, { color: theme.text }]}>
           {departure ? labelFromCode(departure) : "출발지 선택"}
         </Text>
       </TouchableOpacity>
 
+      {/* 스왑 버튼 */}
       <TouchableOpacity
-        style={[styles.swapButton, sameOrEmpty && styles.swapDisabled]}
+        style={[
+          styles.swapButton,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+          },
+          sameOrEmpty && styles.swapDisabled,
+        ]}
         onPress={handleSwap}
         disabled={sameOrEmpty}
         accessibilityLabel="출발지와 도착지 교환"
         accessibilityState={{ disabled: sameOrEmpty }}
       >
-        <Text style={styles.swapIcon}>⇅</Text>
+        <Text style={[styles.swapIcon, { color: theme.text }]}>⇅</Text>
       </TouchableOpacity>
 
+      {/* 도착지 */}
       <TouchableOpacity
-        onPress={() => onSelectField("destination", { excludeCode: departure })}
-        style={styles.input}
+        onPress={() =>
+          onSelectField("destination", { excludeCode: departure })
+        }
+        style={[
+          styles.input,
+          {
+            backgroundColor: theme.card,
+            borderColor: theme.border,
+          },
+        ]}
         accessibilityLabel="도착지 선택"
       >
-        <Text style={styles.inputText}>
+        <Text style={[styles.inputText, { color: theme.text }]}>
           {destination ? labelFromCode(destination) : "도착지 선택"}
         </Text>
       </TouchableOpacity>
@@ -94,14 +121,14 @@ export default function LocationSelector({
 const styles = StyleSheet.create({
   locationWrapper: { position: "relative", marginBottom: 15 },
   input: {
-    borderColor: "#ccc",
+    borderColor: "#ccc",      // 실제 사용 시 theme.border로 오버라이드
     borderWidth: 1,
     padding: 12,
     borderRadius: 8,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#f9f9f9", // 실제 사용 시 theme.card로 오버라이드
     marginBottom: 8,
   },
-  inputText: { fontSize: 16, color: "#333" },
+  inputText: { fontSize: 16, color: "#333" }, // 실제 사용 시 theme.text로 오버라이드
   swapButton: {
     position: "absolute",
     top: 30,
@@ -110,13 +137,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#f9f9f9",
+    backgroundColor: "#f9f9f9", // theme.card로 오버라이드
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#ccc",
+    borderColor: "#ccc",       // theme.border로 오버라이드
   },
   swapDisabled: { opacity: 0.4 },
-  swapIcon: { fontSize: 16 },
+  swapIcon: { fontSize: 16, color: "#333" }, // theme.text로 오버라이드
   helperText: { marginTop: 4, fontSize: 12, color: "#d00" },
 });

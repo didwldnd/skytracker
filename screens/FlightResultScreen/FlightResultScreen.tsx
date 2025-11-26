@@ -14,6 +14,7 @@ import FlightResultHeader from "../../components/FlightResultHeader";
 import FlightLoadingModal from "../../components/FlightLoadingModal";
 import FlightCard from "../../components/FlightCard";
 import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
+import { useTheme } from "../../context/ThemeContext";
 
 // ====== 유틸 ======
 const THEME = "#6ea1d4";
@@ -76,6 +77,7 @@ const FlightResultScreen = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<FlightResultRouteProp>();
+  const { theme } = useTheme();
 
   const {
     originLocationCode,
@@ -198,7 +200,7 @@ const FlightResultScreen = () => {
     });
   }, [deduped]);
 
-  // Comparator 팩토리 (stable sort 보장: 마지막 키로 __idx)
+  // Comparator 팩토리
   const makeComparator = (mode: SortMode) => {
     switch (mode) {
       case "LOWEST_PRICE":
@@ -213,7 +215,6 @@ const FlightResultScreen = () => {
           a.__idx - b.__idx;
 
       case "SHORTEST_DURATION":
-        // 🔹 가는 편 비행시간 기준 정렬
         return (a: Derived, b: Derived) =>
           a.__outboundDurationMin - b.__outboundDurationMin ||
           a.__priceKRW - b.__priceKRW ||
@@ -274,7 +275,7 @@ const FlightResultScreen = () => {
     }, 1555);
   };
 
-  // ====== 정렬 세그먼트 (Kayak 스타일 간결 탭) ======
+  // ====== 정렬 세그먼트 ======
   const SortSegment = () => {
     const modes: SortMode[] = [
       "LOWEST_PRICE",
@@ -282,17 +283,31 @@ const FlightResultScreen = () => {
       "EARLIEST_DEPARTURE",
     ];
     return (
-      <View style={styles.sortBar}>
+      <View
+        style={[styles.sortBar, { backgroundColor: theme.background }]}
+      >
         {modes.map((m) => {
           const active = sortMode === m;
           return (
             <TouchableOpacity
               key={m}
-              style={[styles.sortChip, active && styles.sortChipActive]}
+              style={[
+                styles.sortChip,
+                { backgroundColor: theme.card },
+                active && styles.sortChipActive,
+              ]}
               onPress={() => setSortMode(m)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.sortText, active && styles.sortTextActive]}>
+              <Text
+                style={[
+                  styles.sortText,
+                  {
+                    // ✅ 선택된 탭은 항상 까만 글씨, 나머지는 theme.text
+                    color: active ? "#000" : theme.text,
+                  },
+                ]}
+              >
                 {SORT_LABEL[m]}
               </Text>
               {active && <View style={styles.underline} />}
@@ -304,12 +319,12 @@ const FlightResultScreen = () => {
   };
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
       <FlightResultHeader
         origin={originLocationCode}
         destination={destinationLocationCode}
-        departureDate={departureDate} // raw ISO 날짜
-        returnDate={returnDate} // raw ISO 또는 undefined
+        departureDate={departureDate}
+        returnDate={returnDate}
         passengerCount={adults}
         seatClass={travelClass}
         nonStop={nonStopFlag}
@@ -323,22 +338,37 @@ const FlightResultScreen = () => {
 
       {/* 🔹 왕복 + 최단시간 선택 시 안내 문구 */}
       {roundTripFlag && sortMode === "SHORTEST_DURATION" && (
-        <Text style={styles.sortHint}>
-        * 최단시간 정렬은 가는 편 비행시간만 기준으로 하며, 오는 편 비행시간은 포함되지 않습니다.
+        <Text
+          style={[
+            styles.sortHint,
+            { color: theme.text },
+          ]}
+        >
+          * 최단시간 정렬은 가는 편 비행시간만 기준으로 하며, 오는 편 비행시간은
+          포함되지 않습니다.
         </Text>
       )}
 
       <FlightLoadingModal visible={loading} />
 
       <FlatList
-        contentContainerStyle={styles.listContainer}
+        contentContainerStyle={[
+          styles.listContainer,
+          { backgroundColor: theme.background },
+        ]}
         data={sortedData}
-        keyExtractor={(item) => exactTupleKey(item)} // ✅ 절대 고유 키
+        keyExtractor={(item) => exactTupleKey(item)}
         renderItem={({ item }) => (
           <FlightCard flight={item} onPress={() => handleCardPress(item)} />
         )}
         ListEmptyComponent={
-          <Text style={{ textAlign: "center", padding: 24, color: "#666" }}>
+          <Text
+            style={{
+              textAlign: "center",
+              padding: 24,
+              color: theme.text,
+            }}
+          >
             조건에 맞는 항공편이 없습니다.
           </Text>
         }
@@ -352,7 +382,7 @@ export default FlightResultScreen;
 const styles = StyleSheet.create({
   listContainer: {
     padding: 16,
-    backgroundColor: "#fff",
+    backgroundColor: "#fff", // 실제 색은 theme.background로 덮어씀
   },
   sortBar: {
     flexDirection: "row",
@@ -360,13 +390,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 4,
-    backgroundColor: "#fff",
+    backgroundColor: "#fff", // 실제 색은 theme.background로 덮어씀
   },
   sortChip: {
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#f3f4f6", // 실제 색은 theme.card로 덮어씀
     position: "relative",
   },
   sortChipActive: {

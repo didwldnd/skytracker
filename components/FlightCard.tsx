@@ -10,6 +10,7 @@ import { FlightSearchResponseDto } from "../types/FlightResultScreenDto";
 import { MaterialIcons } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 import { formatPrice, formatDurationKo } from "../utils/formatters";
+import { useTheme } from "../context/ThemeContext";
 
 const THEME = "#6ea1d4";
 const { width } = Dimensions.get("window");
@@ -55,6 +56,8 @@ const FlightCard = ({
   };
   onPress?: () => void;
 }) => {
+  const { theme } = useTheme();
+
   // 출발/도착 시간: outbound* 우선, 없으면 구 DTO(departureTime/arrivalTime) 사용
   const departureTime =
     flight.outboundDepartureTime ?? (flight as any).departureTime;
@@ -72,16 +75,20 @@ const FlightCard = ({
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: theme.card }]}>
         {/* 상단: 항공사/편명 + 가격(+변화) */}
         <View style={styles.cardTop}>
           <View style={styles.airlineRow}>
             <View style={styles.logoDot}>
-              <Text style={styles.logoText}>{flight.airlineCode}</Text>
+              <Text style={[styles.logoText, { color: theme.text }]}>
+                {flight.airlineCode}
+              </Text>
             </View>
             <View>
-              <Text style={styles.airlineName}>{flight.airlineName}</Text>
-              <Text style={styles.flightNo}>
+              <Text style={[styles.airlineName, { color: theme.text }]}>
+                {flight.airlineName}
+              </Text>
+              <Text style={[styles.flightNo, { color: theme.text }]}>
                 {formatFlightNo(flight.airlineCode, flight.flightNumber)}
               </Text>
               {cls && <Text style={styles.seatText}>{cls}</Text>}
@@ -89,7 +96,7 @@ const FlightCard = ({
           </View>
 
           <View style={{ alignItems: "flex-end" }}>
-            <Text style={styles.price}>
+            <Text style={[styles.price, { color: theme.text }]}>
               {formatPrice(flight.price, flight.currency ?? "KRW")}
             </Text>
             {!!diff.text && (
@@ -117,23 +124,45 @@ const FlightCard = ({
         {/* 경로/소요시간 */}
         <View style={styles.routeRow}>
           <View style={styles.timeCol}>
-            <Text style={styles.timeBig}>{formatTime(departureTime)}</Text>
-            <Text style={styles.airportCode}>{flight.departureAirport}</Text>
+            <Text style={[styles.timeBig, { color: theme.text }]}>
+              {formatTime(departureTime)}
+            </Text>
+            <Text style={[styles.airportCode, { color: theme.text }]}>
+              {flight.departureAirport}
+            </Text>
           </View>
 
           <View style={styles.timeline}>
-            <View style={styles.line} />
+            <View
+              style={[
+                styles.line,
+                { backgroundColor: theme.border ?? "#d1d5db" },
+              ]}
+            />
             <View style={{ alignItems: "center" }}>
               <Ionicons name="time-outline" size={14} color="#9ca3af" />
-              <Text style={styles.duration}>{displayDuration}</Text>
-              {flight.nonStop && <Text style={styles.nonStop}>직항</Text>}
+              <Text style={[styles.duration, { color: theme.text }]}>
+                {displayDuration}
+              </Text>
+              {flight.nonStop && (
+                <Text style={[styles.nonStop, { color: THEME }]}>직항</Text>
+              )}
             </View>
-            <View style={styles.line} />
+            <View
+              style={[
+                styles.line,
+                { backgroundColor: theme.border ?? "#d1d5db" },
+              ]}
+            />
           </View>
 
           <View style={styles.timeCol}>
-            <Text style={styles.timeBig}>{formatTime(arrivalTime)}</Text>
-            <Text style={styles.airportCode}>{flight.arrivalAirport}</Text>
+            <Text style={[styles.timeBig, { color: theme.text }]}>
+              {formatTime(arrivalTime)}
+            </Text>
+            <Text style={[styles.airportCode, { color: theme.text }]}>
+              {flight.arrivalAirport}
+            </Text>
           </View>
         </View>
 
@@ -213,11 +242,10 @@ const FlightCard = ({
 
 export default FlightCard;
 
-/* ===== 스타일: CityFlightListScreen 카드 그대로 이식 ===== */
+/* ===== 스타일 ===== */
 const styles = StyleSheet.create({
   card: {
     width: width - 32,
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
@@ -245,12 +273,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  logoText: { fontSize: 12, fontWeight: "900", color: "#4b5563" },
-  airlineName: { fontSize: 14, fontWeight: "700", color: "#111827" },
-  flightNo: { fontSize: 12, color: "#6b7280", marginTop: 2 },
+  logoText: { fontSize: 12, fontWeight: "900" },
+  airlineName: { fontSize: 14, fontWeight: "700" },
+  flightNo: { fontSize: 12, marginTop: 2 },
   seatText: { marginTop: 2, fontSize: 12, fontWeight: "700", color: THEME },
 
-  price: { fontSize: 20, fontWeight: "900", color: "#111827" },
+  price: { fontSize: 20, fontWeight: "900" },
   diffBadge: {
     marginTop: 4,
     paddingHorizontal: 8,
@@ -270,13 +298,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   timeCol: { alignItems: "center", minWidth: 64 },
-  timeBig: { fontSize: 16, fontWeight: "800", color: "#111827" },
-  airportCode: { fontSize: 12, color: "#6b7280" },
+  timeBig: { fontSize: 16, fontWeight: "800" },
+  airportCode: { fontSize: 12 },
 
   timeline: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
-  line: { flex: 1, height: 1, backgroundColor: "#d1d5db" },
-  duration: { fontSize: 11, color: "#6b7280", marginTop: 2 },
-  nonStop: { fontSize: 11, fontWeight: "700", color: THEME, marginTop: 2 },
+  line: { flex: 1, height: 1 },
+  duration: { fontSize: 11, marginTop: 2 },
+  nonStop: { fontSize: 11, fontWeight: "700", marginTop: 2 },
 
   /* 하단 */
   bottomRow: {

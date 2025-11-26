@@ -12,6 +12,7 @@ import {
   ToastAndroid,
   TouchableWithoutFeedback,
 } from "react-native";
+import { useTheme } from "../../context/ThemeContext";
 
 interface Props {
   visible: boolean;
@@ -39,14 +40,16 @@ const SeatStopoverSelector = ({
   onClose,
   onSelect,
 }: Props) => {
+  const { theme } = useTheme();
+
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      {/* 🔹 오버레이 터치 시 닫힘 */}
+      {/* 오버레이 클릭 시 닫기 */}
       <TouchableWithoutFeedback onPress={onClose}>
         <View style={styles.modalOverlay}>
-          {/* 🔹 시트 내부 터치는 모달 유지 */}
+          {/* 내부 눌렀을 땐 모달 유지 */}
           <TouchableWithoutFeedback onPress={() => {}}>
-            <View style={styles.modalContent}>
+            <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
               <FlatList
                 data={options[modalType]}
                 keyExtractor={(item) => item}
@@ -63,9 +66,13 @@ const SeatStopoverSelector = ({
                         onSelect(modalType, item);
                         onClose();
                       }}
-                      style={[styles.option, disabled && { opacity: 0.4 }]}
+                      style={[
+                        styles.option,
+                        { borderBottomColor: theme.border },
+                        disabled && { opacity: 0.4 },
+                      ]}
                     >
-                      <Text style={styles.optionText}>
+                      <Text style={[styles.optionText, { color: theme.text }]}>
                         {item}
                         {disabled ? " (미지원)" : ""}
                       </Text>
@@ -97,7 +104,6 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   modalContent: {
-    backgroundColor: "#fff",
     padding: 24,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -105,7 +111,6 @@ const styles = StyleSheet.create({
   },
   option: {
     paddingVertical: 15,
-    borderBottomColor: "#ccc",
     borderBottomWidth: 1,
   },
   optionText: { fontSize: 18 },
