@@ -615,19 +615,40 @@ export default function PriceAlertScreen() {
     );
   };
 
-  // 1) 비로그인 상태
+   // 1) 비로그인 상태
   if (!isLoggedIn) {
     return (
-      <View style={styles.lockContainer}>
-        <Text style={styles.lockTitle}>로그인 후 이용 가능한 서비스에요</Text>
-        <Text style={styles.lockDesc}>
+      <View
+        style={[
+          styles.lockContainer,
+          { backgroundColor: theme.background }, // 🔹 다크/라이트 공통 배경
+        ]}
+      >
+        <Text
+          style={[
+            styles.lockTitle,
+            { color: theme.text }, // 🔹 제목은 테마 텍스트색
+          ]}
+        >
+          로그인 후 이용 가능한 서비스에요
+        </Text>
+
+        <Text
+          style={[
+            styles.lockDesc,
+            { color: isDark ? "#9ca3af" : "#64748b" }, // 🔹 서브텍스트는 톤만 조금 조정
+          ]}
+        >
           관심 있는 항공편의 가격이 변동되면{`\n`}
           자동으로 알려주는 가격 알림 서비스를 이용하려면{`\n`}
           먼저 로그인 해주세요.
         </Text>
 
         <TouchableOpacity
-          style={styles.lockButton}
+          style={[
+            styles.lockButton,
+            { backgroundColor: "#6ea1d4" }, // or theme.primary 쓰고 있으면 그걸로
+          ]}
           onPress={() => navigation.navigate("LoginScreen")}
         >
           <Text style={styles.lockButtonText}>로그인 하러 가기</Text>

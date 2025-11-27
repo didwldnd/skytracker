@@ -60,7 +60,6 @@ async function handleLoginSuccess(accessToken: string) {
       console.log("⚠️ refreshToken이 응답에 없습니다.");
     }
 
-    // 확인용 (테스트 후 지워도 됨)
     const savedAccess = await SecureStore.getItemAsync("accessToken");
     const savedRefresh = await SecureStore.getItemAsync("refreshToken");
     console.log("🔍 최종 저장된 accessToken:", savedAccess);
@@ -108,7 +107,6 @@ export default function LoginScreen() {
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null);
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-
   const auth = useContext(AuthContext);
 
   const isDisabled = loadingProvider !== null;
@@ -132,7 +130,6 @@ export default function LoginScreen() {
 
       if (result.type !== "success") {
         console.log(`⚠️ [${provider}] AuthSession type:`, result.type);
-        // 사용자가 취소하거나 에러 난 경우
         return;
       }
 
@@ -151,7 +148,6 @@ export default function LoginScreen() {
         throw new Error("accessToken을 리디렉션에서 찾을 수 없습니다.");
       }
 
-      // 🔥 토큰 저장 + refreshToken 발급
       await handleLoginSuccess(accessToken);
       console.log(`✅ [${provider}] handleLoginSuccess 완료`);
 
@@ -182,13 +178,14 @@ export default function LoginScreen() {
 
   return (
     <LinearGradient
-      colors={["#97fcccff", "#6ea1d4", "#5dccffff"]}
+      // 🌈 새 테마(#6ea1d4)를 중심으로 한 파스텔 그라데이션 (라이트 고정)
+      colors={["#B8E7F6", "#6EA1D4", "#4A89C4"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
       style={styles.container}
     >
       <View style={styles.iconCircle}>
-        <FontAwesome name="plane" size={28} color="#6ea1d4" />
+        <FontAwesome name="plane" size={28} color="#4A89C4" />
       </View>
 
       <Text style={styles.title}>SkyTracker</Text>
@@ -298,7 +295,7 @@ export default function LoginScreen() {
         onPress={() => navigation.navigate("HomeScreen")}
         activeOpacity={0.7}
       >
-        <Text>비회원으로 계속하기</Text>
+        <Text style={styles.guestText}>비회원으로 계속하기</Text>
       </TouchableOpacity>
 
       <Text style={styles.footer}>
@@ -314,13 +311,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
-    backgroundColor: "#6ea1d4",
+    // 다크모드 영향 안 받도록 라이트 톤 고정
+    backgroundColor: "#6EA1D4",
   },
   iconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
     justifyContent: "center",
     alignItems: "center",
     alignSelf: "center",
@@ -329,13 +327,18 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#FFFFFF",
     textAlign: "center",
   },
-  subtitle: { fontSize: 16, color: "#fff", textAlign: "center", marginTop: 4 },
+  subtitle: {
+    fontSize: 16,
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 4,
+  },
   subsubtitle: {
     fontSize: 14,
-    color: "#f5f5f5",
+    color: "#F5F5F5",
     textAlign: "center",
     marginBottom: 32,
   },
@@ -347,25 +350,48 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
   },
-  disabledButton: { opacity: 0.5 },
-  icon: { width: 24, height: 24, marginRight: 8 },
-  buttonText: { fontSize: 16, fontWeight: "600", color: "#000" },
-  google: { backgroundColor: "#fff" },
-  kakao: { backgroundColor: "#FEE500" },
-  naver: { backgroundColor: "#03C75A" },
-  footer: {
-    fontSize: 12,
-    color: "#fff",
-    textAlign: "center",
-    marginTop: 24,
-    opacity: 0.8,
+  disabledButton: {
+    opacity: 0.5,
   },
-  link: { textDecorationLine: "underline" },
+  icon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
+  buttonText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#000000",
+  },
+  google: {
+    backgroundColor: "#FFFFFF",
+  },
+  kakao: {
+    backgroundColor: "#FEE500",
+  },
+  naver: {
+    backgroundColor: "#03C75A",
+  },
   guest: {
-    backgroundColor: "#b7a1f1c2",
+    backgroundColor: "#C7B9FF",
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
+  },
+  guestText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1F2933",
+  },
+  footer: {
+    fontSize: 12,
+    color: "#FFFFFF",
+    textAlign: "center",
+    marginTop: 24,
+    opacity: 0.85,
+  },
+  link: {
+    textDecorationLine: "underline",
   },
 });

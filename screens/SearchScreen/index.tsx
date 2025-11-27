@@ -209,9 +209,7 @@ const SearchScreen = () => {
           { backgroundColor: theme.background }, // ⭐ 안쪽도 테마 배경
         ]}
       >
-        <Text style={[styles.title, { color: theme.text }]}>
-          항공권 검색
-        </Text>
+        <Text style={[styles.title, { color: theme.text }]}>항공권 검색</Text>
 
         {/* Trip Type Selector */}
         <View style={styles.tripTypeRow}>
@@ -277,7 +275,9 @@ const SearchScreen = () => {
               ]}
               onPress={() => setShowPassengerModal(true)}
             >
-              <Text style={{ color: theme.text }}>{`총 ${totalPassengers}명`}</Text>
+              <Text
+                style={{ color: theme.text }}
+              >{`총 ${totalPassengers}명`}</Text>
             </TouchableOpacity>
           </View>
 
@@ -347,7 +347,7 @@ const SearchScreen = () => {
           }}
         />
 
-        <SearchButtons
+               <SearchButtons
           onReset={resetForm}
           onSearch={async () => {
             if (isSearchingRef.current) return; // 더블탭 가드
@@ -368,23 +368,24 @@ const SearchScreen = () => {
               // "직항만"일 때만 true, 나머지는 전부 false
               const nonStop = stopover === "직항만";
 
-              // ✅ 좌석 등급 → 백엔드 ENUM 매핑
-              let travelClass: "ECONOMY" | "BUSINESS" | undefined;
-              if (seatClass.includes("일반석")) {
-  travelClass = "ECONOMY";
-} else if (seatClass.includes("비즈니스")) {
-  travelClass = "BUSINESS";
-}
+              // ✅ 좌석 등급 → 백엔드 ENUM 매핑 (undefined 방지)
+              let travelClass: "ECONOMY" | "BUSINESS" = "ECONOMY";
+              if (seatClass.includes("비즈니스")) {
+                travelClass = "BUSINESS";
+              }
+
+              const isRoundTrip = tripType === "왕복";
 
               const requestDto: FlightSearchRequestDto = {
                 originLocationAirport: departure,
                 destinationLocationAirport: destination,
                 departureDate: departureDate.toISOString().split("T")[0],
-                returnDate:
-                  tripType === "왕복"
-                    ? returnDate.toISOString().split("T")[0]
-                    : undefined,
-                nonStop, // ✅ 이제 항상 true/false
+                returnDate: isRoundTrip
+                  ? returnDate.toISOString().split("T")[0]
+                  : null, // 편도일 때는 null
+                currencyCode: "KRW", 
+                nonStop,
+                roundTrip: isRoundTrip, 
                 travelClass,
                 adults: Math.max(1, passengerCounts.adult),
                 max: 10,
@@ -396,7 +397,6 @@ const SearchScreen = () => {
               const { valid } = sanitizeResults(rawResults || []);
               const uniq = dedupeExact(valid);
 
-              // 🔽 이 부분은 일단 그대로 두되, stopover 옵션이 "경유만"은 없으니까 사실상 안 쓰이는 상태
               const filtered =
                 stopover === "경유만" ? uniq.filter((f) => !isDirect(f)) : uniq;
 
@@ -404,7 +404,7 @@ const SearchScreen = () => {
                 originLocationCode: departure,
                 destinationLocationCode: destination,
                 departureDate: departureDate.toISOString(),
-                returnDate: tripType === "왕복" ? returnDate.toISOString() : "",
+                returnDate: isRoundTrip ? returnDate.toISOString() : "",
                 adults: passengerCounts.adult,
                 travelClass: seatClass,
                 stopover,
@@ -419,6 +419,7 @@ const SearchScreen = () => {
           }}
           disabled={isSearchDisabled}
         />
+
 
         <FlightLoadingModal visible={loading} />
         <PopularScreen />
@@ -442,7 +443,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    // backgroundColor: "#fff", // ❌ 이거 때문에 다크모드 안 먹음 → 제거
     gap: 15,
   },
   title: {
