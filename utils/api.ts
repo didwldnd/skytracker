@@ -51,20 +51,20 @@ export async function fetchHotRoutes(): Promise<HotRouteSummaryDto[]> {
 // 🔄 HotRoute → FlightSearchRequestDto 변환
 // ================================
 export function buildRequestFromHotRoute(
-  hot: HotRouteSummaryDto
+  item: HotRouteSummaryDto
 ): FlightSearchRequestDto {
-  const isRoundTrip = !!hot.arrivalDate;
+  const isRoundTrip = !!item.arrivalDate;
 
   return {
-    originLocationAirport: hot.departureAirportCode,
-    destinationLocationAirport: hot.arrivalAirportCode,
-    departureDate: hot.departureDate,
-    returnDate: hot.arrivalDate, // 편도면 null
+    originLocationAirport: item.departureAirportCode,
+    destinationLocationAirport: item.arrivalAirportCode,
+    departureDate: item.departureDate,
+    returnDate: item.arrivalDate ?? undefined, // 편도면 null
     currencyCode: "KRW",
     nonStop: false,
     roundTrip: isRoundTrip,
     travelClass: "ECONOMY",
-    adults: hot.adults,
+    adults: 1, // 고정값 1
     max: 10,
   };
 }

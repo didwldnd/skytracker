@@ -24,6 +24,7 @@ import { FlightSearchResponseDto } from "../../types/FlightResultScreenDto";
 import { FlightSearchRequestDto } from "../../types/FlightSearchRequestDto";
 import { RootStackParamList } from "../../App";
 import { airportMap } from "../PriceAlertScreen/PriceAlertScreen";
+import FlightLoadingModal from "../../components/FlightLoadingModal";
 
 const THEME_COLOR = "#6ea1d4";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -31,6 +32,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const SIDE_INSET = 16;
 const ITEM_GAP = 12;
 const CARD_WIDTH = (SCREEN_WIDTH - SIDE_INSET * 2) * 0.97;
+
 const airportToCity = (code: string) => {
   return airportMap[code] ?? code;
 };
@@ -40,22 +42,22 @@ type HotRouteWithImage = HotRouteSummaryDto & {
   image: any;
 };
 
-// 도착 공항 코드 기준으로 이미지 매핑 (필요하면 추가/수정)
+// 도착 공항 코드 기준으로 이미지 매핑
 export const IMAGE_BY_ARRIVAL: Record<string, any> = {
-  // KR 한국
-  PUS: require("../../assets/citys/pusan.png"), // 부산
-  ICN: require("../../assets/citys/incheon.png"), // 인천
+  // KR 한국 (이미지 파일 있으면 사용)
+  // PUS: require("../../assets/citys/pusan.png"),
+  // ICN: require("../../assets/citys/incheon.png"),
 
   // 🇯🇵 일본
-  NRT: require("../../assets/citys/tokyo.png"),   // 도쿄
-  HND: require("../../assets/citys/tokyo.png"),   // 도쿄
-  KIX: require("../../assets/citys/osaka.png"),   // 오사카
-  ITM: require("../../assets/citys/osaka.png"),   // 오사카
-  FUK: require("../../assets/citys/fukuoka.png"), // 후쿠오카
+  NRT: require("../../assets/citys/tokyo.png"),
+  HND: require("../../assets/citys/tokyo.png"),
+  KIX: require("../../assets/citys/osaka.png"),
+  ITM: require("../../assets/citys/osaka.png"),
+  FUK: require("../../assets/citys/fukuoka.png"),
 
   // 🇨🇳 중국
-  PEK: require("../../assets/citys/beijing.png"),    // 베이징
-  PVG: require("../../assets/citys/shanghai.png"),   // 상하이
+  PEK: require("../../assets/citys/beijing.png"),
+  PVG: require("../../assets/citys/shanghai.png"),
 
   // 🇭🇰 홍콩
   HKG: require("../../assets/citys/hongkong.png"),
@@ -67,38 +69,37 @@ export const IMAGE_BY_ARRIVAL: Record<string, any> = {
   SIN: require("../../assets/citys/singapore.png"),
 
   // 🇺🇸 미국
-  JFK: require("../../assets/citys/ny.png"),           // 뉴욕
+  JFK: require("../../assets/citys/ny.png"),
   LGA: require("../../assets/citys/ny.png"),
   EWR: require("../../assets/citys/ny.png"),
-
-  LAX: require("../../assets/citys/losangeles.png"),   // LA
-  SFO: require("../../assets/citys/sanfrancisco.png"), // 샌프란시스코
-  ORD: require("../../assets/citys/chicago.png"),      // 시카고
-  IAD: require("../../assets/citys/washington.png"),   // 워싱턴
+  LAX: require("../../assets/citys/losangeles.png"),
+  SFO: require("../../assets/citys/sanfrancisco.png"),
+  ORD: require("../../assets/citys/chicago.png"),
+  IAD: require("../../assets/citys/washington.png"),
   DCA: require("../../assets/citys/washington.png"),
-  
+
   // 🇨🇦 캐나다
-  YYZ: require("../../assets/citys/toronto.png"),   // 토론토
-  YVR: require("../../assets/citys/vancouver.png"), // 밴쿠버
+  YYZ: require("../../assets/citys/toronto.png"),
+  YVR: require("../../assets/citys/vancouver.png"),
 
   // 🇬🇧 영국
-  LHR: require("../../assets/citys/london.png"),    // 런던
+  LHR: require("../../assets/citys/london.png"),
   LGW: require("../../assets/citys/london.png"),
 
   // 🇫🇷 프랑스
-  CDG: require("../../assets/citys/paris.png"),     // 파리
+  CDG: require("../../assets/citys/paris.png"),
   ORY: require("../../assets/citys/paris.png"),
 
   // 🇩🇪 독일
-  FRA: require("../../assets/citys/frankfurt.png"), // 프랑크푸르트
+  FRA: require("../../assets/citys/frankfurt.png"),
 
   // 🇪🇸 스페인
-  BCN: require("../../assets/citys/barcelona.png"), // 바르셀로나
-  MAD: require("../../assets/citys/madrid.png"),     // 마드리드
+  BCN: require("../../assets/citys/barcelona.png"),
+  MAD: require("../../assets/citys/madrid.png"),
 
   // 🇮🇹 이탈리아
-  MXP: require("../../assets/citys/milano.png"), // 밀라노
-  FCO: require("../../assets/citys/roma.png"),   // 로마
+  MXP: require("../../assets/citys/milano.png"),
+  FCO: require("../../assets/citys/roma.png"),
 };
 
 const fallbackImage = require("../../assets/citys/fallback-city.png");
@@ -109,8 +110,8 @@ export default function PopularScreen() {
 
   const [data, setData] = useState<HotRouteWithImage[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [searching, setSearching] = useState(false);
+  const [loading, setLoading] = useState(true); // hot-routes 로딩
+  const [searching, setSearching] = useState(false); // 배너 클릭 후 검색 로딩
 
   const viewConfig = useRef({ viewAreaCoveragePercentThreshold: 60 }).current;
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
@@ -160,33 +161,27 @@ export default function PopularScreen() {
     setSearching(true);
 
     try {
-      const requestDto: FlightSearchRequestDto = buildRequestFromHotRoute(item);
+      const dto: FlightSearchRequestDto = buildRequestFromHotRoute(item);
+      const results: FlightSearchResponseDto[] = await searchFlights(dto);
 
-      console.log("[REQ] Hot route search payload:", requestDto);
-
-      const flights: FlightSearchResponseDto[] = await searchFlights(
-        requestDto
-      );
-
-      if (!flights || flights.length === 0) {
+      if (!results || results.length === 0) {
         Alert.alert("검색 결과 없음", "해당 노선의 항공편을 찾지 못했어요.");
         return;
       }
 
-      // 🔁 SearchScreen에서 FlightResult로 넘기는 형태와 최대한 맞춤
       navigation.navigate("FlightResult", {
         originLocationCode: item.departureAirportCode,
         destinationLocationCode: item.arrivalAirportCode,
-        departureDate: item.departureDate, // 그냥 "YYYY-MM-DD" 넘겨도 헤더용으론 충분
+        departureDate: item.departureDate,
         returnDate: item.arrivalDate ?? "",
-        adults: item.adults,
-        travelClass: "일반석", // 기본값
-        stopover: "상관없음", // 기본값
-        results: flights,
+        adults: 1,
+        travelClass: "일반석", // 화면에 표시용
+        stopover: "상관없음",
+        results,
       });
-    } catch (e) {
-      console.error("Hot route search failed", e);
-      Alert.alert("오류", "항공편 검색 중 문제가 발생했어요.");
+    } catch (err) {
+      console.error(err);
+      Alert.alert("오류", "인기 노선 검색 중 문제가 발생했습니다.");
     } finally {
       setSearching(false);
     }
@@ -266,7 +261,7 @@ export default function PopularScreen() {
     setActiveIndex(next);
   };
 
-  // 로딩 중
+  // hot-routes 로딩 중
   if (loading) {
     return (
       <View style={{ marginTop: 20, alignItems: "center" }}>
@@ -313,6 +308,9 @@ export default function PopularScreen() {
       />
 
       {dots}
+
+      {/* 🔥 배너 눌러서 검색하는 동안 뜨는 로딩 모달 */}
+      <FlightLoadingModal visible={searching} />
     </View>
   );
 }
@@ -332,12 +330,11 @@ const styles = StyleSheet.create({
 
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.18)", // 배경 어둡게 해서 흰 글씨 더 잘 보임
+    backgroundColor: "rgba(0,0,0,0.18)",
   },
 
   headerTextWrap: { paddingHorizontal: 16, paddingTop: 14 },
 
-  // 🔥 여기 색 변경
   cityKo: {
     fontSize: 22,
     fontWeight: "800",
