@@ -212,27 +212,38 @@ const SearchScreen = () => {
         <Text style={[styles.title, { color: theme.text }]}>항공권 검색</Text>
 
         {/* Trip Type Selector */}
-        <View style={styles.tripTypeRow}>
-          {["왕복", "편도"].map((type) => (
-            <TouchableOpacity
-              key={type}
-              onPress={() => setTripType(type as "왕복" | "편도")}
-              style={[
-                styles.tripTypeButton,
-                tripType === type && styles.tripTypeButtonActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tripTypeText,
-                  tripType === type && styles.tripTypeTextActive,
-                ]}
-              >
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+<View style={styles.tripTypeRow}>
+  {["왕복", "편도"].map((type) => {
+    const isActive = tripType === type;
+    return (
+      <TouchableOpacity
+        key={type}
+        onPress={() => setTripType(type as "왕복" | "편도")}
+        style={[
+          styles.tripTypeButton,
+          {
+            // ✅ 선택되면 포인트 색, 아니면 배경색(다크모드 배경과 동일)
+            backgroundColor: isActive ? "#6ea1d4" : theme.background,
+            borderColor: isActive ? "#6ea1d4" : theme.border,
+          },
+        ]}
+      >
+        <Text
+          style={[
+            styles.tripTypeText,
+            {
+              // ✅ 둘 다 흰색으로 (다크모드 기준)
+              color: "#ffffff",
+              fontWeight: isActive ? "bold" : "normal",
+            },
+          ]}
+        >
+          {type}
+        </Text>
+      </TouchableOpacity>
+    );
+  })}
+</View>
 
         <LocationSelector
           departure={departure}
@@ -461,8 +472,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#ccc",
-    backgroundColor: "#f0f0f0",
   },
   tripTypeButtonActive: {
     backgroundColor: "#6ea1d4",
@@ -470,11 +479,6 @@ const styles = StyleSheet.create({
   },
   tripTypeText: {
     fontSize: 16,
-    color: "#666",
-  },
-  tripTypeTextActive: {
-    color: "#fff",
-    fontWeight: "bold",
   },
   label: {
     fontSize: 16,
