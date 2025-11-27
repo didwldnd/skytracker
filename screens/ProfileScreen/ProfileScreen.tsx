@@ -52,21 +52,11 @@ function InfoSheet({
               { backgroundColor: theme.muted, borderColor: theme.border },
             ]}
           >
-            <Text
-              style={[
-                styles.sheetTitle,
-                { color: theme.text },
-              ]}
-            >
+            <Text style={[styles.sheetTitle, { color: theme.text }]}>
               {title}
             </Text>
             {!!subtitle && (
-              <Text
-                style={[
-                  styles.sheetSubtitle,
-                  { color: theme.subText },
-                ]}
-              >
+              <Text style={[styles.sheetSubtitle, { color: theme.subText }]}>
                 {subtitle}
               </Text>
             )}
@@ -145,14 +135,7 @@ const PlaceholderRow = ({
 
 const Divider = () => {
   const { theme } = useTheme();
-  return (
-    <View
-      style={[
-        styles.divider,
-        { backgroundColor: theme.border },
-      ]}
-    />
-  );
+  return <View style={[styles.divider, { backgroundColor: theme.border }]} />;
 };
 
 // ------------------ Main Screen ------------------
@@ -310,34 +293,14 @@ const ProfileScreen = () => {
 
   return (
     <ScrollView
-      style={[
-        styles.container,
-        { backgroundColor: theme.background },
-      ]}
+      style={[styles.container, { backgroundColor: theme.background }]}
     >
-      <Text
-        style={[
-          styles.title,
-          { color: theme.text },
-        ]}
-      >
-        프로필
-      </Text>
+      <Text style={[styles.title, { color: theme.text }]}>프로필</Text>
 
       {/* 프로필 헤더 */}
-      <View
-        style={[
-          styles.profileHeader,
-          { backgroundColor: theme.card },
-        ]}
-      >
+      <View style={[styles.profileHeader, { backgroundColor: theme.card }]}>
         {userLoading ? (
-          <Text
-            style={[
-              styles.loginRequiredText,
-              { color: theme.text },
-            ]}
-          >
+          <Text style={[styles.loginRequiredText, { color: theme.text }]}>
             로딩 중...
           </Text>
         ) : user ? (
@@ -353,39 +316,21 @@ const ProfileScreen = () => {
               labelStyle={{ fontSize: 32, color: "white" }}
             />
             <View style={{ flex: 1 }}>
-              <Text
-                style={[
-                  styles.name,
-                  { color: theme.text },
-                ]}
-              >
+              <Text style={[styles.name, { color: theme.text }]}>
                 {user.username}
               </Text>
-              <Text
-                style={[
-                  styles.email,
-                  { color: theme.subText },
-                ]}
-              >
+              <Text style={[styles.email, { color: theme.subText }]}>
                 {user.email}
               </Text>
 
               <View style={styles.infoRow}>
                 <Feather name="send" size={14} color={theme.subText} />
-                <Text
-                  style={[
-                    styles.infoText,
-                    { color: theme.subText },
-                  ]}
-                >
+                <Text style={[styles.infoText, { color: theme.subText }]}>
                   나의 출발 공항: {loading ? "로딩중..." : airportLabel}
                 </Text>
                 <TouchableOpacity
                   onPress={openPicker}
-                  style={[
-                    styles.miniBtn,
-                    { borderColor: theme.border },
-                  ]}
+                  style={[styles.miniBtn, { borderColor: theme.border }]}
                 >
                   <Text
                     style={{
@@ -405,20 +350,10 @@ const ProfileScreen = () => {
             onPress={handleGoLogin}
             activeOpacity={0.8}
           >
-            <Text
-              style={[
-                styles.loginRequiredText,
-                { color: theme.text },
-              ]}
-            >
+            <Text style={[styles.loginRequiredText, { color: theme.text }]}>
               로그인이 필요한 서비스입니다
             </Text>
-            <Text
-              style={[
-                styles.loginRequiredSub,
-                { color: theme.subText },
-              ]}
-            >
+            <Text style={[styles.loginRequiredSub, { color: theme.subText }]}>
               로그인하고 회원 전용 서비스를 경험 해보세요.
             </Text>
           </TouchableOpacity>
@@ -465,10 +400,7 @@ const ProfileScreen = () => {
           ]}
         >
           <View
-            style={[
-              styles.sectionTitleRow,
-              { backgroundColor: HEADER_BG },
-            ]}
+            style={[styles.sectionTitleRow, { backgroundColor: HEADER_BG }]}
           >
             {section.icon}
             <Text style={styles.sectionTitle}>{section.title}</Text>
@@ -476,10 +408,7 @@ const ProfileScreen = () => {
           {section.items.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={[
-                styles.sectionItem,
-                { borderColor: theme.border },
-              ]}
+              style={[styles.sectionItem, { borderColor: theme.border }]}
               onPress={() => {
                 if (item.label === "내 정보 수정") {
                   openEditModal();
@@ -491,17 +420,8 @@ const ProfileScreen = () => {
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
               >
-                <Feather
-                  name={item.icon as any}
-                  size={16}
-                  color={theme.text}
-                />
-                <Text
-                  style={[
-                    styles.sectionLabel,
-                    { color: theme.text },
-                  ]}
-                >
+                <Feather name={item.icon as any} size={16} color={theme.text} />
+                <Text style={[styles.sectionLabel, { color: theme.text }]}>
                   {item.label}
                 </Text>
               </View>
@@ -515,12 +435,7 @@ const ProfileScreen = () => {
       {user && (
         <View style={styles.logoutRow}>
           <TouchableOpacity onPress={handleLogoutPress}>
-            <Text
-              style={[
-                styles.logoutText,
-                { color: theme.subText },
-              ]}
-            >
+            <Text style={[styles.logoutText, { color: theme.subText }]}>
               로그아웃
             </Text>
           </TouchableOpacity>
@@ -578,31 +493,16 @@ const ProfileScreen = () => {
         title="즐겨찾기"
         subtitle="자주 조회하는 항공편을 한 곳에 모아볼 수 있어요."
       >
-        <Text
-          style={[
-            styles.subhead,
-            { color: theme.text },
-          ]}
-        >
+        <Text style={[styles.subhead, { color: theme.text }]}>
           서비스 준비 중
         </Text>
-        <Text
-          style={[
-            styles.caption,
-            { color: theme.subText },
-          ]}
-        >
+        <Text style={[styles.caption, { color: theme.subText }]}>
           즐겨찾기 기능은 현재 준비 중입니다.{"\n"}곧 원하는 항공편을
           저장해두고, 가격 변동과 함께 한 번에 확인할 수 있도록 업데이트될
           예정이에요.
         </Text>
         <Divider />
-        <Text
-          style={[
-            styles.caption,
-            { color: theme.subText },
-          ]}
-        >
+        <Text style={[styles.caption, { color: theme.subText }]}>
           조금만 기다려 주시면 더 편리한 경험을 제공해 드릴게요 ✈️
         </Text>
       </InfoSheet>
@@ -642,12 +542,7 @@ const ProfileScreen = () => {
           right={<Switch value={false} disabled />}
         />
         <Divider />
-        <Text
-          style={[
-            styles.caption,
-            { color: theme.subText },
-          ]}
-        >
+        <Text style={[styles.caption, { color: theme.subText }]}>
           ※ 실제 기능은 곧 제공 예정입니다.
         </Text>
       </InfoSheet>
@@ -659,14 +554,7 @@ const ProfileScreen = () => {
         title="언어 및 통화"
         subtitle=""
       >
-        <Text
-          style={[
-            styles.subhead,
-            { color: theme.text },
-          ]}
-        >
-          언어
-        </Text>
+        <Text style={[styles.subhead, { color: theme.text }]}>언어</Text>
         <View style={styles.rowWrap}>
           <Tag label="한국어" selected />
           <Tag label="English" />
@@ -674,14 +562,7 @@ const ProfileScreen = () => {
           <Tag label="中文" />
         </View>
         <Divider />
-        <Text
-          style={[
-            styles.subhead,
-            { color: theme.text },
-          ]}
-        >
-          통화
-        </Text>
+        <Text style={[styles.subhead, { color: theme.text }]}>통화</Text>
         <View style={styles.rowWrap}>
           <Tag label="KRW ₩" selected />
           <Tag label="USD $" />
@@ -689,12 +570,7 @@ const ProfileScreen = () => {
           <Tag label="EUR €" />
         </View>
         <Divider />
-        <Text
-          style={[
-            styles.caption,
-            { color: theme.subText },
-          ]}
-        >
+        <Text style={[styles.caption, { color: theme.subText }]}>
           ※ 선택해도 저장되지 않습니다 (UI 프리뷰).
         </Text>
       </InfoSheet>
@@ -719,10 +595,7 @@ const ProfileScreen = () => {
           >
             <View style={styles.skelRow}>
               <View
-                style={[
-                  styles.skelBadge,
-                  { backgroundColor: theme.muted },
-                ]}
+                style={[styles.skelBadge, { backgroundColor: theme.muted }]}
               />
               <View style={{ flex: 1 }}>
                 <View
@@ -732,10 +605,7 @@ const ProfileScreen = () => {
                   ]}
                 />
                 <View
-                  style={[
-                    styles.skelLine,
-                    { backgroundColor: theme.muted },
-                  ]}
+                  style={[styles.skelLine, { backgroundColor: theme.muted }]}
                 />
               </View>
             </View>
@@ -751,12 +621,7 @@ const ProfileScreen = () => {
             />
           </View>
         ))}
-        <Text
-          style={[
-            styles.caption,
-            { marginTop: 8, color: theme.subText },
-          ]}
-        >
+        <Text style={[styles.caption, { marginTop: 8, color: theme.subText }]}>
           실제 예약이 생성되면 여기에 표시됩니다.
         </Text>
       </InfoSheet>
@@ -778,21 +643,11 @@ const ProfileScreen = () => {
         title="고객센터 문의"
         subtitle="운영시간: 09:00 ~ 18:00 (KST)"
       >
-        <View
-          style={[
-            styles.contactCard,
-            { borderColor: theme.border },
-          ]}
-        >
+        <View style={[styles.contactCard, { borderColor: theme.border }]}>
           <Feather name="mail" size={18} color={theme.text} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: "600", color: theme.text }}>이메일</Text>
-            <Text
-              style={[
-                styles.caption,
-                { color: theme.subText },
-              ]}
-            >
+            <Text style={[styles.caption, { color: theme.subText }]}>
               skytrackerofficial@gmail.com
             </Text>
           </View>
@@ -800,21 +655,11 @@ const ProfileScreen = () => {
             <Text style={styles.disabledBtnText}>보내기</Text>
           </View>
         </View>
-        <View
-          style={[
-            styles.contactCard,
-            { borderColor: theme.border },
-          ]}
-        >
+        <View style={[styles.contactCard, { borderColor: theme.border }]}>
           <Feather name="phone" size={18} color={theme.text} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: "600", color: theme.text }}>전화</Text>
-            <Text
-              style={[
-                styles.caption,
-                { color: theme.subText },
-              ]}
-            >
+            <Text style={[styles.caption, { color: theme.subText }]}>
               02-551-3122
             </Text>
           </View>
@@ -822,23 +667,13 @@ const ProfileScreen = () => {
             <Text style={styles.disabledBtnText}>전화하기</Text>
           </View>
         </View>
-        <View
-          style={[
-            styles.contactCard,
-            { borderColor: theme.border },
-          ]}
-        >
+        <View style={[styles.contactCard, { borderColor: theme.border }]}>
           <Feather name="message-circle" size={18} color={theme.text} />
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: "600", color: theme.text }}>
               카카오톡
             </Text>
-            <Text
-              style={[
-                styles.caption,
-                { color: theme.subText },
-              ]}
-            >
+            <Text style={[styles.caption, { color: theme.subText }]}>
               @SKYTRACKER
             </Text>
           </View>
@@ -846,12 +681,7 @@ const ProfileScreen = () => {
             <Text style={styles.disabledBtnText}>열기</Text>
           </View>
         </View>
-        <Text
-          style={[
-            styles.caption,
-            { marginTop: 8, color: theme.subText },
-          ]}
-        >
+        <Text style={[styles.caption, { marginTop: 8, color: theme.subText }]}>
           ※ 버튼은 예시용으로만 표시됩니다.
         </Text>
       </InfoSheet>
@@ -892,20 +722,13 @@ const ProfileScreen = () => {
           left={
             <>
               <Feather name="wifi" size={16} color={theme.text} />
-              <Text style={{ color: theme.text }}>
-                Wi-Fi에서만 이미지 로드
-              </Text>
+              <Text style={{ color: theme.text }}>Wi-Fi에서만 이미지 로드</Text>
             </>
           }
           right={<Switch value={true} disabled />}
         />
         <Divider />
-        <Text
-          style={[
-            styles.caption,
-            { color: theme.subText },
-          ]}
-        >
+        <Text style={[styles.caption, { color: theme.subText }]}>
           ※ 실제 동작하지 않는 미리보기입니다.
         </Text>
       </InfoSheet>
@@ -923,27 +746,12 @@ const ProfileScreen = () => {
             onPress={() => setEditVisible(false)}
           />
 
-          <View
-            style={[
-              styles.editCard,
-              { backgroundColor: theme.card },
-            ]}
-          >
-            <Text
-              style={[
-                styles.editTitle,
-                { color: theme.text },
-              ]}
-            >
+          <View style={[styles.editCard, { backgroundColor: theme.card }]}>
+            <Text style={[styles.editTitle, { color: theme.text }]}>
               내 정보 수정
             </Text>
 
-            <Text
-              style={[
-                styles.editLabel,
-                { color: theme.subText },
-              ]}
-            >
+            <Text style={[styles.editLabel, { color: theme.subText }]}>
               이름
             </Text>
             <TextInput
@@ -960,12 +768,7 @@ const ProfileScreen = () => {
               placeholderTextColor={theme.subText}
             />
 
-            <Text
-              style={[
-                styles.editLabel,
-                { color: theme.subText },
-              ]}
-            >
+            <Text style={[styles.editLabel, { color: theme.subText }]}>
               이메일 (변경 불가)
             </Text>
             <TextInput
@@ -986,10 +789,7 @@ const ProfileScreen = () => {
 
             <View style={styles.editButtonRow}>
               <TouchableOpacity
-                style={[
-                  styles.editButton,
-                  { backgroundColor: theme.muted },
-                ]}
+                style={[styles.editButton, { backgroundColor: theme.muted }]}
                 onPress={() => setEditVisible(false)}
                 disabled={saving}
               >
@@ -999,10 +799,7 @@ const ProfileScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[
-                  styles.editButton,
-                  { backgroundColor: HEADER_BG },
-                ]}
+                style={[styles.editButton, { backgroundColor: HEADER_BG }]}
                 onPress={handleSaveEdit}
                 disabled={saving}
               >
@@ -1025,7 +822,7 @@ const FAQ = () => {
   const items = [
     {
       q: "가격 알림은 어떻게 동작하나요?",
-      a: "원하는 노선의 가격 변동을 추적해 알려드립니다.",
+      a: "검색한 특정 항공편을 저장해두면, 해당 항공편의 가격을 서버가 주기적으로 다시 조회합니다. 가격이 내려가면 즉시 알림으로 알려드립니다.",
     },
     {
       q: "예약은 어디서 확인하나요?",
@@ -1044,16 +841,10 @@ const FAQ = () => {
         return (
           <View
             key={idx}
-            style={[
-              styles.faqItem,
-              { borderColor: theme.border },
-            ]}
+            style={[styles.faqItem, { borderColor: theme.border }]}
           >
             <TouchableOpacity
-              style={[
-                styles.faqHeader,
-                { backgroundColor: theme.muted },
-              ]}
+              style={[styles.faqHeader, { backgroundColor: theme.muted }]}
               onPress={() => setOpen(opened ? null : idx)}
             >
               <Text style={{ fontWeight: "600", color: theme.text }}>
@@ -1066,12 +857,7 @@ const FAQ = () => {
               />
             </TouchableOpacity>
             {opened && (
-              <Text
-                style={[
-                  styles.faqBody,
-                  { color: theme.subText },
-                ]}
-              >
+              <Text style={[styles.faqBody, { color: theme.subText }]}>
                 {it.a}
               </Text>
             )}
