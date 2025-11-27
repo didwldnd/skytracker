@@ -13,6 +13,7 @@ export type AppTheme = {
   muted: string;
   danger: string;
   success: string;
+  placeholder: string;
 };
 
 export const lightTheme: AppTheme = {
@@ -25,6 +26,7 @@ export const lightTheme: AppTheme = {
   muted: "#F3F4F6",
   danger: "#EF4444",
   success: "#10B981",
+  placeholder: "#999999"
 };
 
 export const darkTheme: AppTheme = {
@@ -37,4 +39,5 @@ export const darkTheme: AppTheme = {
   muted: "#0f172a",
   danger: "#F97373",
   success: "#34D399",
+  placeholder: "#999999"
 };
