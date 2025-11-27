@@ -13,10 +13,7 @@ import {
   FlightAlertItem,
   deleteFlightAlert,
 } from "../utils/priceAlertApi";
-import {
-  mapSeatClassToBackend,
-  SeatLabel,
-} from "../utils/paramMappers";
+import { mapSeatClassToBackend, SeatLabel } from "../utils/paramMappers";
 
 // 🔹 여기 Props 다시 정의
 interface Props {
@@ -148,7 +145,7 @@ const FlightResultHeader = ({
         flightNumber: "",
         originLocationAirport: origin,
         destinationLocationAirport: destination,
-        departureDate,
+        departureDate: normalizeDate(departureDate),
         returnDate: returnDate ?? null,
         travelClass: backendTravelClass,
         currency: currency ?? "KRW",

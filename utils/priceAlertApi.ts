@@ -101,14 +101,28 @@ export async function fetchFlightAlerts(): Promise<FlightAlertItem[]> {
 }
 
 
-
+// 🔧 "2026-01-10T00:00:00.000Z" → "2026-01-10"
+const stripTime = (s?: string | null): string | null => {
+  if (s == null) return null;
+  const idx = s.indexOf("T");
+  return idx >= 0 ? s.slice(0, idx) : s;
+};
 /* =========================================================
    4) 알림 등록 (POST)
    ========================================================= */
 export async function registerFlightAlert(dto: FlightAlertRequestDto) {
+  // 🔥 여기서 한 번 더 날짜 포맷 강제
+  const sanitized: FlightAlertRequestDto = {
+    ...dto,
+    departureDate: stripTime(dto.departureDate) ?? "",
+    returnDate: stripTime(dto.returnDate ?? null),
+  };
+
+  console.log("[registerFlightAlert] payload:", sanitized);
+
   const res = await apiFetch("/api/flights/alerts", {
     method: "POST",
-    body: JSON.stringify(dto),
+    body: JSON.stringify(sanitized),
   });
 
   const rawText = await res.text();
@@ -125,6 +139,7 @@ export async function registerFlightAlert(dto: FlightAlertRequestDto) {
     return null;
   }
 }
+
 
 
 /* =========================================================
