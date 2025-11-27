@@ -229,17 +229,16 @@ const SearchScreen = () => {
         ]}
       >
         <Text
-          style={[
-            styles.tripTypeText,
-            {
-              // ✅ 둘 다 흰색으로 (다크모드 기준)
-              color: "#ffffff",
-              fontWeight: isActive ? "bold" : "normal",
-            },
-          ]}
-        >
-          {type}
-        </Text>
+  style={[
+    styles.tripTypeText,
+    {
+      color: isActive ? "#ffffff" : theme.text, // ⭐ 일반모드/다크모드 맞춤 적용
+    },
+  ]}
+>
+  {type}
+</Text>
+
       </TouchableOpacity>
     );
   })}

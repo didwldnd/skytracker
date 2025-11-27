@@ -6,4 +6,5 @@ export type HotRouteSummaryDto = {
   departureDate: string;        // 예: "2025-12-02"
   arrivalDate: string | null;   // 편도면 null
   adults: number;
+  minPrice: number;
 };

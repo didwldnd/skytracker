@@ -26,6 +26,8 @@ import { RootStackParamList } from "../../App";
 import { airportMap } from "../PriceAlertScreen/PriceAlertScreen";
 import FlightLoadingModal from "../../components/FlightLoadingModal";
 
+import { formatPrice } from "../../utils/formatters";
+
 const THEME_COLOR = "#6ea1d4";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -40,13 +42,14 @@ const airportToCity = (code: string) => {
 // 서버 DTO + 이미지 필드 하나 추가
 type HotRouteWithImage = HotRouteSummaryDto & {
   image: any;
+  trend?: "up" | "down" | "same";
 };
 
 // 도착 공항 코드 기준으로 이미지 매핑
 export const IMAGE_BY_ARRIVAL: Record<string, any> = {
   // KR 한국 (이미지 파일 있으면 사용)
-  // PUS: require("../../assets/citys/pusan.png"),
-  // ICN: require("../../assets/citys/incheon.png"),
+  PUS: require("../../assets/citys/pusan.png"),
+  ICN: require("../../assets/citys/incheon.png"),
 
   // 🇯🇵 일본
   NRT: require("../../assets/citys/tokyo.png"),
@@ -123,6 +126,8 @@ export default function PopularScreen() {
   const listRef = useRef<FlatList<HotRouteWithImage>>(null);
   const dragStartX = useRef(0);
   const dragStartIndex = useRef(0);
+  // 🔥 이전 minPrice 저장 (항목별)
+  const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
 
   // 🔹 1) 첫 렌더링 시 /hot-routes 호출
   useEffect(() => {
@@ -135,11 +140,34 @@ export default function PopularScreen() {
           return;
         }
 
-        const mapped: HotRouteWithImage[] = hotRoutes.map((h) => ({
-          ...h,
-          image: IMAGE_BY_ARRIVAL[h.arrivalAirportCode] ?? fallbackImage,
-        }));
+        const mapped: HotRouteWithImage[] = hotRoutes.map((h) => {
+          const prev = prevPrices[h.uniqueKey];
+          const current = h.minPrice;
 
+          const trend =
+            prev == null
+              ? "same" // 최초 로딩 → 비교 없음
+              : current < prev
+              ? "down"
+              : current > prev
+              ? "up"
+              : "same";
+
+          return {
+            ...h,
+            image: IMAGE_BY_ARRIVAL[h.arrivalAirportCode] ?? fallbackImage,
+            trend, // 🔥 trend 추가
+          };
+        });
+
+        // 🔥 prevPrices 최신값으로 업데이트
+        setPrevPrices((old) => {
+          const updated = { ...old };
+          hotRoutes.forEach((h) => {
+            updated[h.uniqueKey] = h.minPrice;
+          });
+          return updated;
+        });
         setData(mapped);
       } catch (e) {
         console.error("Failed to load hot routes", e);
@@ -186,7 +214,6 @@ export default function PopularScreen() {
       setSearching(false);
     }
   };
-
   const renderItem = ({
     item,
     index,
@@ -214,6 +241,7 @@ export default function PopularScreen() {
         >
           <View style={styles.overlay} />
 
+          {/* 상단 텍스트 영역 */}
           <View style={styles.headerTextWrap}>
             <Text style={styles.cityKo}>
               #{item.rank} {airportToCity(item.departureAirportCode)} →{" "}
@@ -221,6 +249,20 @@ export default function PopularScreen() {
             </Text>
             <Text style={styles.cityEn}>{dateText}</Text>
             <Text style={styles.cityEn}>성인 {item.adults}명</Text>
+          </View>
+
+          {/* 오른쪽 하단 가격 배지 */}
+          <View style={styles.priceBadge}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              {item.trend === "down" && (
+                <Text style={styles.arrowDown}>⬇️</Text>
+              )}
+              {item.trend === "up" && <Text style={styles.arrowUp}>⬆️</Text>}
+
+              <Text style={styles.priceText}>
+                현재 최저가 {formatPrice(item.minPrice)}
+              </Text>
+            </View>
           </View>
         </ImageBackground>
       </Pressable>
@@ -314,7 +356,6 @@ export default function PopularScreen() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: { marginTop: 20 },
   title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, marginLeft: 3 },
@@ -347,6 +388,22 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
 
+  // 💰 오른쪽 하단 가격 배지
+  priceBadge: {
+    position: "absolute",
+    right: 16,
+    bottom: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(0, 0, 0, 0.55)",
+  },
+  priceText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+
   dotsRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -355,4 +412,14 @@ const styles = StyleSheet.create({
   },
   dot: { width: 6, height: 6, borderRadius: 999, backgroundColor: "#ddd" },
   dotActive: { width: 16, backgroundColor: THEME_COLOR },
+  arrowDown: {
+    color: "#4caf50",
+    fontSize: 16,
+    marginRight: 4,
+  },
+  arrowUp: {
+    color: "#ff5252",
+    fontSize: 16,
+    marginRight: 4,
+  },
 });
