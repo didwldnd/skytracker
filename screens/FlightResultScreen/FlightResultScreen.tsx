@@ -26,8 +26,11 @@ const toMs = (iso?: string) => {
   return Number.isFinite(t) ? t : NaN;
 };
 const exactTupleKey = (f: any) => {
-  const depIso = f.outboundDepartureTime ?? f.departureTime ?? "";
-  const arrIso = f.outboundArrivalTime ?? f.arrivalTime ?? "";
+  const outDepIso = f.outboundDepartureTime ?? f.departureTime ?? "";
+  const outArrIso = f.outboundArrivalTime ?? f.arrivalTime ?? "";
+  const retDepIso = f.returnDepartureTime ?? "";
+  const retArrIso = f.returnArrivalTime ?? "";
+
   return [
     "TUPLE",
     upper(f.airlineCode),
@@ -36,8 +39,14 @@ const exactTupleKey = (f: any) => {
       .trim(),
     upper(f.departureAirport),
     upper(f.arrivalAirport),
-    Number.isFinite(toMs(depIso)) ? toMs(depIso) : depIso,
-    Number.isFinite(toMs(arrIso)) ? toMs(arrIso) : arrIso,
+
+    // 가는 편
+    Number.isFinite(toMs(outDepIso)) ? toMs(outDepIso) : outDepIso,
+    Number.isFinite(toMs(outArrIso)) ? toMs(outArrIso) : outArrIso,
+
+    // 오는 편도 key에 포함
+    Number.isFinite(toMs(retDepIso)) ? toMs(retDepIso) : retDepIso,
+    Number.isFinite(toMs(retArrIso)) ? toMs(retArrIso) : retArrIso,
   ].join("|");
 };
 
@@ -88,7 +97,10 @@ const FlightResultScreen = () => {
     travelClass,
     results = [],
   } = route.params;
-
+console.log(
+  "🔍 FlightResultScreen param results length:",
+  Array.isArray(results) ? results.length : "not-array"
+);
   const [loading, setLoading] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("LOWEST_PRICE");
 
@@ -244,7 +256,13 @@ const FlightResultScreen = () => {
     arr.sort(makeComparator(sortMode));
     return arr as FlightSearchResponseDto[];
   }, [withDerived, sortMode]);
+useEffect(() => {
+  console.log("🔍 deduped length:", deduped.length);
+}, [deduped]);
 
+useEffect(() => {
+  console.log("🔍 sortedData length:", sortedData.length);
+}, [sortedData]);
   // 디버깅: 편명/키별 개수 로그
   useEffect(() => {
     const byTuple = new Map<string, number>();

@@ -34,10 +34,23 @@ const toMs = (iso?: string) => {
 };
 const isDirect = (f: any) =>
   f?.nonStop === true || f?.nonStop === "true" || f?.nonStop === 1;
-// (항공사, 편명, 출발공항, 도착공항, 출발시간, 도착시간) = 절대 고유 튜플
+
+// 💰 가격 숫자 뽑기
+const priceOf = (f: any) => {
+  const p = Number(f?.price);
+  return Number.isFinite(p) ? p : Number.POSITIVE_INFINITY;
+};
+
+// (항공사, 편명, 출발공항, 도착공항, 가는편 출/도착, 오는편 출/도착) = 왕복 고유 튜플
 const exactTupleKey = (f: any) => {
-  const depIso = f.outboundDepartureTime ?? f.departureTime ?? "";
-  const arrIso = f.outboundArrivalTime ?? f.arrivalTime ?? "";
+  // 가는 편
+  const outDepIso = f.outboundDepartureTime ?? f.departureTime ?? "";
+  const outArrIso = f.outboundArrivalTime ?? f.arrivalTime ?? "";
+
+  // 오는 편 (편도면 빈 문자열)
+  const retDepIso = f.returnDepartureTime ?? "";
+  const retArrIso = f.returnArrivalTime ?? "";
+
   return [
     "TUPLE",
     upper(f.airlineCode),
@@ -46,16 +59,35 @@ const exactTupleKey = (f: any) => {
       .trim(), // "0241" → "241"
     upper(f.departureAirport),
     upper(f.arrivalAirport),
-    toMs(depIso) || depIso, // ISO 파싱 실패하면 원문 고정
-    toMs(arrIso) || arrIso,
+
+    // 가는 편 시간
+    toMs(outDepIso) || outDepIso,
+    toMs(outArrIso) || outArrIso,
+
+    // 오는 편 시간
+    toMs(retDepIso) || retDepIso,
+    toMs(retArrIso) || retArrIso,
   ].join("|");
 };
+
+// ✅ 같은 키끼리는 "최저가"만 남기기
 const dedupeExact = (list: any[]) => {
   const m = new Map<string, any>();
+
   for (const it of Array.isArray(list) ? list : []) {
     const k = exactTupleKey(it);
-    if (!m.has(k)) m.set(k, it);
+    const prev = m.get(k);
+
+    if (!prev) {
+      m.set(k, it);
+    } else {
+      // 기존꺼보다 더 싸면 갈아끼움
+      if (priceOf(it) < priceOf(prev)) {
+        m.set(k, it);
+      }
+    }
   }
+
   return Array.from(m.values());
 };
 
@@ -212,37 +244,36 @@ const SearchScreen = () => {
         <Text style={[styles.title, { color: theme.text }]}>항공권 검색</Text>
 
         {/* Trip Type Selector */}
-<View style={styles.tripTypeRow}>
-  {["왕복", "편도"].map((type) => {
-    const isActive = tripType === type;
-    return (
-      <TouchableOpacity
-        key={type}
-        onPress={() => setTripType(type as "왕복" | "편도")}
-        style={[
-          styles.tripTypeButton,
-          {
-            // ✅ 선택되면 포인트 색, 아니면 배경색(다크모드 배경과 동일)
-            backgroundColor: isActive ? "#6ea1d4" : theme.background,
-            borderColor: isActive ? "#6ea1d4" : theme.border,
-          },
-        ]}
-      >
-        <Text
-  style={[
-    styles.tripTypeText,
-    {
-      color: isActive ? "#ffffff" : theme.text, // ⭐ 일반모드/다크모드 맞춤 적용
-    },
-  ]}
->
-  {type}
-</Text>
-
-      </TouchableOpacity>
-    );
-  })}
-</View>
+        <View style={styles.tripTypeRow}>
+          {["왕복", "편도"].map((type) => {
+            const isActive = tripType === type;
+            return (
+              <TouchableOpacity
+                key={type}
+                onPress={() => setTripType(type as "왕복" | "편도")}
+                style={[
+                  styles.tripTypeButton,
+                  {
+                    // ✅ 선택되면 포인트 색, 아니면 배경색(다크모드 배경과 동일)
+                    backgroundColor: isActive ? "#6ea1d4" : theme.background,
+                    borderColor: isActive ? "#6ea1d4" : theme.border,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tripTypeText,
+                    {
+                      color: isActive ? "#ffffff" : theme.text, // ⭐ 일반모드/다크모드 맞춤 적용
+                    },
+                  ]}
+                >
+                  {type}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         <LocationSelector
           departure={departure}
@@ -357,7 +388,7 @@ const SearchScreen = () => {
           }}
         />
 
-               <SearchButtons
+        <SearchButtons
           onReset={resetForm}
           onSearch={async () => {
             if (isSearchingRef.current) return; // 더블탭 가드
@@ -393,9 +424,9 @@ const SearchScreen = () => {
                 returnDate: isRoundTrip
                   ? returnDate.toISOString().split("T")[0]
                   : null, // 편도일 때는 null
-                currencyCode: "KRW", 
+                currencyCode: "KRW",
                 nonStop,
-                roundTrip: isRoundTrip, 
+                roundTrip: isRoundTrip,
                 travelClass,
                 adults: Math.max(1, passengerCounts.adult),
                 max: 10,
@@ -421,7 +452,7 @@ const SearchScreen = () => {
                 results: filtered,
               });
             } catch (err: any) {
-              // ... 기존 에러 처리 그대로
+              // ... 기존 에러 처리 그대로 유지
             } finally {
               setLoading(false);
               isSearchingRef.current = false;
@@ -429,7 +460,6 @@ const SearchScreen = () => {
           }}
           disabled={isSearchDisabled}
         />
-
 
         <FlightLoadingModal visible={loading} />
         <PopularScreen />

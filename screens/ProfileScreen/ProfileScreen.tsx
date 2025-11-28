@@ -366,17 +366,7 @@ const ProfileScreen = () => {
           title: "내 정보 관리",
           icon: <Feather name="user" size={18} color="white" />,
           items: [
-            { label: "알림 설정", icon: "bell" },
-            { label: "언어 및 통화", icon: "globe" },
             { label: "내 정보 수정", icon: "key" },
-          ],
-        },
-        {
-          title: "여행 관리",
-          icon: <Feather name="map-pin" size={18} color="white" />,
-          items: [
-            { label: "즐겨찾기", icon: "heart" },
-            { label: "예약 내역", icon: "calendar" },
           ],
         },
         {
