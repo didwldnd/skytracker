@@ -27,8 +27,8 @@ import { airportMap } from "../PriceAlertScreen/PriceAlertScreen";
 import FlightLoadingModal from "../../components/FlightLoadingModal";
 
 import { formatPrice } from "../../utils/formatters";
+import { useTheme } from "../../context/ThemeContext";
 
-const THEME_COLOR = "#6ea1d4";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const SIDE_INSET = 16;
@@ -110,6 +110,7 @@ const fallbackImage = require("../../assets/citys/fallback-city.png");
 export default function PopularScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { theme } = useTheme();
 
   const [data, setData] = useState<HotRouteWithImage[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -318,8 +319,8 @@ export default function PopularScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>인기 노선 Top 10</Text>
+    <View style={[styles.container, { borderTopWidth: 1, borderTopColor: theme.border }]}>
+      <Text style={[styles.title, { color: theme.text }]}>인기 노선 Top 10</Text>
 
       <FlatList
         ref={listRef}
@@ -357,8 +358,14 @@ export default function PopularScreen() {
   );
 }
 const styles = StyleSheet.create({
-  container: { marginTop: 20 },
-  title: { fontSize: 20, fontWeight: "bold", marginBottom: 12, marginLeft: 3 },
+  container: { marginTop: 28, paddingTop: 24 },
+  title: {
+    fontSize: 17,
+    fontWeight: "700",
+    letterSpacing: -0.3,
+    marginBottom: 12,
+    marginLeft: 20,
+  },
 
   hero: {
     width: "100%",
@@ -377,15 +384,16 @@ const styles = StyleSheet.create({
   headerTextWrap: { paddingHorizontal: 16, paddingTop: 14 },
 
   cityKo: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
+    letterSpacing: -0.4,
     color: "#FFFFFF",
   },
   cityEn: {
-    marginTop: 2,
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#FFFFFF",
+    marginTop: 3,
+    fontSize: 13,
+    fontWeight: "400",
+    color: "rgba(255,255,255,0.85)",
   },
 
   // 💰 오른쪽 하단 가격 배지
@@ -400,8 +408,9 @@ const styles = StyleSheet.create({
   },
   priceText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "600",
+    letterSpacing: -0.2,
   },
 
   dotsRow: {
@@ -411,7 +420,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dot: { width: 6, height: 6, borderRadius: 999, backgroundColor: "#ddd" },
-  dotActive: { width: 16, backgroundColor: THEME_COLOR },
+  dotActive: { width: 16, backgroundColor: "#6ea1d4" },
   arrowDown: {
     color: "#4caf50",
     fontSize: 16,

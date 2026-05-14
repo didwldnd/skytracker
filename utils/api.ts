@@ -23,20 +23,37 @@ const http = axios.create({
 export const searchFlights = async (
   payload: FlightSearchRequestDto
 ): Promise<FlightSearchResponseDto[]> => {
-  const res = await http.post<BackendFlightSearchResponseDto[]>(
-    "/api/flights/search",
-    payload
-  );
+  const url = "/api/flights/search";
+  console.log("[searchFlights] POST", `${API_BASE}${url}`);
 
-  const rawList = res.data ?? [];
+  try {
+    const res = await http.post<BackendFlightSearchResponseDto[]>(
+      url,
+      payload
+    );
 
-  const mapped = rawList.map((item, idx) => {
-    const flight = mapBackendFlightToFrontend(item);
-    console.log("✅ mapped flight", idx, flight);
-    return flight;
-  });
+    const rawList = res.data ?? [];
 
-  return mapped;
+    const mapped = rawList.map((item, idx) => {
+      const flight = mapBackendFlightToFrontend(item);
+      console.log("✅ mapped flight", idx, flight);
+      return flight;
+    });
+
+    return mapped;
+  } catch (err: unknown) {
+    if (axios.isAxiosError(err)) {
+      console.error("[searchFlights] AxiosError", {
+        message: err.message,
+        code: err.code,
+        status: err.response?.status,
+        data: err.response?.data,
+      });
+    } else {
+      console.error("[searchFlights] Error", err);
+    }
+    throw err;
+  }
 };
 
 // ================================

@@ -24,7 +24,7 @@ import { deleteAccount, fetchProfile, updateUser } from "../../api/user";
 import { AuthContext } from "../../context/AuthContext";
 import { useTheme } from "../../context/ThemeContext";
 
-const HEADER_BG = "#6ea1d4";
+const ACCENT = "#6ea1d4";
 
 // ------------------ Reusable Pretty Info Sheet ------------------
 function InfoSheet({
@@ -71,10 +71,10 @@ function InfoSheet({
           </ScrollView>
 
           <Pressable
-            style={[styles.sheetCloseBtn, { backgroundColor: HEADER_BG }]}
+            style={[styles.sheetCloseBtn, { backgroundColor: ACCENT }]}
             onPress={onClose}
           >
-            <Text style={{ color: "white", fontWeight: "600" }}>확인</Text>
+            <Text style={{ color: "white", fontWeight: "600", fontSize: 15 }}>확인</Text>
           </Pressable>
         </View>
       </View>
@@ -99,8 +99,8 @@ const Tag = ({
         styles.tag,
         { borderColor: theme.border },
         selected && {
-          backgroundColor: HEADER_BG + "22",
-          borderColor: HEADER_BG,
+          backgroundColor: ACCENT + "22",
+          borderColor: ACCENT,
         },
         disabled && { opacity: 0.5 },
       ]}
@@ -109,7 +109,7 @@ const Tag = ({
         style={[
           styles.tagText,
           { color: theme.text },
-          selected && { color: HEADER_BG },
+          selected && { color: ACCENT },
         ]}
       >
         {label}
@@ -293,51 +293,54 @@ const ProfileScreen = () => {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
+      style={{ flex: 1, backgroundColor: theme.background }}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 48 }}
     >
-      <Text style={[styles.title, { color: theme.text }]}>프로필</Text>
+      {/* ── 페이지 헤더 ── */}
+      <View style={styles.pageHeader}>
+        <View>
+          <Text style={[styles.headerSub, { color: theme.subText }]}>마이페이지</Text>
+          <Text style={[styles.title, { color: theme.text }]}>프로필</Text>
+        </View>
+      </View>
 
-      {/* 프로필 헤더 */}
-      <View style={[styles.profileHeader, { backgroundColor: theme.card }]}>
+      {/* ── 프로필 카드 ── */}
+      <View
+        style={[
+          styles.profileCard,
+          { backgroundColor: theme.card, borderColor: theme.border },
+        ]}
+      >
         {userLoading ? (
-          <Text style={[styles.loginRequiredText, { color: theme.text }]}>
+          <Text style={[styles.loginRequiredText, { color: theme.subText }]}>
             로딩 중...
           </Text>
         ) : user ? (
           <View style={styles.profileRow}>
             <Avatar.Text
-              size={80}
+              size={72}
               label={user?.username?.charAt(0) ?? "?"}
-              style={{
-                backgroundColor: HEADER_BG,
-                borderColor: theme.background,
-                borderWidth: 2,
-              }}
-              labelStyle={{ fontSize: 32, color: "white" }}
+              style={{ backgroundColor: ACCENT }}
+              labelStyle={{ fontSize: 28, color: "white" }}
             />
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: 1, gap: 4 }}>
               <Text style={[styles.name, { color: theme.text }]}>
                 {user.username}
               </Text>
               <Text style={[styles.email, { color: theme.subText }]}>
                 {user.email}
               </Text>
-
               <View style={styles.infoRow}>
-                <Feather name="send" size={14} color={theme.subText} />
+                <Feather name="navigation" size={13} color={theme.subText} />
                 <Text style={[styles.infoText, { color: theme.subText }]}>
-                  나의 출발 공항: {loading ? "로딩중..." : airportLabel}
+                  {loading ? "로딩중..." : airportLabel}
                 </Text>
                 <TouchableOpacity
                   onPress={openPicker}
-                  style={[styles.miniBtn, { borderColor: theme.border }]}
+                  style={[styles.miniBtn, { borderColor: theme.border, backgroundColor: theme.muted }]}
                 >
-                  <Text
-                    style={{
-                      fontSize: 12,
-                      color: theme.text,
-                    }}
-                  >
+                  <Text style={{ fontSize: 11, fontWeight: "500", color: theme.text }}>
                     변경
                   </Text>
                 </TouchableOpacity>
@@ -350,32 +353,31 @@ const ProfileScreen = () => {
             onPress={handleGoLogin}
             activeOpacity={0.8}
           >
+            <Feather name="user" size={32} color={theme.border} style={{ marginBottom: 8 }} />
             <Text style={[styles.loginRequiredText, { color: theme.text }]}>
               로그인이 필요한 서비스입니다
             </Text>
             <Text style={[styles.loginRequiredSub, { color: theme.subText }]}>
-              로그인하고 회원 전용 서비스를 경험 해보세요.
+              로그인하고 회원 전용 서비스를 경험해보세요.
             </Text>
           </TouchableOpacity>
         )}
       </View>
 
-      {/* 메뉴 섹션 */}
+      {/* ── 메뉴 섹션 ── */}
       {[
         {
           title: "내 정보 관리",
-          icon: <Feather name="user" size={18} color="white" />,
-          items: [
-            { label: "내 정보 수정", icon: "key" },
-          ],
+          icon: "user" as const,
+          items: [{ label: "내 정보 수정", icon: "edit-2" as const }],
         },
         {
           title: "고객 지원",
-          icon: <Feather name="help-circle" size={18} color="white" />,
+          icon: "life-buoy" as const,
           items: [
-            { label: "자주 묻는 질문", icon: "help-circle" },
-            { label: "고객센터 문의", icon: "phone" },
-            { label: "앱 설정", icon: "settings" },
+            { label: "자주 묻는 질문", icon: "help-circle" as const },
+            { label: "고객센터 문의", icon: "phone" as const },
+            { label: "앱 설정", icon: "settings" as const },
           ],
         },
       ].map((section, idx) => (
@@ -383,22 +385,26 @@ const ProfileScreen = () => {
           key={idx}
           style={[
             styles.sectionBox,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-            },
+            { backgroundColor: theme.card, borderColor: theme.border },
           ]}
         >
-          <View
-            style={[styles.sectionTitleRow, { backgroundColor: HEADER_BG }]}
-          >
-            {section.icon}
-            <Text style={styles.sectionTitle}>{section.title}</Text>
+          {/* 섹션 타이틀 — 컬러 밴드 대신 아이콘 + 텍스트 */}
+          <View style={[styles.sectionTitleRow, { borderBottomColor: theme.border }]}>
+            <View style={[styles.sectionIconWrap, { backgroundColor: ACCENT + "18" }]}>
+              <Feather name={section.icon} size={14} color={ACCENT} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>
+              {section.title}
+            </Text>
           </View>
+
           {section.items.map((item, index) => (
             <TouchableOpacity
               key={index}
-              style={[styles.sectionItem, { borderColor: theme.border }]}
+              style={[
+                styles.sectionItem,
+                { borderTopColor: theme.border },
+              ]}
               onPress={() => {
                 if (item.label === "내 정보 수정") {
                   openEditModal();
@@ -406,31 +412,36 @@ const ProfileScreen = () => {
                   openSheet(item.label as Exclude<SheetKind, null>);
                 }
               }}
+              activeOpacity={0.7}
             >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 8 }}
-              >
-                <Feather name={item.icon as any} size={16} color={theme.text} />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+                <Feather name={item.icon} size={16} color={theme.subText} />
                 <Text style={[styles.sectionLabel, { color: theme.text }]}>
                   {item.label}
                 </Text>
               </View>
-              <Feather name="chevron-right" size={16} color={theme.subText} />
+              <Feather name="chevron-right" size={16} color={theme.border} />
             </TouchableOpacity>
           ))}
         </View>
       ))}
 
-      {/* 로그아웃 / 탈퇴 */}
+      {/* ── 로그아웃 / 탈퇴 ── */}
       {user && (
         <View style={styles.logoutRow}>
-          <TouchableOpacity onPress={handleLogoutPress}>
+          <TouchableOpacity
+            style={[styles.logoutBtn, { borderColor: theme.border }]}
+            onPress={handleLogoutPress}
+            activeOpacity={0.7}
+          >
+            <Feather name="log-out" size={14} color={theme.subText} />
             <Text style={[styles.logoutText, { color: theme.subText }]}>
               로그아웃
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.logoutBtn, { borderColor: theme.danger + "44" }]}
             onPress={() =>
               Alert.alert("계정 탈퇴", "정말로 탈퇴하시겠습니까?", [
                 { text: "취소", style: "cancel" },
@@ -440,29 +451,22 @@ const ProfileScreen = () => {
                   onPress: async () => {
                     try {
                       await deleteAccount();
-                      if (auth) {
-                        await auth.logout?.();
-                      }
+                      if (auth) await auth.logout?.();
                       setUser(null);
-                      navigation.reset({
-                        index: 0,
-                        routes: [{ name: "HomeScreen" }],
-                      });
+                      navigation.reset({ index: 0, routes: [{ name: "HomeScreen" }] });
                       Alert.alert("탈퇴 완료", "계정이 삭제되었습니다.");
                     } catch (e) {
                       console.error("계정 삭제 에러:", e);
-                      Alert.alert(
-                        "에러",
-                        (e as any)?.message ??
-                          "계정 삭제에 실패했습니다. 다시 시도해주세요."
-                      );
+                      Alert.alert("에러", (e as any)?.message ?? "계정 삭제에 실패했습니다. 다시 시도해주세요.");
                     }
                   },
                 },
               ])
             }
+            activeOpacity={0.7}
           >
-            <Text style={[styles.logoutText, { color: "red" }]}>계정 탈퇴</Text>
+            <Feather name="trash-2" size={14} color={theme.danger} />
+            <Text style={[styles.logoutText, { color: theme.danger }]}>계정 탈퇴</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -789,7 +793,7 @@ const ProfileScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.editButton, { backgroundColor: HEADER_BG }]}
+                style={[styles.editButton, { backgroundColor: ACCENT }]}
                 onPress={handleSaveEdit}
                 disabled={saving}
               >
@@ -860,69 +864,109 @@ const FAQ = () => {
 
 // ------------------ Styles ------------------
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  profileHeader: {
-    borderRadius: 12,
-    padding: 16,
+  // ── 페이지 헤더 ──
+  pageHeader: {
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  headerSub: {
+    fontSize: 13,
+    fontWeight: "400",
+    marginBottom: 2,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+
+  // ── 프로필 카드 ──
+  profileCard: {
+    marginHorizontal: 16,
     marginBottom: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
   },
   profileRow: { flexDirection: "row", alignItems: "center", gap: 16 },
-  name: { fontSize: 20, fontWeight: "bold", marginBottom: 4 },
-  email: { marginBottom: 4 },
-  infoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 6 },
-  infoText: { fontSize: 12 },
+  name: { fontSize: 17, fontWeight: "700", letterSpacing: -0.3 },
+  email: { fontSize: 13, fontWeight: "400" },
+  infoRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  infoText: { fontSize: 12, fontWeight: "400", flex: 1 },
 
   loginRequiredBox: {
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 24,
+    gap: 4,
   },
   loginRequiredText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: "600",
   },
   loginRequiredSub: {
-    marginTop: 6,
-    fontSize: 12,
+    marginTop: 4,
+    fontSize: 13,
     textAlign: "center",
+    lineHeight: 20,
   },
 
-  sheetBackdropTouch: {
-    flex: 1,
-  },
+  sheetBackdropTouch: { flex: 1 },
 
+  // ── 섹션 ──
   sectionBox: {
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
+    marginHorizontal: 16,
     marginBottom: 16,
+    overflow: "hidden",
   },
   sectionTitleRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    padding: 12,
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", color: "white" },
+  sectionIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sectionTitle: { fontSize: 14, fontWeight: "700", letterSpacing: -0.2 },
   sectionItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderTopWidth: 1,
   },
-  sectionLabel: { fontSize: 14 },
+  sectionLabel: { fontSize: 14, fontWeight: "400" },
 
+  // ── 로그아웃 ──
   logoutRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 24,
-    paddingBottom: 40,
+    justifyContent: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 8,
   },
-  logoutText: { fontSize: 14 },
-
-  title: { fontSize: 24, fontWeight: "bold", marginLeft: 4 },
+  logoutBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  logoutText: { fontSize: 14, fontWeight: "500" },
 
   // Sheet
   sheetBackdrop: {
@@ -1047,7 +1091,8 @@ const styles = StyleSheet.create({
   },
   editTitle: {
     fontSize: 18,
-    fontWeight: "bold",
+    fontWeight: "700",
+    letterSpacing: -0.3,
     marginBottom: 16,
   },
   editLabel: {
@@ -1067,12 +1112,12 @@ const styles = StyleSheet.create({
   editButtonRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
-    marginTop: 20,
+    marginTop: 24,
     gap: 8,
   },
   editButton: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 10,
   },
 });

@@ -11,12 +11,16 @@ expo-env.d.ts
 
 # Native
 .kotlin/
+android/local.properties
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
+credentials.json
+google-services.json
+GoogleService-Info.plist
 
 # Metro
 .metro-health-check*
@@ -30,8 +34,20 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (비밀·내부 URL은 여기만)
+.env
 .env*.local
+!.env.example
+
+# IDE (기기 경로·개인 설정이 섞일 수 있음)
+.idea/
+
+# 로그
+*.log
+npm-debug.log*
 
 # typescript
 *.tsbuildinfo
+
+# 내부 문서·졸업작업 자료 (이력서/포트폴리오용 로컬 보관)
+docs/

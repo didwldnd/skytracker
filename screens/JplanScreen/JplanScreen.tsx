@@ -13,9 +13,10 @@ import {
   Animated,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
+import { Ionicons } from "@expo/vector-icons";
 import { apiFetch } from "../../utils/apiClient";
 import { AuthContext } from "../../context/AuthContext";
-import { useTheme } from "../../context/ThemeContext"; // ⭐ 추가
+import { useTheme } from "../../context/ThemeContext";
 
 type ChatMessage = {
   id: string;
@@ -226,26 +227,24 @@ const JplanScreen = () => {
     }
   };
 
-  // 1) 비회원 화면 – 버튼 눌렀을 때만 로그인 이동
+  // 1) 비회원 화면
   if (!isLoggedIn) {
     return (
-      <View
-        style={[
-          styles.lockContainer,
-          { backgroundColor: theme.background }, // ⭐ 테마 배경
-        ]}
-      >
+      <View style={[styles.lockContainer, { backgroundColor: theme.background }]}>
+        <View style={[styles.lockIconWrap, { backgroundColor: theme.muted }]}>
+          <Ionicons name="chatbubbles-outline" size={40} color={theme.primary} />
+        </View>
         <Text style={[styles.lockTitle, { color: theme.text }]}>
-          로그인 후 이용 가능한 서비스에요
+          로그인 후 이용 가능한 서비스예요
         </Text>
-        <Text style={[styles.lockDesc, { color: theme.text }]}>
-          J플랜은 회원 전용 서비스입니다.{`\n`}
-          맞춤형 여행 일정을 이용하려면 먼저 로그인 해주세요.
+        <Text style={[styles.lockDesc, { color: theme.subText }]}>
+          J플랜은 회원 전용 AI 여행 도우미입니다.{`\n`}
+          맞춤형 여행 정보를 받으려면 먼저 로그인해주세요.
         </Text>
-
         <TouchableOpacity
           style={[styles.lockButton, { backgroundColor: theme.primary }]}
           onPress={() => navigation.navigate("LoginScreen")}
+          activeOpacity={0.8}
         >
           <Text style={styles.lockButtonText}>로그인 하러 가기</Text>
         </TouchableOpacity>
@@ -261,10 +260,12 @@ const JplanScreen = () => {
       keyboardVerticalOffset={Platform.OS === "android" ? 25 : 25}
     >
       <View style={{ flex: 1, backgroundColor: theme.background }}>
-        {/* 🔹 상단 헤더 + 사용법 토글 버튼 */}
+        {/* ── 상단 헤더 ── */}
         <View style={[styles.headerRow, { backgroundColor: theme.background }]}>
-          <Text style={[styles.title, { color: theme.text }]}>J플랜</Text>
-
+          <View>
+            <Text style={[styles.headerSub, { color: theme.subText }]}>AI 여행 도우미</Text>
+            <Text style={[styles.title, { color: theme.text }]}>J플랜</Text>
+          </View>
           <TouchableOpacity
             onPress={() => setShowGuide((prev) => !prev)}
             style={[
@@ -273,13 +274,19 @@ const JplanScreen = () => {
             ]}
             activeOpacity={0.7}
           >
-            <Text style={[styles.guideToggleText, { color: theme.text }]}>
-              {showGuide ? "사용법 접기 ▲" : "사용법 보기 ▼"}
+            <Ionicons
+              name={showGuide ? "chevron-up-outline" : "information-circle-outline"}
+              size={14}
+              color={theme.subText}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[styles.guideToggleText, { color: theme.subText }]}>
+              {showGuide ? "접기" : "사용법"}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* 🔹 사용법 안내 Overlay */}
+        {/* ── 사용법 안내 오버레이 ── */}
         {guideMounted && (
           <Animated.View
             pointerEvents={showGuide ? "auto" : "none"}
@@ -291,7 +298,7 @@ const JplanScreen = () => {
                   {
                     translateY: guideAnim.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [-10, 0],
+                      outputRange: [-8, 0],
                     }),
                   },
                 ],
@@ -307,18 +314,13 @@ const JplanScreen = () => {
               <Text style={[styles.guideTitle, { color: theme.text }]}>
                 J플랜 사용 가이드
               </Text>
-              <Text style={[styles.guideText, { color: theme.text }]}>
-                • J플랜은 항공권·여행 시기 추천 도우미예요.{"\n"}• 도시명 또는
-                국가명을 입력해 주시면{"\n"}
-                {"   "}– 항공권이 가장 저렴한 시기{"\n"}
-                {"   "}– 여행하기 좋은 계절과 이유{"\n"}
-                {"   "}– 가격 경향{"\n"}
-                {"   "}등을 기준으로 안내해 드립니다.{"\n\n"}• 날짜를 함께
-                지정해 주시면 그 날짜 기준으로{"\n"}
-                {"   "}– 여행 적합성{"\n"}
-                {"   "}– 항공권 가격 경향{"\n"}
-                {"   "}을 상세히 설명해 드려요.{"\n\n"}
-                항상 존댓말로, 이해하기 쉽게 설명해 드릴게요. 🙂
+              <Text style={[styles.guideText, { color: theme.subText }]}>
+                • 도시명 또는 국가명을 입력하면{"\n"}
+                {"  "}– 항공권이 저렴한 시기{"\n"}
+                {"  "}– 여행하기 좋은 계절과 이유{"\n"}
+                {"  "}– 가격 경향을 안내해 드려요.{"\n\n"}
+                • 날짜를 함께 지정하면{"\n"}
+                {"  "}– 여행 적합성 및 항공권 가격 경향을 상세히 알려드립니다.
               </Text>
             </View>
           </Animated.View>
@@ -378,34 +380,38 @@ const JplanScreen = () => {
           )}
         </View>
 
-        {/* 입력창 */}
+        {/* ── 입력창 ── */}
         <View
           style={[
             styles.inputBox,
-            { backgroundColor: theme.card, borderColor: theme.border },
+            { backgroundColor: theme.card, borderTopColor: theme.border },
           ]}
         >
           <TextInput
             style={[
               styles.input,
-              { backgroundColor: theme.background, color: theme.text },
+              {
+                backgroundColor: theme.muted,
+                borderColor: theme.border,
+                color: theme.text,
+              },
             ]}
             value={input}
             onChangeText={setInput}
             placeholder="메시지를 입력하세요"
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={theme.placeholder}
             returnKeyType="send"
             onSubmitEditing={handleSend}
           />
           <TouchableOpacity
             onPress={handleSend}
             style={[styles.sendBtn, { backgroundColor: theme.primary }]}
-            activeOpacity={0.7}
+            activeOpacity={0.8}
           >
             {sending ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={{ color: "white" }}>전송</Text>
+              <Ionicons name="send-outline" size={18} color="#fff" />
             )}
           </TouchableOpacity>
         </View>
@@ -417,7 +423,7 @@ const JplanScreen = () => {
 export default JplanScreen;
 
 const styles = StyleSheet.create({
-  // 🔹 공통 로딩/락 스타일
+  // ── 로딩 ──
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
@@ -425,30 +431,43 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 8,
-    color: "#555",
+    fontSize: 14,
+    fontWeight: "400",
   },
+
+  // ── 비로그인 락 화면 ──
   lockContainer: {
     flex: 1,
-    padding: 24,
+    paddingHorizontal: 24,
     justifyContent: "center",
     alignItems: "center",
+    gap: 16,
+  },
+  lockIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
   },
   lockTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: "700",
     textAlign: "center",
+    letterSpacing: -0.3,
   },
   lockDesc: {
     fontSize: 14,
+    fontWeight: "400",
     textAlign: "center",
-    marginBottom: 24,
-    lineHeight: 20,
+    lineHeight: 22,
   },
   lockButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
+    marginTop: 8,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 12,
   },
   lockButtonText: {
     color: "#fff",
@@ -456,116 +475,135 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 
-  // 🔹 상단 헤더 + 사용법 토글
+  // ── 헤더 ──
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 16,
+    paddingTop: 24,
     paddingBottom: 8,
   },
-  guideOverlay: {
-    position: "absolute",
-    top: 55,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 10,
-    zIndex: 10,
+  headerSub: {
+    fontSize: 13,
+    fontWeight: "400",
+    marginBottom: 2,
   },
-
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
+    fontSize: 22,
+    fontWeight: "800",
+    letterSpacing: -0.5,
   },
   guideToggle: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
     borderWidth: 1,
   },
   guideToggleText: {
     fontSize: 12,
     fontWeight: "500",
   },
+
+  // ── 사용법 오버레이 ──
+  guideOverlay: {
+    position: "absolute",
+    top: 64,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    zIndex: 10,
+  },
   guideContainer: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
   },
   guideTitle: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 8,
+    letterSpacing: -0.2,
   },
   guideText: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    fontWeight: "400",
+    lineHeight: 20,
   },
 
-  // 🔹 채팅 UI
-  wrapper: {
-    flex: 1,
-    backgroundColor: "white",
-  },
-  container: {
-    flex: 1,
-  },
+  // ── 채팅 UI ──
+  wrapper: { flex: 1 },
+  container: { flex: 1 },
   bubble: {
     maxWidth: "80%",
-    borderRadius: 12,
-    marginVertical: 5,
+    borderRadius: 14,
+    marginVertical: 4,
   },
   userBubble: {
     alignSelf: "flex-end",
     backgroundColor: "#6ea1d4",
     paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginBottom: 10,
+    paddingHorizontal: 16,
+    marginBottom: 8,
     maxWidth: "80%",
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     borderBottomLeftRadius: 18,
     borderBottomRightRadius: 4,
-    position: "relative",
-    marginRight: 10,
+    marginRight: 16,
   },
   userText: {
     color: "white",
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 20,
   },
   botMessageWrapper: {
     alignSelf: "flex-start",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   botIcon: {
-    marginLeft: 10,
-    marginBottom: 3,
-    fontSize: 20,
+    marginLeft: 16,
+    marginBottom: 4,
+    fontSize: 18,
   },
   botBubble: {
     alignSelf: "flex-start",
-    padding: 10,
-    marginLeft: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginLeft: 16,
   },
   botText: {
-    color: "black",
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 20,
   },
+
+  // ── 입력창 ──
   inputBox: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderTopWidth: 1,
+    gap: 8,
   },
   input: {
     flex: 1,
-    padding: 10,
-    borderRadius: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    fontSize: 14,
   },
   sendBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    marginLeft: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

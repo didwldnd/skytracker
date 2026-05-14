@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 
 interface Airport {
@@ -22,7 +23,6 @@ interface Props {
   onSelect: (code: string) => void;
   data: Airport[];
   fieldLabel?: string;
-  /** 반대편에서 이미 선택된 공항 코드 → 목록에서 제외(동일 공항 선택 방지) */
   excludeCode?: string;
 }
 
@@ -37,12 +37,11 @@ export default function SearchModal({
   const { theme } = useTheme();
   const [query, setQuery] = useState("");
 
-  // 모달 닫힐 때 검색어 초기화
   useEffect(() => {
     if (!visible) setQuery("");
   }, [visible]);
 
-  // 1) 검색어 필터 → 2) excludeCode 제거 → 3) code 기준 중복 제거(Map)
+  // 검색어 필터 → excludeCode 제거 → 중복 제거
   const filtered = Array.from(
     new Map(
       data
@@ -58,77 +57,89 @@ export default function SearchModal({
 
   return (
     <Modal visible={visible} animationType="slide">
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.background }, // 🔹 배경
-        ]}
-      >
-        {/* 상단 헤더 */}
-              <View
+      <View style={[styles.container, { backgroundColor: theme.background }]}>
+
+        {/* ── 헤더 ── */}
+        <View
           style={[
             styles.header,
-            { borderColor: theme.border }, 
+            { backgroundColor: theme.card, borderBottomColor: theme.border },
           ]}
         >
-          <TouchableOpacity onPress={onClose}>
-             <Text style={[styles.closeIcon, { color: theme.text }]}>✕</Text>
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: theme.text }]}>{fieldLabel}</Text>
-          <View style={{ width: 24 }} />
-        </View>
-        {/* (옵션) 동일 공항 제외 안내 */}
-       {excludeCode ? (
-          <View
-            style={[
-              styles.notice,
-              {
-                backgroundColor: theme.card,
-              },
-            ]}
+          <TouchableOpacity
+            onPress={onClose}
+            style={[styles.closeBtn, { backgroundColor: theme.muted }]}
+            activeOpacity={0.7}
           >
+            <Ionicons name="close" size={18} color={theme.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: theme.text }]}>
+            {fieldLabel} 선택
+          </Text>
+          <View style={{ width: 36 }} />
+        </View>
+
+        {/* ── 검색 입력창 ── */}
+        <View
+          style={[
+            styles.inputRow,
+            {
+              backgroundColor: theme.card,
+              borderBottomColor: theme.border,
+              borderColor: theme.border,
+            },
+          ]}
+        >
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color={theme.subText}
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            style={[styles.input, { color: theme.text }]}
+            placeholder="도시, 공항 또는 코드 검색"
+            placeholderTextColor={theme.placeholder}
+            value={query}
+            onChangeText={setQuery}
+            autoFocus={visible}
+          />
+          {query.length > 0 && (
+            <TouchableOpacity onPress={() => setQuery("")} activeOpacity={0.7}>
+              <Ionicons name="close-circle" size={18} color={theme.subText} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* ── 반대편 공항 제외 안내 ── */}
+        {excludeCode ? (
+          <View style={[styles.notice, { backgroundColor: theme.muted }]}>
+            <Ionicons
+              name="information-circle-outline"
+              size={14}
+              color={theme.subText}
+              style={{ marginRight: 6 }}
+            />
             <Text style={[styles.noticeText, { color: theme.subText }]}>
-              {`선택된 반대편 공항(${excludeCode})은 목록에서 제외됩니다.`}
+              {`반대편 공항(${excludeCode})은 목록에서 제외됩니다.`}
             </Text>
           </View>
         ) : null}
 
-        {/* 검색창 */}
-        <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.card,
-              borderColor: theme.border,
-              color: theme.text,
-            },
-          ]}
-          placeholder="도시, 공항 또는 코드 검색"
-          placeholderTextColor={theme.placeholder}
-          value={query}
-          onChangeText={setQuery}
-        />
-
-
-        {/* 공항 리스트 */}
+        {/* ── 공항 리스트 ── */}
         <FlatList
           data={filtered}
           keyExtractor={(item, index) => `${item.code}-${index}`}
           renderItem={({ item }) => (
             <TouchableOpacity
-              style={[
-                styles.item,
-                {
-                  borderColor: theme.border,
-                  backgroundColor: theme.background,
-                },
-              ]}
+              style={[styles.item, { borderBottomColor: theme.border }]}
               onPress={() => {
                 onSelect(item.code);
                 setQuery("");
               }}
+              activeOpacity={0.7}
             >
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={[styles.city, { color: theme.text }]}>
                   {item.city}
                 </Text>
@@ -136,50 +147,107 @@ export default function SearchModal({
                   {item.airport}
                 </Text>
               </View>
-              <Text style={[styles.code, { color: theme.text }]}>
-                {item.code}
-              </Text>
+              <View style={[styles.codeBadge, { backgroundColor: theme.muted }]}>
+                <Text style={[styles.code, { color: theme.primary }]}>
+                  {item.code}
+                </Text>
+              </View>
             </TouchableOpacity>
           )}
           keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: 32 }}
         />
       </View>
     </Modal>
   );
 }
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
+
+  // ── 헤더 ──
   header: {
-    height: 56,
+    height: 64,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
     borderBottomWidth: 1,
   },
-  closeIcon: { fontSize: 20 },
-  title: { fontSize: 16, fontWeight: "bold" },
-  notice: {
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: -0.3,
+  },
+
+  // ── 검색 입력 ──
+  inputRow: {
+    flexDirection: "row",
+    alignItems: "center",
     marginHorizontal: 16,
-    marginTop: 10,
-    padding: 8,
-    borderRadius: 8,
-  },
-  noticeText: { fontSize: 12 },
-  input: {
+    marginVertical: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    margin: 16,
   },
+  input: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "400",
+  },
+
+  // ── 안내 배너 ──
+  notice: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  noticeText: {
+    fontSize: 12,
+    fontWeight: "400",
+    flex: 1,
+  },
+
+  // ── 리스트 아이템 ──
   item: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
-  city: { fontWeight: "bold", fontSize: 16 },
-  airport: { fontSize: 13 },
-  code: { fontSize: 16, fontWeight: "bold", alignSelf: "center" },
+  city: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 2,
+    letterSpacing: -0.2,
+  },
+  airport: {
+    fontSize: 13,
+    fontWeight: "400",
+  },
+  codeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    marginLeft: 12,
+  },
+  code: {
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
 });

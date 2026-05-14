@@ -2,7 +2,7 @@
 export const buildAuthUrl = ({
   authEndpoint,       // ex) Google: "https://accounts.google.com/o/oauth2/v2/auth"
   clientId,
-  redirectUri,        // ex) "http://localhost:19006/skytracker/redirect"
+  redirectUri,        // ex) "skytracker://redirect"
   scope,              // ex) "profile email"
   state,
   extra = {},         // kakao/naver에서 필요한 추가 파라미터

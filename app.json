@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.yourname.skytracker",
+      "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "foregroundImage": "./assets/favicon.png",
         "backgroundColor": "#000000"

@@ -5,6 +5,7 @@
   "main": "index.ts",
   "homepage": "https://didwldnd.github.io/skytracker/",
   "scripts": {
+    "dev": "expo start",
     "build:web": "npx expo export -p web && node scripts/postexport.cjs",
     "deploy": "npm run build:web && gh-pages -d dist --dotfiles",
     "android": "expo run:android",
@@ -56,6 +57,7 @@
     "@types/react": "~19.1.10",
     "@types/react-dom": "~19.1.7",
     "gh-pages": "^6.3.0",
+    "pptxgenjs": "^4.0.1",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.2"
   },

@@ -18,7 +18,7 @@ export type AppTheme = {
 
 export const lightTheme: AppTheme = {
   primary: "#6ea1d4",
-  background: "#FFFFFF",
+  background: "#F5F7FA",
   card: "#FFFFFF",
   text: "#111827",
   subText: "#6B7280",
@@ -26,7 +26,7 @@ export const lightTheme: AppTheme = {
   muted: "#F3F4F6",
   danger: "#EF4444",
   success: "#10B981",
-  placeholder: "#999999"
+  placeholder: "#9CA3AF"
 };
 
 export const darkTheme: AppTheme = {
