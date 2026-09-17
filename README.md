@@ -199,9 +199,3 @@ skytracker/
 ├── utils/               # API, OAuth, mapBackendFlight 등
 └── types/               # 타입·DTO
 ```
-
----
-
-## 라이선스
-
-MIT
