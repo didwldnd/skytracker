@@ -5,8 +5,50 @@ Expo(React Native)와 TypeScript로 구현했으며, 동일한 코드베이스�
 
 | 항목 | 내용 |
 |------|------|
-| **라이브 데모 (웹)** | [https://didwldnd.github.io/skytracker/](https://didwldnd.github.io/skytracker/) |
+| **웹 배포** | [https://didwldnd.github.io/skytracker/](https://didwldnd.github.io/skytracker/) |
 | **저장소** | [https://github.com/didwldnd/skytracker](https://github.com/didwldnd/skytracker) |
+
+> 연동하던 [Amadeus Self-Service](https://developers.amadeus.com/) 서비스 종료로 현재 항공편 조회 등 관련 기능이 제한됩니다. 아래 캡처는 API 연동이 가능했던 시점의 화면입니다.
+
+---
+
+## 주요 화면
+
+> 라이트·다크 테마를 지원하며, 아래 캡처에는 두 테마의 화면이 포함되어 있습니다.
+
+### 항공편 검색
+
+출발·도착 공항과 여행 날짜, 인원·좌석 조건을 설정해 항공편을 검색합니다.
+
+| 검색 조건 | 공항 선택 | 날짜 선택 |
+|:---:|:---:|:---:|
+| <img src="./readme-assets/flight-search.png" alt="출발·도착 공항과 인원·좌석 조건을 설정하는 항공편 검색 화면" width="250" /> | <img src="./readme-assets/airport-selection.png" alt="공항을 검색하고 선택하는 화면" width="250" /> | <img src="./readme-assets/date-selection.png" alt="가는 날과 오는 날을 고르는 날짜 선택 화면" width="250" /> |
+
+### 검색 결과 및 상세
+
+항공편의 가격과 출도착 시간을 비교하고, 상세 화면에서 왕복 일정·좌석 정보·운임 정책을 확인합니다.
+
+검색 결과와 상세 화면은 서로 다른 조회 예시입니다.
+
+| 검색 결과 | 왕복 일정 | 좌석·운임 정책 |
+|:---:|:---:|:---:|
+| <img src="./readme-assets/flight-results.png" alt="항공편 가격과 출도착 시간을 비교하는 검색 결과 화면" width="250" /> | <img src="./readme-assets/flight-itinerary.png" alt="왕복 일정과 구간 정보를 보여주는 상세 화면" width="250" /> | <img src="./readme-assets/flight-fare-policy.png" alt="좌석 정보와 운임 정책을 확인하는 상세 화면" width="250" /> |
+
+### 가격 알림
+
+등록한 항공편 조건의 가격 하락을 이메일로 안내하는 기능의 수신 예시입니다.
+
+| 가격 알림 이메일 |
+|:---:|
+| <img src="./readme-assets/price-alert-email.png" alt="가격 하락을 안내하는 가격 알림 이메일 수신 예시" width="250" /> |
+
+### J플랜
+
+채팅으로 여행지와 여행 시기, 항공권 관련 정보를 질문하고 답변을 확인할 수 있습니다.
+
+| J플랜 채팅 |
+|:---:|
+| <img src="./readme-assets/jplan-chat.png" alt="여행지와 항공권 정보를 질문하는 J플랜 채팅 화면" width="250" /> |
 
 ---
 
@@ -80,6 +122,8 @@ npx expo start --web    # 웹
 npm run android         # Android 네이티브 빌드
 # iOS는 macOS에서: npm run ios
 ```
+
+위 명령으로 프론트엔드를 실행할 수 있지만, 종료된 Amadeus Self-Service에 의존하는 기능은 기존 설정만으로 정상 동작하지 않습니다.
 
 웹 정적 배포:
 
